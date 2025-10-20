@@ -5,6 +5,7 @@ services:
     working_dir: "/var/www/docker"
     volumes:
       - "./src:/var/www/docker"
+      - /var/www/docker/node_modules
     ports:
       - "3100:3100" # vite hot reload
     command: >
