@@ -1,0 +1,53 @@
+{
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.17.0",
+        "@primevue/auto-import-resolver": "^4.2.5",
+        "@tailwindcss/aspect-ratio": "^0.4.2",
+        "@tailwindcss/forms": "^0.5.7",
+        "@tailwindcss/typography": "^0.5.10",
+        "@types/eslint__js": "^8.42.3",
+        "@types/lodash": "^4.17.13",
+        "@types/node": "^20.10.4",
+        "@vitejs/plugin-vue": "^6.0.1",
+        "autoprefixer": "^10.4.16",
+        "axios": "^1.6.2",
+        "eslint-config-prettier": "^9.1.0",
+        "eslint-plugin-prettier": "^5.2.1",
+        "eslint-plugin-vue": "^9.32.0",
+        "history": "^5.3.0",
+        "postcss": "^8.4.32",
+        "prettier": "^3.4.2",
+        "prettier-plugin-tailwindcss": "^0.6.9",
+        "tailwindcss": "^4.0.6",
+        "typescript": "^5.3.3",
+        "typescript-eslint": "^8.18.0",
+        "unplugin-vue-components": "^28.0.0",
+        "vite": "^7.1.7",
+        "vue": "^3.3.11",
+        "vue-eslint-parser": "^9.4.3"
+    },
+    "dependencies": {
+        "@fontsource-variable/inter": "^5.1.1",
+        "@heroicons/vue": "^2.0.18",
+        "@primevue/themes": "^4.2.5",
+        "@tailwindcss/postcss": "^4.0.3",
+        "@tailwindcss/vite": "^4.0.6",
+        "@unhead/vue": "^2.0.0-alpha.19",
+        "@vueuse/core": "^13.9.0",
+        "devicon": "^2.17.0",
+        "primeicons": "^7.0.0",
+        "primelocale": "^1.6.0",
+        "primevue": "^4.2.5",
+        "tailwindcss-primeui": "^0.4.0",
+        "vite-imagetools": "^6.2.7",
+        "vue-i18n": "^9.8.0",
+        "vue-router": "^4.5.0",
+        "vue-toast-notification": "^3.1.2"
+    }
+}
