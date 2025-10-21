@@ -3,7 +3,7 @@
 </script>
 
 <template>
-footer
+footer caca
 </template>
 
 <style scoped>
