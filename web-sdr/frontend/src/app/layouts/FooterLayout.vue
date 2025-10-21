@@ -3,7 +3,9 @@
 </script>
 
 <template>
-footer
+        <footer>
+        ciao
+    </footer>
 </template>
 
 <style scoped>

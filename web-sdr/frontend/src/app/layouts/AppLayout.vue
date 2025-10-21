@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {useDark, useToggle} from '@vueuse/core'
 import FooterLayout from "./FooterLayout.vue";
-import NavbarLayout from "./NavbarLayout.vue";
+import NavbarComponent from "../components/NavbarComponent.vue";
 
 const isDarkMode = useDark()
 const toggleDarkMode = useToggle(isDarkMode)
@@ -22,7 +22,7 @@ const toggleDarkMode = useToggle(isDarkMode)
                 <i class="pi pi-moon hidden" style="font-size: 1.5rem"></i>
             </div>
         </button>
-        <NavbarLayout/>
+        <NavbarComponent/>
         <slot/>
         <FooterLayout/>
     </div>

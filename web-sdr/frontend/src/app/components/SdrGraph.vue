@@ -13,9 +13,8 @@
     </Card>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
-import NavbarComponent from "@/components/NavbarComponent.vue";
 
 const canvasRef = ref(null);
 let ctx = null;
