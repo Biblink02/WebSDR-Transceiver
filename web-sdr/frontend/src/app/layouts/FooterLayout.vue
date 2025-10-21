@@ -3,8 +3,8 @@
 </script>
 
 <template>
-        <footer>
-        ciao
+    <footer>
+        TODO footer
     </footer>
 </template>
 

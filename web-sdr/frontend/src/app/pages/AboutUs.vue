@@ -1,5 +1,10 @@
 
 <template>
-    about us
+    <AppLayout>
+        ciaoss
+    </AppLayout>
 </template>
 
+<script setup lang="ts">
+import AppLayout from "&/layouts/AppLayout.vue";
+</script>

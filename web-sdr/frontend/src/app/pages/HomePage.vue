@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
-import SdrPage from "&/pages/sdr/SdrPage.vue";
-import NavbarComponent from "&/components/NavbarComponent.vue";
+import {ref, reactive} from 'vue';
+import FrequencyControl from "&/components/FrequencyControl.vue";
+import TabbedSettings from "&/components/TabbedSettings.vue";
+import AppLayout from "&/layouts/AppLayout.vue";
+import SdrGraph from "&/components/SdrGraph.vue";
 
 // Reactive state for the main frequency slider
 const frequency = ref(50);
@@ -30,108 +32,21 @@ const physicsSettings = reactive({
 
 
 <template>
-    <div class="min-h-screen ">
-
-        <NavbarComponent></NavbarComponent>
-        <!-- Main Content -->
+    <AppLayout>
         <main class="p-4">
             <div class="max-w-6xl mx-auto space-y-6">
                 <!-- Graph Placeholder -->
-                <SdrPage/>
+                <SdrGraph/>
 
                 <!-- Slider Control -->
-                <Card>
-                    <template #content>
-                        <div class="space-y-4">
-                            <div class="flex items-center justify-between">
-                                <label for="frequency-slider" class="text-sm font-medium">
-                                    Frequency Control
-                                </label>
-                                <span class="text-sm">{{ frequency }} MHz</span>
-                            </div>
-                            <Slider v-model="frequency" id="frequency-slider" :max="100" :step="1" class="w-full" />
-                        </div>
-                    </template>
-                </Card>
+                <FrequencyControl v-model:frequency="frequency"/>
 
                 <!-- Tabbed Settings -->
-                <Card>
-                    <template #content>
-                        <TabView>
-                            <TabPanel header="Audio">
-                                <div class="grid gap-4 mt-6">
-                                    <div class="space-y-2">
-                                        <label for="volume">Volume</label>
-                                        <Slider id="volume" v-model="audioSettings.volume" :max="100" :step="1" />
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label for="sample-rate">Sample Rate (Hz)</label>
-                                        <InputText id="sample-rate" type="number" placeholder="48000" v-model="audioSettings.sampleRate" class="w-full" />
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label for="audio-filter">Audio Filter</label>
-                                        <InputText id="audio-filter" placeholder="Low Pass" v-model="audioSettings.filter" class="w-full" />
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <Button label="Reset" outlined class="flex-1" />
-                                        <Button label="Apply" class="flex-1" />
-                                    </div>
-                                </div>
-                            </TabPanel>
-
-                            <TabPanel header="Graph">
-                                <div class="grid gap-4 mt-6">
-                                    <div class="space-y-2">
-                                        <label for="fft-size">FFT Size</label>
-                                        <InputText id="fft-size" type="number" placeholder="2048" v-model="graphSettings.fftSize" class="w-full" />
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label for="refresh-rate">Refresh Rate (ms)</label>
-                                        <InputText id="refresh-rate" type="number" placeholder="100" v-model="graphSettings.refreshRate" class="w-full" />
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label for="color-scheme">Color Scheme</label>
-                                        <InputText id="color-scheme" placeholder="Spectrum" v-model="graphSettings.colorScheme" class="w-full" />
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label for="y-axis-scale">Y-Axis Scale</label>
-                                        <Slider id="y-axis-scale" v-model="graphSettings.yAxisScale" :max="100" :step="1" />
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <Button label="Reset" outlined class="flex-1" />
-                                        <Button label="Apply" class="flex-1" />
-                                    </div>
-                                </div>
-                            </TabPanel>
-
-                            <TabPanel header="Physics">
-                                <div class="grid gap-4 mt-6">
-                                    <div class="space-y-2">
-                                        <label for="center-freq">Center Frequency (MHz)</label>
-                                        <InputText id="center-freq" type="number" placeholder="100.0" v-model="physicsSettings.centerFreq" class="w-full" />
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label for="bandwidth">Bandwidth (kHz)</label>
-                                        <InputText id="bandwidth" type="number" placeholder="200" v-model="physicsSettings.bandwidth" class="w-full" />
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label for="gain">Gain (dB)</label>
-                                        <Slider id="gain" v-model="physicsSettings.gain" :max="60" :step="1" />
-                                    </div>
-                                    <div class="space-y-2">
-                                        <label for="modulation">Modulation Type</label>
-                                        <InputText id="modulation" placeholder="FM" v-model="physicsSettings.modulation" class="w-full" />
-                                    </div>
-                                    <div class="flex gap-2">
-                                        <Button label="Reset" outlined class="flex-1" />
-                                        <Button label="Apply" class="flex-1" />
-                                    </div>
-                                </div>
-                            </TabPanel>
-                        </TabView>
-                    </template>
-                </Card>
+                <TabbedSettings v-model:audio-settings="audioSettings"
+                                v-model:graph-settings="graphSettings"
+                                v-model:physics-settings="physicsSettings"/>
             </div>
         </main>
-    </div>
+    </AppLayout>
+
 </template>
