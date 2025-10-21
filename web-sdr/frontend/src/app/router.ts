@@ -2,9 +2,10 @@
 import HomePage from './pages/HomePage.vue'
 import SrdPage from './pages/sdr/SdrPage.vue'
 import aboutpage from './pages/about.vue'
+import ressources from './pages/ressources.vue'
 
 
-const routes = [{path: '/', component: HomePage}, {path: '/sdr', component: SrdPage},{path: '/about', component: aboutpage}]
+const routes = [{path: '/', component: HomePage}, {path: '/sdr', component: SrdPage},{path: '/about', component: aboutpage},{path: '/ressources', component: ressources}]
 
 const router = createRouter({
     history: createWebHistory(),
