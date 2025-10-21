@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useDark, useToggle } from '@vueuse/core'
-import FooterLayout from "./FooterLayout.vue";
-import NavbarLayout from "./NavbarLayout.vue";
+import NavbarLayout from './NavbarLayout.vue'
+import FooterLayout from './FooterLayout.vue'
 
 const isDarkMode = useDark()
 const toggleDarkMode = useToggle(isDarkMode)
@@ -26,14 +26,10 @@ const toggleDarkMode = useToggle(isDarkMode)
     <!-- Navbar -->
     <NavbarLayout />
 
-    <!-- Page Content -->
+    <!-- Contenu des pages -->
     <slot />
 
     <!-- Footer -->
     <FooterLayout />
   </div>
 </template>
-
-<style scoped>
-/* Vous pouvez ajouter ici des styles spécifiques au layout */
-</style>
