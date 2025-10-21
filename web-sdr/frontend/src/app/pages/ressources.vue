@@ -46,9 +46,9 @@ const resources = [
 
 <template>
   <AppLayout>
-    <div class="max-w-7xl mx-auto p-6 space-y-10 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-      <h1 class="text-4xl font-serif font-bold mb-12 text-center">
-        Resources Used for the SatCom project
+    <div class="max-w-7xl mx-auto p-15 space-y-10 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      <h1 class="text-5xl font-bold mb-14 text-center select-none">
+        Resources
       </h1>
 
       <div v-for="resource in resources" :key="resource.id" class="flex items-center space-x-6 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
@@ -56,7 +56,7 @@ const resources = [
           <img :src="resource.thumbnail" alt="Thumbnail" class="object-cover w-full h-full" />
         </a>
         <div class="flex-1">
-          <a :href="resource.url" target="_blank" class="text-2xl font-semibold hover:underline text-favourite_yellow">
+          <a :href="resource.url" target="_blank" class="text-2xl font-semibold hover:underline text-dark-blue">
             {{ resource.title }}
           </a>
           <p class="mt-2 text-gray-700 dark:text-gray-300 leading-relaxed">

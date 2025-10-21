@@ -69,8 +69,10 @@ const flagUrls = {
 
 <template>
   <AppLayout>
-    <div class="max-w-7xl mx-auto p-6 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-serif">
+    <div class="max-w-7xl mx-auto p-15 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-serif">
       <h1 class="text-5xl font-bold mb-14 text-center select-none">
+
+
         Meet Our Team
       </h1>
 
