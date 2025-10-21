@@ -64,7 +64,8 @@ async def tcp_data_handler(
 
             # 4. Broadcast the received data to ALL connected Socket.IO clients.
             #    'data_update' is the custom event name the client will listen for.
-            await sio_server.emit('data_update', data)
+            logging.info(f"Data received: {data}")
+            await sio_server.emit('update', data)
 
     except Exception:
         logging.exception(f"An error occurred with the data source {peername}")

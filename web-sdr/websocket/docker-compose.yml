@@ -12,8 +12,7 @@ services:
       - "${WEBSOCKET_PORT}:8001"
 
     volumes:
-      - ./src:/app
-      - ./requirements.txt:/app/requirements.txt
+      - ./src:/app:ro
       - pip_packages:/root/.local
 
     restart: unless-stopped
