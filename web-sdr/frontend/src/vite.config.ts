@@ -40,6 +40,7 @@ export default ({ mode }: Params) => {
 
         resolve: {
             alias: {
+                '&': '/app',
                 '@': '/app/ts',
                 '~': '/resources',
                 'vue-i18n': 'vue-i18n/dist/vue-i18n.cjs.js', // https://github.com/intlify/vue-i18n-next/issues/789
