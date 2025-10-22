@@ -46,7 +46,7 @@ const resources = [
 
 <template>
   <AppLayout>
-    <div class="max-w-7xl mx-auto p-15 space-y-10 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div class="max-w-7xl mx-auto p-15 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-serif">
       <h1 class="text-5xl font-bold mb-14 text-center select-none">
         Resources
       </h1>
