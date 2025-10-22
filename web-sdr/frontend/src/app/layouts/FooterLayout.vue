@@ -4,7 +4,7 @@
 
 <template>
   <footer class="mt-12 py-8 border-t border-gray-200 dark:border-gray-700">
-    <div class="p-6 md:px-20 lg:px-40 xl:px-60 max-w-6xl mx-auto">
+    <div class="w-full">
       <div class="flex flex-col md:flex-row justify-between items-center space-y-6 md:space-y-0">
 
         <!-- Left section: Project name and description -->
