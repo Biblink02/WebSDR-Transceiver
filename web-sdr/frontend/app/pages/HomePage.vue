@@ -3,7 +3,7 @@ import {ref, reactive} from 'vue';
 import FrequencyControl from "&/components/FrequencyControl.vue";
 import TabbedSettings from "&/components/TabbedSettings.vue";
 import AppLayout from "&/layouts/AppLayout.vue";
-import SdrGraph from "&/components/SdrGraph.vue";
+import SdrGraph from "&/components/SpectrogramComponent.vue";
 
 // Reactive state for the main frequency slider
 const frequency = ref(50);
