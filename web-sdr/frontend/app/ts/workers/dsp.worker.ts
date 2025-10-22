@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { fft, magDb } from '@thi.ng/dsp';
+import {demodulateSSB} from "@/ts/SSBDemodulation";
 
 let socket: Socket | null = null;
 let wsUrl = '';
@@ -77,14 +78,14 @@ function processForGraphic(timeDomainData: Float32Array): void {
     }, [fftResult.buffer]);
 }
 
-//TODO lorenzo
 
 function processForAudio(timeDomainData: Float32Array): void {
-    const audioSamples = null; //TODO
-    self.postMessage({
-        type: 'audioData',
-        payload: audioSamples
-    }, [audioSamples.buffer]);
+    const audioSampleRate = 1024;
+    const sampleRate = 48000;
+    const frequency = 2.4 * 10^9;
+    const bandwidth = 4000;
+    const audioData = demodulateSSB(timeDomainData,sampleRate, audioSampleRate, frequency,bandwidth);
+    playAudio(audioData, audioSampleRate);
 }
 
 
