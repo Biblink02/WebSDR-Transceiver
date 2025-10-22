@@ -157,15 +157,9 @@ function handleMouseMove(event: MouseEvent) {
   const rect = container.value.getBoundingClientRect()
   mouseX = event.clientX - rect.left
   mouseY = event.clientY - rect.top
-}
-
-function handleMouseEnter() {
   isMouseInside = true
 }
 
-function handleMouseLeave() {
-  isMouseInside = false
-}
 
 onMounted(() => {
   if (!container.value) return
@@ -181,18 +175,12 @@ onMounted(() => {
   initParticles()
   window.addEventListener('resize', handleResize)
   document.addEventListener('mousemove', handleMouseMove)
-  container.value.addEventListener('mouseenter', handleMouseEnter)
-  container.value.addEventListener('mouseleave', handleMouseLeave)
   animate()
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
   document.removeEventListener('mousemove', handleMouseMove)
-  if (container.value) {
-    container.value.removeEventListener('mouseenter', handleMouseEnter)
-    container.value.removeEventListener('mouseleave', handleMouseLeave)
-  }
   if (animationFrameId !== null) {
     cancelAnimationFrame(animationFrameId)
   }
@@ -209,7 +197,7 @@ onBeforeUnmount(() => {
   inset: 0;
   width: 100%;
   height: 100%;
-  pointer-events: auto;
+  pointer-events: none;
   background: rgb(0,8,20);
   overflow: hidden;
   cursor: none;
