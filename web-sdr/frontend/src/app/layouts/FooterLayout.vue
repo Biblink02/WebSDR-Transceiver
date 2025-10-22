@@ -47,17 +47,19 @@
 
 <style>
 .footer {
-  margin-top: 3rem;
-  padding: 2rem 0;
+  margin-top: 4rem;
+  padding: 3rem 0;
   width: 100%;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  background-color: rgba(0, 0, 0, 0.3);
+  backdrop-filter: transparent;
 }
 
 .footer__container {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 2rem;
 }
 
 .footer__layout {
@@ -65,7 +67,7 @@
   flex-direction: column;
   justify-content: space-between;
   align-items: center;
-  gap: 1.5rem;
+  gap: 2rem;
 }
 
 .footer__left {
@@ -74,40 +76,46 @@
 
 .footer__title {
   font-family: monospace;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: bold;
   text-transform: uppercase;
-  color: #1f2937;
+  color: #ffffff;
+  letter-spacing: 2px;
+  margin: 0;
 }
 
 .footer__description {
   font-family: monospace;
-  font-size: 0.875rem;
+  font-size: 0.95rem;
   text-transform: uppercase;
-  color: #6b7280;
-  margin-top: 0.25rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 0.5rem;
+  letter-spacing: 1px;
 }
 
 .footer__team {
   font-weight: 600;
+  color: #ffffff;
 }
 
 .footer__nav {
   display: flex;
-  gap: 1.5rem;
+  gap: 2.5rem;
 }
 
 .footer__link {
   font-family: monospace;
-  font-size: 0.875rem;
+  font-size: 1rem;
   text-transform: uppercase;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.8);
   text-decoration: none;
-  transition: color 0.15s ease-out;
+  transition: color 0.2s ease-out;
+  letter-spacing: 1px;
 }
 
 .footer__link:hover {
-  color: #1f2937;
+  color: #ffffff;
+  text-decoration: underline;
 }
 
 .footer__right {
@@ -116,39 +124,49 @@
 
 .footer__copyright {
   font-family: monospace;
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: rgba(255, 255, 255, 0.7);
   margin: 0;
+  letter-spacing: 1px;
 }
 
 .footer__legal-link {
   font-family: monospace;
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   text-transform: uppercase;
-  color: #9ca3af;
+  color: rgba(255, 255, 255, 0.7);
   text-decoration: none;
-  transition: color 0.15s ease-out;
-  margin-top: 0.25rem;
-  display: block;
+  transition: color 0.2s ease-out;
+  margin-top: 0.5rem;
+  display: inline-block;
+  letter-spacing: 1px;
 }
 
 .footer__legal-link:hover {
-  color: #1f2937;
+  color: #ffffff;
   text-decoration: underline;
 }
 
 @media (min-width: 768px) {
   .footer__layout {
     flex-direction: row;
+    align-items: center;
   }
 
   .footer__left {
     text-align: left;
+    flex: 1;
+  }
+
+  .footer__nav {
+    flex: 1;
+    justify-content: center;
   }
 
   .footer__right {
     text-align: right;
+    flex: 1;
   }
 }
 </style>
