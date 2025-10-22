@@ -1,0 +1,27 @@
+services:
+  websocket-server:
+    image: python:3.11-slim
+    working_dir: /app
+    command: >
+      sh -c "pip install --user --no-cache-dir -r requirements.txt
+      && python app.py"
+    # Publish TCP for web/socket.io and UDP for GNU Radio frames
+    ports:
+      - "${WEBSOCKET_PORT:-8001}:8001/tcp"
+      - "${DATA_PORT:-8000}:8000/udp"
+    # App source mounted read-only
+    volumes:
+      - ./src:/app:ro
+      - pip_packages:/root/.local
+    # Optional: pass env to your app if it reads them
+    environment:
+      LISTEN_IP: "0.0.0.0"
+      DATA_PORT: "${DATA_PORT:-8000}"
+      WEB_PORT: "${WEBSOCKET_PORT:-8001}"
+      FFT_LEN: "1024"
+      EMIT_EVERY: "1"
+    restart: unless-stopped
+
+volumes:
+  pip_packages:
+
