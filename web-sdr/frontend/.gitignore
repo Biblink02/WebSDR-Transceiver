@@ -20,3 +20,4 @@ yarn-error.log
 /.vscode
 components.d.ts
 package-lock.json
+/src

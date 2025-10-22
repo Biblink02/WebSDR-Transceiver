@@ -10,8 +10,7 @@ let socket = null;
 // --- Socket.IO Connection State ---
 const isConnected = ref(false);
 const statusText = ref('CONNECTING');
-
-const wsUrl = 'http://localhost:8001';
+const wsUrl = import.meta.env.VITE_WS_URL ??'http://localhost:8001';
 
 // --- Canvas Drawing Functions ---
 const magnitudeToColor = (magnitude) => {

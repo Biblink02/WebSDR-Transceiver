@@ -25,8 +25,7 @@ services:
     ports:
       - "3100:3100" # vite hot reload
     environment:
-      - VITE_WS_HOST=websocket-server
-      - VITE_WS_PORT=${WEBSOCKET_PORT}
+      - VITE_WS_URL=http://${CONTAINER_SERVICE_PYTHON_IP_ADDRESS}:${WEBSOCKET_PORT}
     command: >
       bash -c "npm install
       && npm run dev"
