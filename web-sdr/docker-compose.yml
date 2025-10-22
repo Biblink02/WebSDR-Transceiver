@@ -11,6 +11,8 @@ services:
       - ./websocket:/app:ro
       - pip_packages:/root/.local
     restart: unless-stopped
+    environment:
+      - WEBSOCKET_UPDATE_EVENT=${WEBSOCKET_UPDATE_EVENT}
     networks:
       default:
         ipv4_address: "${CONTAINER_SERVICE_PYTHON_IP_ADDRESS}"
@@ -26,6 +28,7 @@ services:
       - "3100:3100" # vite hot reload
     environment:
       - VITE_WS_URL=http://${CONTAINER_SERVICE_PYTHON_IP_ADDRESS}:${WEBSOCKET_PORT}
+      - VITE_WS_EVENT=${WEBSOCKET_UPDATE_EVENT}
     command: >
       bash -c "npm install
       && npm run dev"

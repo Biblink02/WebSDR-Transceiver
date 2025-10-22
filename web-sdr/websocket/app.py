@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import socketio
+import os
 from aiohttp import web
 
 # --- Configuration ---
@@ -8,6 +9,7 @@ CONFIG = {
     "DATA_PORT": 8000,
     "WEB_PORT": 8001,
     "LISTEN_IP": "0.0.0.0",
+    "UPDATE_EVENT": os.environ.get('WEBSOCKET_UPDATE_EVENT') or 'update'
 }
 
 # --- Setup ---
@@ -54,7 +56,7 @@ class UdpDataProtocol(asyncio.DatagramProtocol):
         """Called when a UDP datagram is received."""
         logging.info(f"UDP Data received from {addr}: {data}")
 
-        self.loop.create_task(self.sio_server.emit('update', data))
+        self.loop.create_task(self.sio_server.emit(CONFIG['UPDATE_EVENT'], data))
 
     def error_received(self, exc: Exception):
         """Called when an error occurs."""
