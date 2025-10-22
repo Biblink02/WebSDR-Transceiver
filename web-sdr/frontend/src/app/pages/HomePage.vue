@@ -20,7 +20,7 @@ function goToSdr() {
               SatCom project
             </h1>
             <p class="text-xl text-white drop-shadow-md leading-relaxed">
-              This project, developed by group PRI05, aims to create software for a ground station capable of sending and receiving data from the QO-100 geostationary satellite. The software displays both the transmitted signals and the demodulated received signals, with the additional feature of hearing the received audio.
+              This project, developed by group PRI05, aims to create software for a ground station capable of receiving data from the QO-100 geostationary satellite. The software displays  the demodulated received signals via a waterfall chart, with the additional feature of hearing the received audio.
             </p>
             <button
               @mouseenter="hovered = true"

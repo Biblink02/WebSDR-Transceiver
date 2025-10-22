@@ -69,9 +69,8 @@ const flagUrls = {
 
 <template>
   <AppLayout>
-    <div class="max-w-7xl mx-auto p-15 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-serif">
-      <h1 class="text-5xl font-bold mb-14 text-center select-none">
-
+    <div class="max-w-7xl mx-auto p-15 font-serif">
+      <h1 class="text-5xl font-bold mb-14 text-center select-none text-white">
 
         Meet Our Team
       </h1>
@@ -80,7 +79,7 @@ const flagUrls = {
         <div
           v-for="member in teamMembers"
           :key="member.id"
-          class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 flex flex-col items-center text-center transform transition-transform hover:scale-105 motion-safe:animate-fadeIn"
+          class="rounded-lg p-6 flex flex-col items-center text-center transform transition-transform hover:scale-105 motion-safe:animate-fadeIn backdrop-blur-sm"
           style="animation-delay: calc(var(--delay) * 100ms)"
           :style="{'--delay': member.id}"
         >
@@ -102,10 +101,10 @@ const flagUrls = {
               loading="lazy"
             />
           </div>
-          <h3 class="italic text-lg mb-3 text-gray-700 dark:text-gray-300 select-text">
+          <h3 class="italic text-lg mb-3 text-white select-text">
             {{ member.role }}
           </h3>
-          <p class="text-gray-700 dark:text-gray-300 leading-relaxed select-text max-w-md">
+          <p class="text-white leading-relaxed select-text max-w-md">
             {{ member.description }}
           </p>
         </div>

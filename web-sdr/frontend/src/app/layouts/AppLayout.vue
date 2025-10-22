@@ -2,7 +2,7 @@
 import { useDark, useToggle } from '@vueuse/core'
 import NavbarLayout from './NavbarLayout.vue'
 import FooterLayout from './FooterLayout.vue'
-import ParticlesBackground from '&/components/ParticlesBackground.vue'
+import ParticlesBackground from '../components/ParticlesBackground.vue'
 
 const isDarkMode = useDark()
 const toggleDarkMode = useToggle(isDarkMode)
