@@ -1,92 +1,67 @@
 <script setup lang="ts">
-import {onMounted, onUnmounted, ref} from 'vue';
-import {io} from 'socket.io-client';
-import {fft, magDb} from '@thi.ng/dsp'; // <-- Importiamo le funzioni DSP
-import SpectrogramCanvas from './SpectrogramCanvas.vue'; // <-- Importiamo il figlio
+import { onMounted, onUnmounted, ref } from 'vue';
+import SpectrogramCanvas from './SpectrogramCanvas.vue';
+import AudioComponent from "@/components/AudioComponent.vue";
 
-// --- WebSocket State ---
+// --- State ---
+// Questi ref sono ora controllati *dal* Worker
 const isConnected = ref(false);
 const statusText = ref('CONNECTING');
+const fftMagnitudes = ref<Float32Array | null>(null);
+const audioSamples = ref<Float32Array | null>(null);
+
+// Riferimento al nostro Worker
+let dspWorker: Worker | null = null;
+
+// Informazioni da passare al Worker
 const wsUrl = import.meta.env.VITE_WS_URL ?? 'http://localhost:8001';
 const wsEvent = import.meta.env.VITE_WS_EVENT ?? 'update';
-let socket = null;
-
-const fftMagnitudes = ref(null);
-
-const toggleConnection = () => {
-    if (!socket) return;
-    if (isConnected.value) {
-        socket.disconnect();
-    } else {
-        statusText.value = 'CONNECTING';
-        socket.connect();
-    }
-};
 
 onMounted(() => {
-    socket = io(wsUrl, {
-        transports: ['websocket', 'polling']
+    dspWorker = new Worker(new URL('@/workers/dsp.worker.ts', import.meta.url), {
+        type: 'module'
     });
 
-    socket.on('connect', () => {
-        isConnected.value = true;
-        statusText.value = 'CONNECTED';
-        console.log('Socket.IO connected:', socket.id);
-    });
+    dspWorker.onmessage = (event: MessageEvent) => {
+        const { type, payload } = event.data;
 
-    socket.on('disconnect', () => {
-        isConnected.value = false;
-        statusText.value = 'DISCONNECTED';
-        console.log('Socket.IO disconnected');
-    });
+        switch (type) {
+            case 'status':
+                statusText.value = payload.status;
+                isConnected.value = payload.isConnected;
+                break;
+            case 'fftData':
+                // FFT signal ready to be displayed
+                fftMagnitudes.value = payload;
+                break;
+            case 'audioData':
+                // Audio data ready to be reproduced
+                audioSamples.value = payload;
+                break;
+            case 'error':
+                console.error("Error from DSP Worker:", payload);
+                break;
+        }
+    };
 
-    socket.on('connect_error', (err) => {
-        isConnected.value = false;
-        statusText.value = 'ERROR';
-        console.error('Socket.IO connection error:', err.message);
-    });
-
-    socket.on(wsEvent, (rawData) => {
-        if (!rawData) return;
-        processForGraphic(rawData);
+    dspWorker.postMessage({
+        type: 'init',
+        payload: { wsUrl, wsEvent }
     });
 });
 
 onUnmounted(() => {
-    if (socket) {
-        socket.disconnect();
+    if (dspWorker) {
+        dspWorker.postMessage({ type: 'disconnect' });
+        dspWorker.terminate();
     }
 });
 
-
-function processForGraphic(rawData): void {
-    try {
-        let timeDomainData;
-
-        if (rawData instanceof ArrayBuffer) {
-            timeDomainData = new Float32Array(rawData);
-        } else if (Array.isArray(rawData)) {
-            timeDomainData = Float32Array.from(rawData);
-        } else {
-            console.warn("Unhandled raw data format:", typeof rawData);
-            return;
-        }
-
-        if (timeDomainData.length === 0) return;
-        if ((timeDomainData.length & (timeDomainData.length - 1)) !== 0) {
-            console.warn(`Data length (${timeDomainData.length}) is not a power of 2. FFT might be slow or inaccurate.`);
-        }
-
-        const spectrum = fft(timeDomainData);
-
-        const magnitudesDb = magDb(spectrum);
-
-        fftMagnitudes.value = magnitudesDb.slice(0, magnitudesDb.length / 2);
-
-    } catch (e) {
-        console.error("Error processing raw data:", e);
+const toggleConnection = () => {
+    if (dspWorker) {
+        dspWorker.postMessage({ type: 'toggleConnection' });
     }
-}
+};
 </script>
 
 <template>
@@ -115,6 +90,8 @@ function processForGraphic(rawData): void {
                     :magnitudes="fftMagnitudes"
                     class="w-full h-80 rounded-md"
                 />
+
+                <AudioComponent :samples="audioSamples" />
             </div>
         </template>
     </Card>
