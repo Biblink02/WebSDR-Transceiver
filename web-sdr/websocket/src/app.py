@@ -2,8 +2,6 @@ import asyncio
 import logging
 import socketio
 from aiohttp import web
-from functools import partial
-from typing import Coroutine, Callable
 
 # --- Configuration ---
 CONFIG = {
@@ -15,14 +13,10 @@ CONFIG = {
 # --- Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# 1. Create an instance of the Socket.IO asynchronous server.
-#    CORS (Cross-Origin Resource Sharing) is allowed from all origins ('*').
 sio = socketio.AsyncServer(async_mode='aiohttp', cors_allowed_origins='*')
 
-# 2. Create an aiohttp web application.
 app = web.Application()
 
-# 3. Attach the Socket.IO server to the web application.
 sio.attach(app)
 
 
@@ -40,52 +34,51 @@ async def disconnect(sid: str):
     logging.info(f"Client disconnected: {sid}")
 
 
-# --- TCP Data Source Handler ---
+# --- UDP Data Source Handler (Protocol) ---
 
-async def tcp_data_handler(
-        reader: asyncio.StreamReader,
-        writer: asyncio.StreamWriter,
-        sio_server: socketio.AsyncServer
-):
+class UdpDataProtocol(asyncio.DatagramProtocol):
     """
-    Handles the connection from the data source and forwards the data
+    Handles incoming UDP datagrams and forwards the data
     to all connected clients via Socket.IO.
     """
-    peername = writer.get_extra_info('peername')
-    logging.info(f"Data source connected from {peername}")
+    def __init__(self, sio_server: socketio.AsyncServer):
+        self.sio_server = sio_server
+        self.loop = asyncio.get_running_loop()
+        super().__init__()
 
-    try:
-        while True:
-            # Read a chunk of data from the TCP socket.
-            data = await reader.read(1024)
-            if not data:
-                # An empty bytes object means the connection was closed by the peer.
-                break
+    def connection_made(self, transport: asyncio.DatagramTransport):
+        """Called when the endpoint is set up."""
+        logging.info("UDP endpoint is active.")
 
-            # 4. Broadcast the received data to ALL connected Socket.IO clients.
-            #    'data_update' is the custom event name the client will listen for.
-            logging.info(f"Data received: {data}")
-            await sio_server.emit('update', data)
+    def datagram_received(self, data: bytes, addr: tuple):
+        """Called when a UDP datagram is received."""
+        logging.info(f"UDP Data received from {addr}: {data}")
 
-    except Exception:
-        logging.exception(f"An error occurred with the data source {peername}")
-    finally:
-        logging.info(f"Data source {peername} disconnected.")
-        writer.close()
-        await writer.wait_closed()
+        self.loop.create_task(self.sio_server.emit('update', data))
+
+    def error_received(self, exc: Exception):
+        """Called when an error occurs."""
+        logging.error(f"UDP error received: {exc}")
+
+    def connection_lost(self, exc: Exception | None):
+        """Called when the endpoint is closed (e.g., on server shutdown)."""
+        logging.info("UDP endpoint closed.")
 
 
 # --- Main Application Runner ---
 
 async def main():
-    """Starts the TCP server and the web server with Socket.IO."""
+    """Starts the UDP server and the web server with Socket.IO."""
 
-    # Create a partial function to pass the 'sio' instance to the handler.
-    handler: Callable[..., Coroutine] = partial(tcp_data_handler, sio_server=sio)
+    loop = asyncio.get_running_loop()
 
-    # Start the TCP server to listen for the data source.
-    tcp_server = await asyncio.start_server(handler, CONFIG["LISTEN_IP"], CONFIG["DATA_PORT"])
-    logging.info(f"TCP server listening on tcp://{CONFIG['LISTEN_IP']}:{CONFIG['DATA_PORT']}")
+    protocol_factory = lambda: UdpDataProtocol(sio_server=sio)
+
+    await loop.create_datagram_endpoint(
+        protocol_factory,
+        local_addr=(CONFIG["LISTEN_IP"], CONFIG["DATA_PORT"])
+    )
+    logging.info(f"UDP server listening on udp://{CONFIG['LISTEN_IP']}:{CONFIG['DATA_PORT']}")
 
     # Set up and start the aiohttp web server that hosts Socket.IO.
     runner = web.AppRunner(app)
