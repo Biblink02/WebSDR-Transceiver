@@ -66,7 +66,7 @@ function connectSocket() {
 }
 
 function processForGraphic(timeDomainData: Float32Array): void {
-    // No check for the
+    // No check for the power of 2: always comes 1024
     const spectrum = fft(timeDomainData);
     const magnitudesDb = magDb(spectrum);
     const fftResult = magnitudesDb.slice(0, magnitudesDb.length / 2);
@@ -88,7 +88,7 @@ function processForAudio(timeDomainData: Float32Array): void {
 }
 
 
-// Listener principale del Worker: gestisce i COMANDI dal Main Thread
+// Worker listener
 self.onmessage = (event: MessageEvent) => {
     const { type, payload } = event.data;
 
