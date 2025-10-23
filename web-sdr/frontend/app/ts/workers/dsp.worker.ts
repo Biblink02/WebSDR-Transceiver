@@ -1,6 +1,6 @@
 import { io, Socket } from 'socket.io-client';
-import { fft } from '@thi.ng/dsp';
-import {fftShift} from "@/GraphicsHelper";
+import { fft, magDb } from '@thi.ng/dsp';
+import {demodulateSSB} from "@/ts/SSBDemodulation";
 
 let socket: Socket | null = null;
 let wsUrl = '';
@@ -55,7 +55,6 @@ function connectSocket() {
             }
 
             if (timeDomainData.length === 0) return;
-            console.log("New valid data arrived");
 
             processForGraphic(timeDomainData);
             processForAudio(timeDomainData);
@@ -95,7 +94,12 @@ function processForGraphic(timeDomainData: Float32Array): void {
 //TODO lorenzo
 
 function processForAudio(timeDomainData: Float32Array): void {
-
+    const audioSampleRate = 1024;
+    const sampleRate = 48000;
+    const frequency = 2.4 * 10^9;
+    const bandwidth = 4000;
+    const audioData = demodulateSSB(timeDomainData,sampleRate, audioSampleRate, frequency,bandwidth);
+    playAudio(audioData, audioSampleRate);
 }
 
 
