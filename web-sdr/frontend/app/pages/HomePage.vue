@@ -3,7 +3,7 @@ import {ref, reactive} from 'vue';
 import FrequencyControl from "&/components/FrequencyControl.vue";
 import TabbedSettings from "&/components/TabbedSettings.vue";
 import AppLayout from "&/layouts/AppLayout.vue";
-import SdrGraph from "&/components/SpectrogramComponent.vue";
+import SignalContainer from "&/components/SignalContainer.vue";
 
 // Reactive state for the main frequency slider
 const frequency = ref(50);
@@ -36,8 +36,7 @@ const physicsSettings = reactive({
         <main class="p-4">
             <div class="max-w-6xl mx-auto space-y-6">
                 <!-- Graph Placeholder -->
-                <SdrGraph/>
-
+                <SignalContainer/>
                 <!-- Slider Control -->
                 <FrequencyControl v-model:frequency="frequency"/>
 

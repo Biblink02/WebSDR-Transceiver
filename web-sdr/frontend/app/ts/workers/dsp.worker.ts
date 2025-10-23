@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client';
-import { fft, magDb } from '@thi.ng/dsp';
+import { fft } from '@thi.ng/dsp';
+import {fftShift} from "@/GraphicsHelper";
 
 let socket: Socket | null = null;
 let wsUrl = '';
@@ -54,6 +55,7 @@ function connectSocket() {
             }
 
             if (timeDomainData.length === 0) return;
+            console.log("New valid data arrived");
 
             processForGraphic(timeDomainData);
             processForAudio(timeDomainData);
@@ -66,25 +68,34 @@ function connectSocket() {
 }
 
 function processForGraphic(timeDomainData: Float32Array): void {
-    // No check for the power of 2: always comes 1024
-    const spectrum = fft(timeDomainData);
-    const magnitudesDb = magDb(spectrum);
-    const fftResult = magnitudesDb.slice(0, magnitudesDb.length / 2);
+    const N = timeDomainData.length / 2; // N = 1024
 
-    self.postMessage({
+    const real = new Float32Array(N);
+    const imag = new Float32Array(N);
+
+    for (let i = 0; i < N; i++) {
+        real[i] = timeDomainData[i * 2];
+        imag[i] = timeDomainData[i * 2 + 1];
+    }
+    const [fftReal, fftImag] = fft([real, imag]);
+
+    // 3. Calculate the power spectrum in Decibels (dB)
+    //    magDb calculates from real and imaginary components
+
+    console.log(timeDomainData)
+    let i = 100000000000000;
+    while(i-- > 0);
+    /*self.postMessage({
         type: 'fftData',
         payload: fftResult
-    }, [fftResult.buffer]);
+        //TODO
+    }, { transfer: [fftResult[0].buffer] });*/
 }
 
 //TODO lorenzo
 
 function processForAudio(timeDomainData: Float32Array): void {
-    const audioSamples = null; //TODO
-    self.postMessage({
-        type: 'audioData',
-        payload: audioSamples
-    }, [audioSamples.buffer]);
+
 }
 
 
@@ -94,6 +105,7 @@ self.onmessage = (event: MessageEvent) => {
 
     switch (type) {
         case 'init':
+            console.log("Init worker thread");
             wsUrl = payload.wsUrl;
             wsEvent = payload.wsEvent;
             self.postMessage({

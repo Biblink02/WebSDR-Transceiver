@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue';
-import SpectrogramCanvas from './SpectrogramCanvas.vue';
-import AudioComponent from "@/components/AudioComponent.vue";
+import {onMounted, onUnmounted, ref} from 'vue';
+import AudioComponent from "&/components/AudioComponent.vue";
+import SpectrogramComponent from "&/components/SpectrogramComponent.vue";
 
 // --- State ---
 // Questi ref sono ora controllati *dal* Worker
@@ -23,7 +23,7 @@ onMounted(() => {
     });
 
     dspWorker.onmessage = (event: MessageEvent) => {
-        const { type, payload } = event.data;
+        const {type, payload} = event.data;
 
         switch (type) {
             case 'status':
@@ -43,23 +43,23 @@ onMounted(() => {
                 break;
         }
     };
-
+    console.log("Sendig init message");
     dspWorker.postMessage({
         type: 'init',
-        payload: { wsUrl, wsEvent }
+        payload: {wsUrl, wsEvent}
     });
 });
 
 onUnmounted(() => {
     if (dspWorker) {
-        dspWorker.postMessage({ type: 'disconnect' });
+        dspWorker.postMessage({type: 'disconnect'});
         dspWorker.terminate();
     }
 });
 
 const toggleConnection = () => {
     if (dspWorker) {
-        dspWorker.postMessage({ type: 'toggleConnection' });
+        dspWorker.postMessage({type: 'toggleConnection'});
     }
 };
 </script>
@@ -86,12 +86,12 @@ const toggleConnection = () => {
                     {{ isConnected ? 'Disconnect' : 'Connect' }}
                 </button>
 
-                <SpectrogramCanvas
+                <SpectrogramComponent
                     :magnitudes="fftMagnitudes"
                     class="w-full h-80 rounded-md"
                 />
 
-                <AudioComponent :samples="audioSamples" />
+                <AudioComponent :samples="audioSamples"/>
             </div>
         </template>
     </Card>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import {ref, onMounted, watch} from 'vue';
 
 // --- Props ---
 const props = defineProps({
@@ -11,26 +11,26 @@ const props = defineProps({
 
 // --- Canvas State ---
 const canvasRef = ref(null);
-let ctx = null;
+let ctx: any = null;
 
 const minDb = -100; // Value for the colder color
 const maxDb = -20;  // Value for the hottest color
 
 // --- Canvas Drawing Functions ---
 
-const magnitudeToColor = (magnitudeDb) => {
+function magnitudeToColor(magnitudeDb: any) {
     let norm = (magnitudeDb - minDb) / (maxDb - minDb);
     if (norm < 0) norm = 0;
     if (norm > 1) norm = 1;
 
     const hue = 240 - (norm * 240);
     return `hsl(${hue}, 100%, 50%)`;
-};
+}
 
-const draw = (magnitudes) => {
+function draw(magnitudes: any) {
     if (!ctx || !canvasRef.value || !magnitudes) return;
 
-    const canvas = canvasRef.value;
+    const canvas: any = canvasRef.value;
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
 
@@ -41,9 +41,9 @@ const draw = (magnitudes) => {
         ctx.fillStyle = magnitudeToColor(magnitude);
         ctx.fillRect(i, canvasHeight - 1, 1, 1);
     }
-};
+}
 
-const resizeData = (data, targetWidth) => {
+function resizeData(data: any, targetWidth: number) {
     if (!data || data.length === 0 || targetWidth === 0) {
         return new Float32Array(targetWidth);
     }
@@ -59,12 +59,12 @@ const resizeData = (data, targetWidth) => {
         resized[i] = data[index];
     }
     return resized;
-};
+}
 
 // --- Lifecycle ---
 
 onMounted(() => {
-    const canvas = canvasRef.value;
+    const canvas: any = canvasRef.value;
     if (canvas) {
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
@@ -81,7 +81,7 @@ watch(() => props.magnitudes, (newMagnitudes) => {
         return;
     }
 
-    const canvasWidth = canvasRef.value.width;
+    const canvasWidth: number = canvasRef.value.width;
     const processedMagnitudes = resizeData(newMagnitudes, canvasWidth);
     draw(processedMagnitudes);
 });

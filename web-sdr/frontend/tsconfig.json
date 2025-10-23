@@ -21,14 +21,14 @@
             "./app/ts/types"
         ],
         "paths": {
-            "@/*": [
+            "&/*": [
                 "./app/*"
+            ],
+            "@/*": [
+                "./app/ts/*"
             ],
             "~/*": [
                 "./resources/*"
-            ],
-            "&/*": [
-                "./public/*"
             ]
         },
         "outDir": "public/build/assets",
