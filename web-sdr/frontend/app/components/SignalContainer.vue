@@ -5,16 +5,18 @@ import SpectrogramComponent from "&/components/SpectrogramComponent.vue";
 
 
 // --- State ---
-// Questi ref sono ora controllati *dal* Worker
+// These refs are now controlled *by* the Worker
 const isConnected = ref(false);
 const statusText = ref('CONNECTING');
-const fftMagnitudes = ref<Float32Array | null>(null);
 const audioSamples = ref<Float32Array | null>(null);
 
-// Riferimento al nostro Worker
+// Reference to our Worker
 let dspWorker: Worker | null = null;
 
-// Informazioni da passare al Worker
+// Reference to the SpectrogramComponent instance
+const spectrogramComponentRef = ref<InstanceType<typeof SpectrogramComponent> | null>(null);
+
+// Information to pass to the Worker
 const wsUrl = import.meta.env.VITE_WS_URL ?? 'http://localhost:8001';
 const wsEvent = import.meta.env.VITE_WS_EVENT ?? 'update';
 
@@ -33,7 +35,9 @@ onMounted(() => {
                 isConnected.value = payload.isConnected;
                 break;
             case 'fftData':
-                fftMagnitudes.value = payload;
+                if (spectrogramComponentRef.value) {
+                    spectrogramComponentRef.value.setLatestData(payload);
+                }
                 break;
             case 'audioData':
                 audioSamples.value = payload;
@@ -43,7 +47,7 @@ onMounted(() => {
                 break;
         }
     };
-    console.log("Sendig init message");
+    console.log("Sending init message");
     dspWorker.postMessage({
         type: 'init',
         payload: {wsUrl, wsEvent}
@@ -87,7 +91,7 @@ const toggleConnection = () => {
                 </button>
 
                 <SpectrogramComponent
-                    :magnitudes="fftMagnitudes"
+                    ref="spectrogramComponentRef"
                     class="w-full h-80 rounded-md"
                 />
 

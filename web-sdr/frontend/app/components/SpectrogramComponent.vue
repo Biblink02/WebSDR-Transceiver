@@ -1,24 +1,26 @@
 <script setup lang="ts">
-import {ref, onMounted, watch} from 'vue';
+import {ref, onMounted, onUnmounted} from 'vue';
 
 // --- Props ---
-const props = defineProps({
-    magnitudes: {
-        type: [Float32Array, Array],
-        default: () => null
-    }
+// Props are no longer needed for magnitudes
+defineProps({
+    // You can keep other props if you have them
 });
 
 // --- Canvas State ---
-const canvasRef = ref(null);
-let ctx: any = null;
+const canvasRef = ref<HTMLCanvasElement | null>(null);
+let ctx: CanvasRenderingContext2D | null = null;
+let animationFrameId: number | null = null;
+
+// --- Data Buffer ---
+let latestMagnitudes: Float32Array | null = null;
 
 const minDb = -100; // Value for the colder color
 const maxDb = -20;  // Value for the hottest color
 
 // --- Canvas Drawing Functions ---
 
-function magnitudeToColor(magnitudeDb: any) {
+function magnitudeToColor(magnitudeDb: number) {
     let norm = (magnitudeDb - minDb) / (maxDb - minDb);
     if (norm < 0) norm = 0;
     if (norm > 1) norm = 1;
@@ -27,23 +29,25 @@ function magnitudeToColor(magnitudeDb: any) {
     return `hsl(${hue}, 100%, 50%)`;
 }
 
-function draw(magnitudes: any) {
-    if (!ctx || !canvasRef.value || !magnitudes) return;
+function draw(magnitudes: Float32Array) {
+    if (!ctx || !canvasRef.value) return;
 
-    const canvas: any = canvasRef.value;
+    const canvas = canvasRef.value;
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
+
+    const processedMagnitudes = resizeData(magnitudes, canvasWidth);
 
     ctx.drawImage(canvas, 0, 1, canvasWidth, canvasHeight - 1, 0, 0, canvasWidth, canvasHeight - 1);
 
     for (let i = 0; i < canvasWidth; i++) {
-        const magnitude = magnitudes[i] || minDb;
+        const magnitude = processedMagnitudes[i] || minDb;
         ctx.fillStyle = magnitudeToColor(magnitude);
         ctx.fillRect(i, canvasHeight - 1, 1, 1);
     }
 }
 
-function resizeData(data: any, targetWidth: number) {
+function resizeData(data: Float32Array, targetWidth: number): Float32Array {
     if (!data || data.length === 0 || targetWidth === 0) {
         return new Float32Array(targetWidth);
     }
@@ -61,29 +65,46 @@ function resizeData(data: any, targetWidth: number) {
     return resized;
 }
 
+// --- Render Loop ---
+function renderLoop() {
+    animationFrameId = requestAnimationFrame(renderLoop);
+
+    if (latestMagnitudes) {
+        draw(latestMagnitudes);
+        latestMagnitudes = null; // Clear buffer after drawing
+    }
+}
+
+// --- Public Method ---
+// This function will be called from the parent component (or worker handler)
+function setLatestData(data: Float32Array) {
+    latestMagnitudes = data;
+}
+
+defineExpose({ setLatestData });
+
 // --- Lifecycle ---
 
 onMounted(() => {
-    const canvas: any = canvasRef.value;
+    const canvas = canvasRef.value;
     if (canvas) {
         canvas.width = canvas.clientWidth;
         canvas.height = canvas.clientHeight;
         ctx = canvas.getContext('2d');
 
-        ctx.fillStyle = magnitudeToColor(minDb);
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (ctx) {
+            ctx.fillStyle = magnitudeToColor(minDb);
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
+        renderLoop(); // Start the render loop
     }
 });
 
-// --- Watcher ---
-watch(() => props.magnitudes, (newMagnitudes) => {
-    if (!ctx || !canvasRef.value || !newMagnitudes || newMagnitudes.length === 0) {
-        return;
+onUnmounted(() => {
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
     }
-
-    const canvasWidth: number = canvasRef.value.width;
-    const processedMagnitudes = resizeData(newMagnitudes, canvasWidth);
-    draw(processedMagnitudes);
 });
 
 </script>
