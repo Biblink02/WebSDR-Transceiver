@@ -3,11 +3,9 @@
 
 <template>
   <nav class="fixed top-0 left-0 w-full text-white font-serif font-semibold text-2xl px-1 py-4 z-50">
-    <div class="max-w-full w-full mx-auto flex items-center">
-      <div class="w-48 flex justify-center">
-        <img src="/resources/images/logo.ico" alt="Logo" class="h-16" />
-      </div>
-      <div class="flex space-x-6 ml-0 flex-1 justify-center">
+    <div class="max-w-full w-full mx-auto flex items-center justify-center">
+      <div class="flex space-x-6 justify-center items-center">
+        <img src="/resources/images/logo.ico" alt="Logo" class="h-16 mr-4" />
         <router-link
         to="/"
         class="px-3 py-2 transition-transform duration-300 hover:scale-125 whitespace-nowrap"

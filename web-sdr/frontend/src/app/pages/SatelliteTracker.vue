@@ -14,11 +14,11 @@ const toggleDarkMode = useToggle(isDarkMode)
     <ParticlesBackground class="absolute inset-0 z-0" />
 
     <!-- Contenu principal -->
-    <div class="relative z-10 w-full">
+    <div class="relative z-10 w-full pt-7">
       <!-- Dark Mode Toggle -->
       <button
         @click="toggleDarkMode()"
-        class="lg:fixed absolute cursor-pointer top-9 right-9 text-favourite_yellow z-50"
+          class="lg:fixed absolute cursor-pointer top-9 right-9 text-favourite_yellow"
         :title="'Toggle ' + (isDarkMode ? 'Light' : 'Dark') + ' Mode'"
       >
         <div class="hidden dark:block">
@@ -32,29 +32,29 @@ const toggleDarkMode = useToggle(isDarkMode)
       <!-- Navbar -->
       <NavbarLayout class="relative z-20" />
 
-      <!-- Header pour la page Satellite Tracker -->
-      <div class="text-center py-2">
-        <h1 class="text-2xl font-bold text-white drop-shadow-lg mb-1">
-          Satellite Tracker
-        </h1>
-        <p class="text-sm text-white drop-shadow-md">
-          Track satellites in real-time using sattrack.app
-        </p>
-      </div>
-      
-      <!-- Container pour l'embedding -->
-      <div class="w-full min-h-[930px] h-[calc(100vh-200px)] px-1 pb-1 flex items-center justify-center overflow-hidden">
-        <iframe
-          src="https://sattrack.app?zoom=0.6"
-          class="w-full h-full border-0 rounded-lg shadow-2xl"
-          title="Satellite Tracker"
-          allowfullscreen
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-        ></iframe>
-      </div>
+      <!-- Contenu de la page -->
+      <div class="w-full">
+        <!-- Header pour la page Satellite Tracker -->
+        <div class="text-center py-2">
+          <h1 class="text-2xl font-bold text-white drop-shadow-lg mb-1">
+            Satellite Tracker
+          </h1>
+        </div>
+        
+        <!-- Container pour l'embedding -->
+        <div class="w-full min-h-[930px] h-[calc(100vh-200px)] px-1 pb-1 flex items-center justify-center overflow-hidden">
+          <iframe
+            src="https://sattrack.app?zoom=0.6"
+            class="w-full h-full border-0 rounded-lg shadow-2xl"
+            title="Satellite Tracker"
+            allowfullscreen
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+          ></iframe>
+        </div>
 
-      <!-- Footer -->
-      <FooterLayout class="relative z-20" />
+        <!-- Footer -->
+        <FooterLayout class="relative z-20" />
+      </div>
     </div>
   </div>
 </template>
