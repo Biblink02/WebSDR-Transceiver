@@ -37,6 +37,7 @@ const physicsSettings = reactive({
             <div class="max-w-6xl mx-auto space-y-6">
                 <!-- Graph Placeholder -->
                 <SignalContainer/>
+
                 <!-- Slider Control -->
                 <FrequencyControl v-model:frequency="frequency"/>
 

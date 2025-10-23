@@ -54,7 +54,7 @@ class UdpDataProtocol(asyncio.DatagramProtocol):
 
     def datagram_received(self, data: bytes, addr: tuple):
         """Called when a UDP datagram is received."""
-        logging.info(f"UDP Data received from {addr}: {data}")
+        logging.info(f"UDP Data received from {addr}")
 
         self.loop.create_task(self.sio_server.emit(CONFIG['UPDATE_EVENT'], data))
 
