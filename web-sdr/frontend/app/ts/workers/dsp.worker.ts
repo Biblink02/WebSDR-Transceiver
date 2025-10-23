@@ -145,6 +145,7 @@ self.onmessage = (event: MessageEvent) => {
 
         case 'toggleConnection':
             if (socket?.connected) {
+                pendingData=null;
                 socket.disconnect();
             } else {
                 connectSocket();
