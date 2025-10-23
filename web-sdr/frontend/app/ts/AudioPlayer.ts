@@ -7,7 +7,7 @@
  * @param audioSampleRate - The audio sample rate (e.g. 48000)
  */
 
-function playAudio(samples: number[] | Float32Array, audioSampleRate: number) {
+export function playAudio(samples: number[] | Float32Array, audioSampleRate: number) {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 
     const numSamples = samples.length;

@@ -291,6 +291,35 @@ blocks:
     coordinate: [528, 500.0]
     rotation: 0
     state: true
+- name: qtgui_sink_x_0
+  id: qtgui_sink_x
+  parameters:
+    affinity: ''
+    alias: ''
+    bw: samp_rate
+    comment: ''
+    fc: '0'
+    fftsize: '1024'
+    gui_hint: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    name: '""'
+    plotconst: 'True'
+    plotfreq: 'True'
+    plottime: 'True'
+    plotwaterfall: 'True'
+    rate: '10'
+    showports: 'False'
+    showrf: 'False'
+    type: complex
+    wintype: window.WIN_BLACKMAN_hARRIS
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [200, 628.0]
+    rotation: 0
+    state: enabled
 - name: s2v
   id: blocks_stream_to_vector
   parameters:
@@ -336,6 +365,7 @@ connections:
 - [fft_vxx_0, '0', c2mag, '0']
 - [iio_pluto_source_0, '0', blocks_stream_to_tagged_stream_0_0, '0']
 - [iio_pluto_source_0, '0', low_pass_filter_0, '0']
+- [iio_pluto_source_0, '0', qtgui_sink_x_0, '0']
 - [low_pass_filter_0, '0', s2v, '0']
 - [pdu_tagged_stream_to_pdu_0, pdus, network_socket_pdu_0, pdus]
 - [pdu_tagged_stream_to_pdu_0_0, pdus, network_socket_pdu_0_0, pdus]

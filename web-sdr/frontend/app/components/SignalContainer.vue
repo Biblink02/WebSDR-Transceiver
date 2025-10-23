@@ -2,27 +2,29 @@
 import {onMounted, onUnmounted, ref} from 'vue';
 import AudioComponent from "&/components/AudioComponent.vue";
 import SpectrogramComponent from "&/components/SpectrogramComponent.vue";
+import MyWorker from '@/workers/dsp.worker.ts?worker'
 
 
-// --- State ---
-// Questi ref sono ora controllati *dal* Worker
 const isConnected = ref(false);
 const statusText = ref('CONNECTING');
 const fftMagnitudes = ref<Float32Array | null>(null);
-const audioSamples = ref<Float32Array | null>(null);
+const audioData = ref<Float32Array | null>(null);
 
-// Riferimento al nostro Worker
 let dspWorker: Worker | null = null;
 
-// Informazioni da passare al Worker
 const wsUrl = import.meta.env.VITE_WS_URL ?? 'http://localhost:8001';
 const wsEvent = import.meta.env.VITE_WS_EVENT ?? 'update';
 
+
+//demod
+
 onMounted(() => {
 
-    dspWorker = new Worker(new URL('@/workers/dsp.worker.ts', import.meta.url), {
-        type: 'module'
-    });
+
+    //play audio
+
+
+    dspWorker = new MyWorker()
 
     dspWorker.onmessage = (event: MessageEvent) => {
         const {type, payload} = event.data;
@@ -36,7 +38,7 @@ onMounted(() => {
                 fftMagnitudes.value = payload;
                 break;
             case 'audioData':
-                audioSamples.value = payload;
+                audioData.value = payload;
                 break;
             case 'error':
                 console.error("Error from DSP Worker:", payload);
@@ -61,6 +63,7 @@ const toggleConnection = () => {
     if (dspWorker) {
         dspWorker.postMessage({type: 'toggleConnection'});
     }
+
 };
 </script>
 
@@ -91,7 +94,7 @@ const toggleConnection = () => {
                     class="w-full h-80 rounded-md"
                 />
 
-                <AudioComponent :samples="audioSamples"/>
+                <AudioComponent :samples="audioData"/>
             </div>
         </template>
     </Card>

@@ -1,47 +1,22 @@
-import {
-    osc,
-    OscType,
-    mulC,
-    fir,
-    sinc,
-    window,
-    kaiser,
-    type IProc,
-} from "@thi.ng/dsp";
-import { map, iterator, comp, downsample } from "@thi.ng/transducers";
+import { biquadLP, cos, osc, sin, type IProc } from "@thi.ng/dsp";
+import { comp, iterator, map, takeNth } from "@thi.ng/transducers";
 
-// Define a type alias for complex numbers as [real, imag]
 type Complex = number[];
 
 /**
- * Creates a stateful Numerical Controlled Oscillator (NCO) generator.
- * @param freqRel - Normalized frequency (frequency / sampleRate)
+ * Creates a stateful transducer-like map function for filtering complex signals
+ * using a Biquad Low-Pass filter.
+ * @param cutoff - Normalized cutoff frequency (0 .. 0.5)
+ * @param q - Filter Q (resonance)
  */
-/* NOTA: Questa funzione personalizzata è stata rimossa per utilizzare
-   i generatori 'osc()' integrati, come da richiesta.
-const createNCO = (freqRel: number): (() => Complex) => {
-    let phase = 0;
-    const delta = freqRel * Math.PI * 2;
-    return (): Complex => {
-        // e^(j*phase) = cos(phase) + j*sin(phase)
-        // We need the conjugate for down-shifting: e^(-j*phase)
-        const res: Complex = [Math.cos(phase), -Math.sin(phase)];
-        phase += delta;
-        return res;
-    };
-};
-*/
+const complexFilter = (cutoff: number, q: number): ((sample: Complex) => Complex) => {
+    // Instantiate separate filters for the I and Q channels
+    const filterI: IProc<number, number> = biquadLP(cutoff, q);
+    const filterQ: IProc<number, number> = biquadLP(cutoff, q);
 
-/**
- * Creates a stateful transducer-like map function for FIR filtering complex signals.
- * @param taps - FIR filter tap coefficients
- */
-const complexFIR = (taps: number[]): ((sample: Complex) => Complex) => {
-    const firI: IProc<number, number> = fir(taps);
-    const firQ: IProc<number, number> = fir(taps);
     return (sample: Complex): Complex => [
-        firI.next(sample[0]).value,
-        firQ.next(sample[1]).value,
+        filterI.next(sample[0]).value,
+        filterQ.next(sample[1]).value,
     ];
 };
 
@@ -71,30 +46,41 @@ export function demodulateSSB(
         );
     }
 
+    // Calculate normalized frequencies for the LO and the filter
     const cutoffRel = bandwidth / sampleRate;
-    const numTaps = 101;
-    const taps = window(
-        kaiser(numTaps, 5.0), // Kaiser window (beta=5 is a good general-purpose choice)
-        sinc(numTaps, cutoffRel) // Sinc kernel for LPF
-    );
-
     const freqRel = frequency / sampleRate;
-    const loReal = osc(OscType.COSINE, freqRel);
-    const loImag = osc(OscType.SINE, freqRel);
-    const filter = complexFIR(taps);
+
+    // Create oscillators for the Local Oscillator (LO)
+    const loReal = osc(cos, freqRel);
+    const loImag = osc(sin, freqRel);
+
+    // Create the complex filter using the documented biquadLP
+    // 0.707 is a standard "Butterworth" Q value (no resonance)
+    const filter = complexFilter(cutoffRel, 0.707);
 
     const ssbDemodChain = comp(
-        map((sample: Complex) =>
-            mulC(sample, [loReal.next().value, -loImag.next().value])
-        ),
+        // Step 1: Frequency shift (complex multiplication)
+        map((sample: Complex) => {
+            const I = sample[0];
+            const Q = sample[1];
+            const loR = loReal.next().value;
+            // Use conjugate of LO: [R, -I]
+            const loI = -loImag.next().value;
+
+            // Complex multiplication: (I + iQ) * (loR + iloI)
+            const outI = I * loR - Q * loI; // Real part: ac - bd
+            const outQ = I * loI + Q * loR; // Imag part: ad + bc
+
+            return [outI, outQ];
+        }),
+        // Step 2: Low-pass filter the I/Q signal
         map(filter),
-        downsample(decimationFactor),
+        // Step 3: Decimate (downsample) to the target audio rate
+        // Corretto: Sostituito 'downsample' con 'takeNth'
+        takeNth(decimationFactor),
+        // Step 4: Take the Real (I) part as the final audio signal
         map((sample: Complex) => sample[0])
     );
 
-    const audioOutput = [...iterator(ssbDemodChain, complexSignal)];
-
-    return audioOutput;
+    return Float32Array.from(iterator(ssbDemodChain, complexSignal));
 }
-
-
