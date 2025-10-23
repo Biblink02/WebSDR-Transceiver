@@ -19,7 +19,7 @@
         <!-- Center section: Navigation links -->
         <div class="footer__nav">
           <router-link
-            v-for="item in ['Home', 'SDR', 'About', 'Resources']"
+            v-for="item in ['Home', 'SDR', 'About', 'Resources', 'satellite-tracker']"
             :key="item"
             :to="item === 'Home' ? '/' : `/${item.toLowerCase()}`"
             class="footer__link"
