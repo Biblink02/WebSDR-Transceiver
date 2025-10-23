@@ -2,7 +2,7 @@
 </script>
 
 <template>
-  <nav class="fixed top-0 left-0 w-full text-white font-serif font-semibold text-2xl px-1 py-4 z-50">
+  <nav class="fixed top-0 left-0 w-full text-white font-mono font-semibold text-2xl px-1 py-4 z-50">
     <div class="max-w-full w-full mx-auto flex items-center justify-center">
       <div class="flex space-x-6 justify-center items-center">
         <img src="/resources/images/logo.ico" alt="Logo" class="h-16 mr-4" />

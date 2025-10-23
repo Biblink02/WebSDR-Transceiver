@@ -11,7 +11,7 @@ const teamMembers = [
     thumbnail: "https://fr.web.img5.acsta.net/c_310_420/pictures/19/06/05/12/04/5240675.jpg"},
   {
     id: 2,
-    name: "vedant",
+    name: "Vedant",
     country: "germany",
     role: "Computer Science Student",
     description: "Bob develops the receiver and WebSDR frontend for real-time waterfall and audio streaming.",
@@ -69,8 +69,8 @@ const flagUrls = {
 
 <template>
   <AppLayout>
-    <div class="max-w-7xl mx-auto p-15 font-serif">
-      <h1 class="text-5xl font-bold mb-14 text-center select-none text-white">
+    <div class="max-w-7xl mx-auto p-15 font-mono">
+      <h1 class="text-5xl font-mono mb-14 text-center select-none text-white">
 
         Meet Our Team
       </h1>
