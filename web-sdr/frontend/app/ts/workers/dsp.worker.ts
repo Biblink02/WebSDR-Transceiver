@@ -1,10 +1,12 @@
-import { io, Socket } from 'socket.io-client';
-import { fft } from '@thi.ng/dsp';
+import {io, Socket} from 'socket.io-client';
+import {fft} from '@thi.ng/dsp';
+import {calculateMagnitudesDb, fftShift} from "@/GraphicsHelper";
 
 let socket: Socket | null = null;
 let wsUrl = '';
 let wsEvent = '';
-
+let isProcessing = false;
+let pendingData: Float32Array | null = null;
 
 function connectSocket() {
     if (socket) {
@@ -18,7 +20,7 @@ function connectSocket() {
     socket.on('connect', () => {
         self.postMessage({
             type: 'status',
-            payload: { status: 'CONNECTED', isConnected: true }
+            payload: {status: 'CONNECTED', isConnected: true}
         });
         console.log('Worker: Socket.IO connected');
     });
@@ -26,7 +28,7 @@ function connectSocket() {
     socket.on('disconnect', () => {
         self.postMessage({
             type: 'status',
-            payload: { status: 'DISCONNECTED', isConnected: false }
+            payload: {status: 'DISCONNECTED', isConnected: false}
         });
         console.log('Worker: Socket.IO disconnected');
     });
@@ -34,9 +36,9 @@ function connectSocket() {
     socket.on('connect_error', (err) => {
         self.postMessage({
             type: 'status',
-            payload: { status: 'ERROR', isConnected: false }
+            payload: {status: 'ERROR', isConnected: false}
         });
-        self.postMessage({ type: 'error', payload: err.message });
+        self.postMessage({type: 'error', payload: err.message});
         console.error('Worker: Socket.IO connection error:', err.message);
     });
 
@@ -55,18 +57,45 @@ function connectSocket() {
 
             if (timeDomainData.length === 0) return;
 
-            processForGraphic(timeDomainData);
-            processForAudio(timeDomainData);
+            if (isProcessing) {
+                pendingData = timeDomainData;
+            } else {
+                isProcessing = true;
+                startProcessing(timeDomainData);
+            }
 
         } catch (e) {
-            self.postMessage({ type: 'error', payload: (e as Error).message });
+            self.postMessage({type: 'error', payload: (e as Error).message});
             console.error("Worker: Error processing raw data:", e);
+            isProcessing = false;
+            pendingData = null;
         }
     });
+
+    function startProcessing(data: Float32Array) {
+        setTimeout(() => {
+            try {
+                processForGraphic(data);
+                processForAudio(data);
+                console.log("Data elaborated correctly...");
+            } catch (e) {
+                self.postMessage({type: 'error', payload: (e as Error).message});
+                console.error("Worker: Error processing raw data:", e);
+            } finally {
+                if (pendingData) {
+                    const nextData = pendingData;
+                    pendingData = null;
+                    startProcessing(nextData);
+                } else {
+                    isProcessing = false;
+                }
+            }
+        }, 0);
+    }
 }
 
 function processForGraphic(timeDomainData: Float32Array): void {
-    const N = timeDomainData.length / 2; // N = 1024
+    const N = timeDomainData.length / 2;
 
     const real = new Float32Array(N);
     const imag = new Float32Array(N);
@@ -76,12 +105,14 @@ function processForGraphic(timeDomainData: Float32Array): void {
         imag[i] = timeDomainData[i * 2 + 1];
     }
     const fftData = fft([real, imag]);
+    const magnitudesDb = calculateMagnitudesDb(fftData, -100);
+    const shiftedMagnitudes = fftShift(magnitudesDb);
     self.postMessage(
-        {type:'fftData', payload: fftData},
-        {transfer: fftData}
-    )
-
+        {type: 'fftData', payload: shiftedMagnitudes},
+        {transfer: [shiftedMagnitudes.buffer]}
+    );
 }
+
 function processForAudio(timeDomainData: Float32Array): void {
     //TODO
 }
@@ -89,7 +120,7 @@ function processForAudio(timeDomainData: Float32Array): void {
 
 // Worker listener
 self.onmessage = (event: MessageEvent) => {
-    const { type, payload } = event.data;
+    const {type, payload} = event.data;
 
     switch (type) {
         case 'init':
@@ -97,7 +128,7 @@ self.onmessage = (event: MessageEvent) => {
             wsEvent = payload.wsEvent;
             self.postMessage({
                 type: 'status',
-                payload: { status: 'CONNECTING', isConnected: false }
+                payload: {status: 'CONNECTING', isConnected: false}
             });
             connectSocket();
             break;

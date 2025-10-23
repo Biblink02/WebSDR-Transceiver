@@ -3,6 +3,7 @@ import {onMounted, onUnmounted, ref} from 'vue';
 import AudioComponent from "&/components/AudioComponent.vue";
 import SpectrogramComponent from "&/components/SpectrogramComponent.vue";
 
+
 // --- State ---
 // Questi ref sono ora controllati *dal* Worker
 const isConnected = ref(false);
@@ -18,6 +19,7 @@ const wsUrl = import.meta.env.VITE_WS_URL ?? 'http://localhost:8001';
 const wsEvent = import.meta.env.VITE_WS_EVENT ?? 'update';
 
 onMounted(() => {
+
     dspWorker = new Worker(new URL('@/workers/dsp.worker.ts', import.meta.url), {
         type: 'module'
     });
@@ -31,11 +33,9 @@ onMounted(() => {
                 isConnected.value = payload.isConnected;
                 break;
             case 'fftData':
-                // FFT signal ready to be displayed
                 fftMagnitudes.value = payload;
                 break;
             case 'audioData':
-                // Audio data ready to be reproduced
                 audioSamples.value = payload;
                 break;
             case 'error':
