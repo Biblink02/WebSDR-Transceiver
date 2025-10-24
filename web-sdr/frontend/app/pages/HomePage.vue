@@ -1,52 +1,48 @@
 <script setup lang="ts">
-import {ref, reactive} from 'vue';
-import FrequencyControl from "&/components/FrequencyControl.vue";
-import TabbedSettings from "&/components/TabbedSettings.vue";
-import AppLayout from "&/layouts/AppLayout.vue";
-import SignalContainer from "&/components/SignalContainer.vue";
+import AppLayout from '&/layouts/AppLayout.vue'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-// Reactive state for the main frequency slider
-const frequency = ref(50);
+const router = useRouter()
+const hovered = ref(false)
 
-// Reactive state for the tabbed settings panels
-const audioSettings = reactive({
-    volume: 70,
-    sampleRate: null,
-    filter: '',
-});
-
-const graphSettings = reactive({
-    fftSize: null,
-    refreshRate: null,
-    colorScheme: '',
-    yAxisScale: 50,
-});
-
-const physicsSettings = reactive({
-    centerFreq: null,
-    bandwidth: null,
-    gain: 30,
-    modulation: '',
-});
+function goToSdr() {
+  router.push('/sdr')
+}
 </script>
 
-
 <template>
-    <AppLayout>
-        <main class="p-4">
-            <div class="max-w-6xl mx-auto space-y-6">
-                <!-- Graph Placeholder -->
-                <SignalContainer/>
-
-                <!-- Slider Control -->
-                <FrequencyControl v-model:frequency="frequency"/>
-
-                <!-- Tabbed Settings -->
-                <TabbedSettings v-model:audio-settings="audioSettings"
-                                v-model:graph-settings="graphSettings"
-                                v-model:physics-settings="physicsSettings"/>
-            </div>
-        </main>
-    </AppLayout>
-
+  <AppLayout>
+    <div class="relative flex-1 w-full min-h-screen">
+      <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="max-w-4xl w-full text-center space-y-8">
+          <h1 class="text-5xl font-mono text-white drop-shadow-lg">
+            SatCom project
+          </h1>
+          <p class="text-xl text-white font-mono drop-shadow-md leading-relaxed">
+            This project, developed by group PRI05, aims to create software for a ground station capable of receiving data from the QO-100 geostationary satellite. The software displays  the demodulated received signals via a waterfall chart, with the additional feature of hearing the received audio.
+          </p>
+          <button
+            @mouseenter="hovered = true"
+            @mouseleave="hovered = false"
+            @click="goToSdr"
+            class="mt-8 bg-blue-600/50 hover:bg-blue-700/70 text-white focus:outline-none focus:ring-4 focus:ring-blue-500/50 rounded-lg px-12 py-4 text-2xl font-semibold shadow-lg transition-all duration-300 backdrop-blur-sm"
+          >
+            Start
+          </button>
+        </div>
+      </div>
+    </div>
+  </AppLayout>
 </template>
+
+
+<style scoped>
+
+.bg-nightblue {
+  background-color: #001f3f;
+}
+.bg-nightblue:hover {
+  background-color: #003366;
+}
+</style>
