@@ -3,6 +3,7 @@
 </script>
 
 <template>
+<<<<<<< HEAD:web-sdr/frontend/src/app/layouts/FooterLayout.vue
   <footer class="footer">
     <div class="footer__container">
       <div class="footer__layout">
@@ -43,6 +44,11 @@
       </div>
     </div>
   </footer>
+=======
+    <footer>
+        TODO footer
+    </footer>
+>>>>>>> feat/frontend:web-sdr/frontend/app/layouts/FooterLayout.vue
 </template>
 
 <style>
