@@ -4,11 +4,6 @@ import { useDark, useToggle } from '@vueuse/core'
 import NavbarLayout from './NavbarLayout.vue'
 import FooterLayout from './FooterLayout.vue'
 import ParticlesBackground from '../components/ParticlesBackground.vue'
-=======
-import {useDark, useToggle} from '@vueuse/core'
-import FooterLayout from "./FooterLayout.vue";
-import NavbarComponent from "../components/NavbarComponent.vue";
->>>>>>> feat/frontend:web-sdr/frontend/app/layouts/AppLayout.vue
 
 const isDarkMode = useDark()
 const toggleDarkMode = useToggle(isDarkMode)
