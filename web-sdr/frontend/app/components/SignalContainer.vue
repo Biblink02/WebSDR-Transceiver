@@ -69,12 +69,18 @@ onUnmounted(() => {
     }
 });
 
-const toggleConnection = () => {
+function toggleConnection(): void {
     if (dspWorker) {
         dspWorker.postMessage({type: 'toggleConnection'});
     }
 
-};
+}
+
+function toggleAudio(): void {
+    if (dspWorker) {
+        dspWorker.postMessage({type: 'toggleAudio'})
+    }
+}
 </script>
 
 <template>
@@ -104,7 +110,7 @@ const toggleConnection = () => {
                     class="w-full h-80 rounded-md"
                 />
 
-                <AudioComponent :samples="audioData"/>
+                <AudioComponent :samples="audioData" @toggle-audio="toggleAudio()"/>
             </div>
         </template>
     </Card>

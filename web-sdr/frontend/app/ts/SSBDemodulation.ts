@@ -36,14 +36,14 @@ export function demodulateSSB(
     audioSampleRate: number,
     frequency: number,
     bandwidth: number
-): number[] {
+): Float32Array<ArrayBuffer> {
 
     const decimationFactor = Math.round(sampleRate / audioSampleRate);
     if (decimationFactor < 1 || sampleRate % audioSampleRate !== 0) {
-        console.warn(
+        /*console.warn(
             `Sample rate ${sampleRate} is not an integer multiple of audio rate ${audioSampleRate}.
             Using decimation factor ${decimationFactor}, actual audio rate may vary.`
-        );
+        );*/
     }
 
     // Calculate normalized frequencies for the LO and the filter

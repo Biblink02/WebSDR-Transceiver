@@ -3,12 +3,13 @@ import {fft} from '@thi.ng/dsp';
 import {calculateMagnitudesDb, fftShift} from "@/GraphicsHelper";
 import {demodulateSSB} from "@/SSBDemodulation";
 
-
 let socket: Socket | null = null;
 let wsUrl = '';
 let wsEvent = '';
 let isProcessing = false;
 let pendingData: Float32Array | null = null;
+let
+    processAudio = false;
 
 function connectSocket() {
     if (socket) {
@@ -78,8 +79,8 @@ function connectSocket() {
         setTimeout(() => {
             try {
                 processForGraphic(data);
-                processForAudio(data);
-                console.log("Data elaborated correctly...");
+                //TODO move audio processing to audioWorklet
+                if (processAudio) processForAudio(data);
             } catch (e) {
                 self.postMessage({type: 'error', payload: (e as Error).message});
                 console.error("Worker: Error processing raw data:", e);
@@ -118,11 +119,11 @@ function processForGraphic(timeDomainData: Float32Array): void {
 function processForAudio(timeDomainData: Float32Array): void {
     const audioSampleRate = 48000;
     const sampleRate = 1024;
-    const frequency = 2.4 * 10**9;
+    const frequency = 2.4 * 10 ** 9;
     const bandwidth = 4000;
     const audioData = demodulateSSB(timeDomainData, sampleRate, audioSampleRate, frequency, bandwidth);
     self.postMessage(
-        {type:'audioData', payload: audioData},
+        {type: 'audioData', payload: audioData},
         {transfer: [audioData.buffer]}
     )
 }
@@ -145,7 +146,7 @@ self.onmessage = (event: MessageEvent) => {
 
         case 'toggleConnection':
             if (socket?.connected) {
-                pendingData=null;
+                pendingData = null;
                 socket.disconnect();
             } else {
                 connectSocket();
@@ -154,6 +155,10 @@ self.onmessage = (event: MessageEvent) => {
 
         case 'disconnect':
             socket?.disconnect();
+            break;
+
+        case 'toggleAudio':
+            processAudio = !processAudio;
             break;
     }
 };

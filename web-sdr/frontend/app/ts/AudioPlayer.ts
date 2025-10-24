@@ -6,15 +6,18 @@
  * @param samples - The array of audio samples (e.g. [-0.5, 0.1, 0.8, ...])
  * @param audioSampleRate - The audio sample rate (e.g. 48000)
  */
+const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
 
 export function playAudio(samples: number[] | Float32Array, audioSampleRate: number) {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-
+    console.log("Samples:\n")
+    console.log(samples)
+    let i=1000000000000;
+    while(--i);
     const numSamples = samples.length;
     const audioBuffer = audioContext.createBuffer(
         1,
         numSamples,
-        audioSampleRate
+        audioContext.sampleRate
     );
     const channelData = audioBuffer.getChannelData(0);
 

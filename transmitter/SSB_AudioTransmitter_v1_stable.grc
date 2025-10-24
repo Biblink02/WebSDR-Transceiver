@@ -64,6 +64,7 @@ blocks:
     low_cutoff_freq: '300'
     samp_rate: samp_rate
     type: complex_band_pass
+    value: ''
     width: '200'
     win: window.WIN_HAMMING
   states:
@@ -225,7 +226,7 @@ blocks:
     affinity: ''
     alias: ''
     attenuation1: '10.0'
-    bandwidth: '3000000'
+    bandwidth: '2000000'
     buffer_size: '32768'
     comment: ''
     cyclic: 'False'
@@ -434,3 +435,4 @@ connections:
 
 metadata:
   file_format: 1
+  grc_version: 3.10.12.0

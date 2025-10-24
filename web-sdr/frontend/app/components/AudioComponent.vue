@@ -8,9 +8,9 @@ const props = defineProps({
     samples: {
         type: [Float32Array, Array],
         default: () => null
-    }
+    },
 });
-
+const emits = defineEmits(['toggleAudio']);
 
 watch(() => props.samples, (newSamples) => {
     playAudio(newSamples, 1024);
@@ -21,7 +21,7 @@ watch(() => props.samples, (newSamples) => {
 </script>
 
 <template>
-<div></div>
+    <Button class="cursor-pointer mt-6 mx-auto" @click="emits('toggleAudio')">Toggle Audio</Button>
 </template>
 
 <style scoped>
