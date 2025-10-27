@@ -1,0 +1,7 @@
+apiVersion: sessions.example.com/v1alpha1
+kind: UserSession
+metadata:
+  name: test-session-2
+spec:
+  userId: "test-user-2"
+

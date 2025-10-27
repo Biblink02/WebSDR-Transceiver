@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: websocket-broker
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: broker-sa
+  namespace: websocket-broker
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: broker-usersession-cr-writer
+rules:
+  - apiGroups: ["sessions.example.com"]
+    resources: ["usersessions"]
+    verbs: ["get", "list", "create", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: broker-usersession-cr-writer-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: broker-usersession-cr-writer
+subjects:
+  - kind: ServiceAccount
+    name: broker-sa
+    namespace: websocket-broker
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: websocket-broker
+  namespace: websocket-broker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: websocket-broker
+  template:
+    metadata:
+      labels:
+        app: websocket-broker
+    spec:
+      serviceAccountName: broker-sa
+      volumes:
+        - name: bin
+          emptyDir: {}
+        - name: script
+          configMap:
+            name: broker-script
+            defaultMode: 0755
+      initContainers:
+        - name: fetch-websocketd
+          image: alpine:3.20
+          command: ["/bin/sh","-c"]
+          args:
+            - |
+              apk add --no-cache curl unzip && \
+              curl -fsSL -o /tmp/websocketd.zip https://github.com/joewalnes/websocketd/releases/download/v0.4.1/websocketd-0.4.1-linux_amd64.zip && \
+              cd /tmp && unzip -o /tmp/websocketd.zip && \
+              mv websocketd /opt/bin/websocketd && \
+              chmod +x /opt/bin/websocketd && \
+              rm -rf /tmp/websocketd.zip /tmp/README.md /tmp/LICENSE /tmp/CHANGES
+          volumeMounts:
+            - name: bin
+              mountPath: /opt/bin
+      containers:
+        - name: broker
+          image: bitnami/kubectl:latest
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh","-lc","/opt/bin/websocketd --port=8080 --devconsole /usr/local/bin/gestore-sessione.sh"]
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KUBECTL_BIN
+              value: kubectl
+            - name: KUBERNETES_SERVICE_HOST
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: KUBERNETES_SERVICE_PORT
+              value: "6443"
+          volumeMounts:
+            - name: bin
+              mountPath: /opt/bin
+            - name: script
+              mountPath: /usr/local/bin/gestore-sessione.sh
+              subPath: gestore-sessione.sh
