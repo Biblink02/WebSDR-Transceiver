@@ -1,0 +1,57 @@
+# sdr-server.yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: sdr-server
+spec:
+  type: ClusterIP
+  selector:
+    app: sdr-server
+  ports:
+    - name: iq-stream
+      port: 5000
+      targetPort: 5000
+      protocol: TCP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sdr-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sdr-server
+  template:
+    metadata:
+      labels:
+        app: sdr-server
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: hardware
+                    operator: In
+                    values:
+                      - sdr-true
+      # ---------------------------------
+      containers:
+        - name: sdr-server-container
+          image: your-repo/gnu-sdr-server-real:latest #TODO
+          imagePullPolicy: Always
+          ports:
+            - name: iq-stream
+              containerPort: 5000
+              protocol: TCP
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /dev/bus/usb
+              name: usb-devices
+      volumes:
+        - name: usb-devices
+          hostPath:
+            path: /dev/bus/usb

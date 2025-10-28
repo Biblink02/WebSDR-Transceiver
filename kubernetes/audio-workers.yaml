@@ -1,0 +1,67 @@
+# This is the Headless Service. It does NOT do load balancing.
+# It provides the stable, unique DNS names for each Pod.
+# e.g., audio-worker-0.audio-workers-headless.default.svc.cluster.local
+apiVersion: v1
+kind: Service
+metadata:
+  name: audio-workers-headless
+spec:
+  clusterIP: None # This makes it "headless"
+  selector:
+    app: audio-worker
+  ports:
+    - name: control
+      port: 5001       # Port for ZMQ/control messages TODO
+      targetPort: 5001
+---
+# This is the StatefulSet for the "Hot Pool".
+# It creates a fixed number of pre-warmed workers.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: audio-worker
+spec:
+  # This MUST match the headless Service name
+  serviceName: "audio-workers-headless"
+
+  # Concurrent user limit
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: audio-worker
+  template:
+    metadata:
+      labels:
+        app: audio-worker
+    spec:
+      containers:
+        - name: audio-worker-container
+          image: your-repo/gnu-audio-worker:latest #TODO
+          imagePullPolicy: IfNotPresent
+          ports:
+            # The port for receiving "tune" commands #TODO
+            - name: control
+              containerPort: 5001
+              protocol: TCP #ZMQ uses TCP? #TODO
+            # The port for streaming audio out (can be any port)
+            - name: audio-out
+              containerPort: 5002
+              protocol: UDP # Audio is often good over UDP
+          env:
+            # Tell the worker its own name (e.g., "audio-worker-0")
+            # Useful for logging.
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            # Tell the worker where to find the I/Q stream
+            - name: SDR_HOST
+              value: "sdr-server.default.svc.cluster.local"
+            - name: SDR_PORT
+              value: "5000"
+            # Tell the worker where to send its audio stream
+            - name: BACKEND_HOST
+              value: "backend-controller.default.svc.cluster.local"
+            - name: BACKEND_AUDIO_PORT
+              value: "9002" # Assumed port, must match backend-controller service

@@ -1,0 +1,65 @@
+# This Service exposes the backend to the Ingress (for web)
+# and to the other workers (for audio/graphics data).
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-controller
+spec:
+  type: ClusterIP
+  selector:
+    app: backend-controller
+  ports:
+    # Port for web/Socket.IO traffic (from Ingress) TODO
+    - name: http-web
+      port: 80
+      targetPort: 8080
+    # Port for receiving data from the graphics-worker TODO
+    - name: graphics-in
+      port: 9001
+      targetPort: 9001
+    # Port for receiving audio from ALL audio-workers TODO
+    - name: audio-in
+      port: 9002
+      targetPort: 9002
+      protocol: UDP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-controller
+spec:
+  replicas: 2 # Can be scaled, as it's stateless
+  selector:
+    matchLabels:
+      app: backend-controller
+  template:
+    metadata:
+      labels:
+        app: backend-controller
+    spec:
+      containers:
+        - name: backend-controller-container
+          # TODO
+          image: your-repo/sdr-backend-controller:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: graphics
+              containerPort: 9001
+            - name: audio
+              containerPort: 9002
+              protocol: UDP
+          env:
+            - name: POOL_SIZE
+              value: "3"
+            - name: WORKER_HEADLESS_SERVICE
+              value: "audio-workers-headless.default.svc.cluster.local"
+            - name: WORKER_CONTROL_PORT
+              value: "5001"
+            - name: PORT
+              value: "8080" # Deve corrispondere a containerPort
+            - name: GRAPHICS_PORT
+              value: "9001" # Deve corrispondere al Service
+            - name: AUDIO_PORT
+              value: "9002" # Deve corrispondere al Service

@@ -2,7 +2,6 @@
 import {ref, onMounted, onUnmounted} from 'vue';
 
 // --- Props ---
-// Props are no longer needed for magnitudes
 defineProps({
     // You can keep other props if you have them
 });
@@ -13,14 +12,35 @@ let ctx: CanvasRenderingContext2D | null = null;
 let animationFrameId: number | null = null;
 
 // --- Data Buffer ---
+// Questo buffer ora contiene magnitudini LINEARI
 let latestMagnitudes: Float32Array | null = null;
 
-const minDb = -100; // Value for the colder color
-const maxDb = -20;  // Value for the hottest color
+// --- Auto-DB / AGC State ---
+let currentMaxDb = -20.0;
+let currentMinDb = -100.0;
+
+const dynamicRange = 80.0;
+const autoGainAttack = 0.1;
+const autoGainRelease = 0.005;
+
+// --- Funzione di conversione ---
+const NOISE_FLOOR_DB = -120.0; // Impedisce Math.log10(0) = -Infinity
+
+function linearToDb(data: Float32Array): Float32Array {
+    const dbData = new Float32Array(data.length);
+    for (let i = 0; i < data.length; i++) {
+        // 20 * log10(magnitudine)
+        const db = 20 * Math.log10(data[i]);
+        // Applica il "noise floor"
+        dbData[i] = db < NOISE_FLOOR_DB ? NOISE_FLOOR_DB : db;
+    }
+    return dbData;
+}
+
 
 // --- Canvas Drawing Functions ---
 
-function magnitudeToColor(magnitudeDb: number) {
+function magnitudeToColor(magnitudeDb: number, minDb: number, maxDb: number) {
     let norm = (magnitudeDb - minDb) / (maxDb - minDb);
     if (norm < 0) norm = 0;
     if (norm > 1) norm = 1;
@@ -29,20 +49,42 @@ function magnitudeToColor(magnitudeDb: number) {
     return `hsl(${hue}, 100%, 50%)`;
 }
 
-function draw(magnitudes: Float32Array) {
+// Draw ora accetta dati lineari e li converte
+function draw(linearMagnitudes: Float32Array) {
     if (!ctx || !canvasRef.value) return;
+
+    // --- 1. Converti in dB ---
+    const magnitudesDb = linearToDb(linearMagnitudes);
 
     const canvas = canvasRef.value;
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
 
-    const processedMagnitudes = resizeData(magnitudes, canvasWidth);
+    // --- 2. Trova il picco nei dati dB ---
+    let dataPeak = -Infinity;
+    for (let i = 0; i < magnitudesDb.length; i++) {
+        if (magnitudesDb[i] > dataPeak) dataPeak = magnitudesDb[i];
+    }
+    if (dataPeak === -Infinity) dataPeak = currentMaxDb;
+
+    // --- 3. Applica la logica AGC (Attack/Release) al MaxDB ---
+    if (dataPeak > currentMaxDb) {
+        currentMaxDb += (dataPeak - currentMaxDb) * autoGainAttack;
+    } else {
+        currentMaxDb -= (currentMaxDb - dataPeak) * autoGainRelease;
+    }
+
+    // --- 4. Calcola il MinDB in base al range dinamico ---
+    currentMinDb = currentMaxDb - dynamicRange;
+
+    // --- 5. Disegna la riga ---
+    const processedMagnitudes = resizeData(magnitudesDb, canvasWidth);
 
     ctx.drawImage(canvas, 0, 1, canvasWidth, canvasHeight - 1, 0, 0, canvasWidth, canvasHeight - 1);
 
     for (let i = 0; i < canvasWidth; i++) {
-        const magnitude = processedMagnitudes[i] || minDb;
-        ctx.fillStyle = magnitudeToColor(magnitude);
+        const magnitude = processedMagnitudes[i] || currentMinDb;
+        ctx.fillStyle = magnitudeToColor(magnitude, currentMinDb, currentMaxDb);
         ctx.fillRect(i, canvasHeight - 1, 1, 1);
     }
 }
@@ -70,13 +112,13 @@ function renderLoop() {
     animationFrameId = requestAnimationFrame(renderLoop);
 
     if (latestMagnitudes) {
-        draw(latestMagnitudes);
-        latestMagnitudes = null; // Clear buffer after drawing
+        draw(latestMagnitudes); // Passa i dati lineari a draw
+        latestMagnitudes = null;
     }
 }
 
 // --- Public Method ---
-// This function will be called from the parent component (or worker handler)
+// Questa funzione riceve i dati LINEARI dal genitore
 function setLatestData(data: Float32Array) {
     latestMagnitudes = data;
 }
@@ -93,11 +135,11 @@ onMounted(() => {
         ctx = canvas.getContext('2d');
 
         if (ctx) {
-            ctx.fillStyle = magnitudeToColor(minDb);
+            ctx.fillStyle = magnitudeToColor(currentMinDb, currentMinDb, currentMaxDb);
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        renderLoop(); // Start the render loop
+        renderLoop();
     }
 });
 
@@ -107,8 +149,6 @@ onUnmounted(() => {
     }
 });
 
-</script>
-
-<template>
+</script><template>
     <canvas ref="canvasRef"></canvas>
 </template>

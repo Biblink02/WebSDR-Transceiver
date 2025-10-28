@@ -2,39 +2,31 @@
 import {onMounted, onUnmounted, ref} from 'vue';
 import AudioComponent from "&/components/AudioComponent.vue";
 import SpectrogramComponent from "&/components/SpectrogramComponent.vue";
-import MyWorker from '@/workers/dsp.worker.ts?worker'
+import MyWorker from '@/workers/socket.worker.ts?worker'
+import {feedAudio} from "@/AudioPlayer";
 
 
 // --- State ---
-// These refs are now controlled *by* the Worker
 const isConnected = ref(false);
 const statusText = ref('CONNECTING');
-const fftMagnitudes = ref<Float32Array | null>(null);
 const audioData = ref<Float32Array | null>(null);
-const audioSamples = ref<Float32Array | null>(null);
 
 // Reference to our Worker
-let dspWorker: Worker | null = null;
+let socketWorker: Worker | null = null;
 
 // Reference to the SpectrogramComponent instance
 const spectrogramComponentRef = ref<InstanceType<typeof SpectrogramComponent> | null>(null);
 
 // Information to pass to the Worker
 const wsUrl = import.meta.env.VITE_WS_URL ?? 'http://localhost:8001';
-const wsEvent = import.meta.env.VITE_WS_EVENT ?? 'update';
-
-
-//demod
+// Get the specific event names from .env
+const wsEventGraphics = import.meta.env.VITE_WS_GRAPHICS_EVENT ?? 'update_graphic';
+const wsEventAudio = import.meta.env.VITE_WS_AUDIO_EVENT ?? 'update_audio';
 
 onMounted(() => {
-
-
-    //play audio
-
-
-    dspWorker = new MyWorker()
-
-    dspWorker.onmessage = (event: MessageEvent) => {
+    socketWorker = new MyWorker()
+    if(!socketWorker) return;
+    socketWorker.onmessage = (event: MessageEvent) => {
         const {type, payload} = event.data;
 
         switch (type) {
@@ -42,43 +34,45 @@ onMounted(() => {
                 statusText.value = payload.status;
                 isConnected.value = payload.isConnected;
                 break;
-            case 'fftData':
+            case 'graphicData':
                 if (spectrogramComponentRef.value) {
                     spectrogramComponentRef.value.setLatestData(payload);
                 }
                 break;
             case 'audioData':
-                audioData.value = payload;
+                feedAudio(payload);
                 break;
             case 'error':
                 console.error("Error from DSP Worker:", payload);
                 break;
         }
     };
+
     console.log("Sending init message");
-    dspWorker.postMessage({
+
+    socketWorker.postMessage({
         type: 'init',
-        payload: {wsUrl, wsEvent}
+        payload: {wsUrl, wsEventGraphics, wsEventAudio}
     });
 });
 
 onUnmounted(() => {
-    if (dspWorker) {
-        dspWorker.postMessage({type: 'disconnect'});
-        dspWorker.terminate();
+    if (socketWorker) {
+        socketWorker.postMessage({type: 'disconnect'});
+        socketWorker.terminate();
     }
 });
 
 function toggleConnection(): void {
-    if (dspWorker) {
-        dspWorker.postMessage({type: 'toggleConnection'});
+    if (socketWorker) {
+        socketWorker.postMessage({type: 'toggleConnection'});
     }
 
 }
 
 function toggleAudio(): void {
-    if (dspWorker) {
-        dspWorker.postMessage({type: 'toggleAudio'})
+    if (socketWorker) {
+        socketWorker.postMessage({type: 'toggleAudio'})
     }
 }
 </script>

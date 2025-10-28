@@ -122,7 +122,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [392, 588.0]
+    coordinate: [368, 632.0]
     rotation: 0
     state: true
 - name: c2mag
@@ -223,18 +223,18 @@ blocks:
     affinity: ''
     alias: ''
     comment: ''
-    host: 127.0.0.1
+    host: 172.28.0.101
     maxoutbuf: '0'
     minoutbuf: '0'
     mtu: '10000'
-    port: '8005'
+    port: '8000'
     tcp_no_delay: 'True'
     type: UDP_CLIENT
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1600, 436.0]
+    coordinate: [1536, 432.0]
     rotation: 0
     state: true
 - name: network_socket_pdu_0_0
@@ -247,7 +247,7 @@ blocks:
     maxoutbuf: '0'
     minoutbuf: '0'
     mtu: '10000'
-    port: '8000'
+    port: '8005'
     tcp_no_delay: 'True'
     type: UDP_CLIENT
   states:

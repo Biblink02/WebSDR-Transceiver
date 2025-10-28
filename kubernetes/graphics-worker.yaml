@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graphics-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: graphics-worker
+  template:
+    metadata:
+      labels:
+        app: graphics-worker
+    spec:
+      containers:
+        - name: graphics-worker-container
+          image: your-repo/gnu-graphics-worker:latest #TODO
+          imagePullPolicy: IfNotPresent
+          env:
+            # Tell the worker where to find the I/Q stream
+            - name: SDR_HOST
+              value: "sdr-server.default.svc.cluster.local"
+            - name: SDR_PORT
+              value: "5000"
+            # Tell the worker where to send its FFT data
+            - name: BACKEND_HOST
+              value: "backend-controller.default.svc.cluster.local"
+            - name: BACKEND_GRAPHICS_PORT
+              value: "9001" # Must match backend-controller service
