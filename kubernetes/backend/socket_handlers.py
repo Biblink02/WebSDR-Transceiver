@@ -1,4 +1,5 @@
 import logging
+import os
 
 
 class SocketHandlers:
@@ -11,7 +12,9 @@ class SocketHandlers:
         self.client_to_worker_map = pool_state['client_to_worker_map']
         self.worker_to_client_map = pool_state['worker_to_client_map']
         self.send_control_command = send_control_cmd_func
-        logging.info("SocketHandlers initialized.")
+        #TODO make the .env for this in the yaml maybe
+        self.sdr_center_freq = float(os.environ.get("SDR_CENTER_FREQ", 100000000))
+        logging.info(f"SocketHandlers initialized. SDR Center Freq: {self.sdr_center_freq} Hz")
 
     async def register_events(self):
         """Registers all event handlers with the Socket.IO server."""
@@ -62,10 +65,12 @@ class SocketHandlers:
         self.worker_pool[assigned_worker] = sid
         self.client_to_worker_map[sid] = assigned_worker
         self.worker_to_client_map[assigned_worker] = sid
-        await self.sio.join_room(sid, room=sid)
+        await self.sio.enter_room(sid, sid)
 
-        client_freq = data.get("freq", 100.0e6)
-        client_bw = data.get("bw", 150e3)
+        client_freq = float(data.get("freq", 100.0e6))
+        client_bw = float(data.get("bw", 150e3))
+
+        freq_offset = client_freq - self.sdr_center_freq
         await self.send_control_command(assigned_worker, {
             "cmd": "tune",
             "freq": client_freq,
@@ -98,9 +103,13 @@ class SocketHandlers:
             logging.error(f"Tune event from {sid} failed: No worker assigned.")
             return
 
-        logging.info(f"Client {sid} tuning {worker_name} to {data}")
+        target_freq = float(data.get("freq", 0))
+        freq_offset = target_freq - self.sdr_center_freq
+
+        logging.info(f"Client {sid} tuning {worker_name} to {target_freq} (Offset: {freq_offset})")
+
         await self.send_control_command(worker_name, {
             "cmd": "tune",
-            "freq": data.get("freq"),
+            "freq_offset": freq_offset,
             "bw": data.get("bw")
         })
