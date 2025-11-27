@@ -1,0 +1,277 @@
+options:
+  parameters:
+    author: ''
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: ''
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: no_gui
+    hier_block_src_path: '.:'
+    id: audio_worker
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: run
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: Not titled yet
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: audio_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: '48000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [296, 16.0]
+    rotation: 0
+    state: enabled
+- name: bandwidth
+  id: variable
+  parameters:
+    comment: ''
+    value: '15000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [544, 16.0]
+    rotation: 0
+    state: enabled
+- name: decim
+  id: variable
+  parameters:
+    comment: ''
+    value: '40'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [384, 16.0]
+    rotation: 0
+    state: enabled
+- name: freq_offset
+  id: variable
+  parameters:
+    comment: ''
+    value: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [456, 16.0]
+    rotation: 0
+    state: enabled
+- name: is_active
+  id: variable
+  parameters:
+    comment: ''
+    value: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [632, 16.0]
+    rotation: 0
+    state: enabled
+- name: samp_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: '2000000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [208, 16.0]
+    rotation: 0
+    state: enabled
+- name: analog_nbfm_rx_0
+  id: analog_nbfm_rx
+  parameters:
+    affinity: ''
+    alias: ''
+    audio_rate: '50000'
+    comment: ''
+    max_dev: 5e3
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    quad_rate: '50000'
+    tau: 75e-6
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [528, 248.0]
+    rotation: 0
+    state: enabled
+- name: epy_block_0
+  id: epy_block
+  parameters:
+    _source_code: "import numpy as np\nfrom gnuradio import gr\nimport socket\nimport\
+      \ os\n\nclass blk(gr.sync_block):\n    \"\"\"\n    UDP sender that can be muted\
+      \ via the 'active' parameter.\n    \"\"\"\n    def __init__(self, active=True):\n\
+      \        gr.sync_block.__init__(\n            self,\n            name='UDP Sender\
+      \ with Header',\n            in_sig=[np.float32],\n            out_sig=None\n\
+      \        )\n        \n        self.active = active\n\n        self.pod_name\
+      \ = os.environ.get(\"POD_NAME\", \"worker-manual\")\n        self.host = os.environ.get(\"\
+      BACKEND_HOST\", \"backend-controller\")\n        try:\n            self.port\
+      \ = int(os.environ.get(\"BACKEND_AUDIO_PORT\", \"9002\"))\n        except ValueError:\n\
+      \            self.port = 9002\n            \n        self.sock = socket.socket(socket.AF_INET,\
+      \ socket.SOCK_DGRAM)\n        self.dest = (self.host, self.port)\n        self.header\
+      \ = f\"{self.pod_name}:\".encode('utf-8')\n\n    def work(self, input_items,\
+      \ output_items):\n        in0 = input_items[0]\n        n_items = len(in0)\n\
+      \        \n        if not self.active:\n            return n_items\n\n     \
+      \   if n_items > 0:\n            try:\n                audio_payload = in0.tobytes()\n\
+      \                self.sock.sendto(self.header + audio_payload, self.dest)\n\
+      \            except Exception:\n                pass\n                \n   \
+      \     return n_items\n"
+    active: is_active
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    _io_cache: ('UDP Sender with Header', 'blk', [('active', 'True')], [('0', 'float',
+      1)], [], "\nUDP sender that can be muted via the 'active' parameter.\n", ['active'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [896, 272.0]
+    rotation: 0
+    state: enabled
+- name: freq_xlating_fir_filter_xxx_0
+  id: freq_xlating_fir_filter_xxx
+  parameters:
+    affinity: ''
+    alias: ''
+    center_freq: -freq_offset
+    comment: ''
+    decim: decim
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_rate: samp_rate
+    taps: firdes.low_pass(1, samp_rate, bandwidth/2, 5000)
+    type: ccc
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [304, 248.0]
+    rotation: 0
+    state: enabled
+- name: import_0
+  id: import
+  parameters:
+    alias: ''
+    comment: ''
+    imports: import threading, zmq, json
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [720, 24.0]
+    rotation: 0
+    state: enabled
+- name: rational_resampler_xxx_0
+  id: rational_resampler_xxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    decim: '50'
+    fbw: '0'
+    interp: '48'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    taps: '[]'
+    type: fff
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [720, 248.0]
+    rotation: 0
+    state: enabled
+- name: snippet_0
+  id: snippet
+  parameters:
+    alias: ''
+    code: "# --- Function that receives the flowgraph as an argument ---\ndef control_loop(flowgraph):\n\
+      \    ctx = zmq.Context()\n    sock = ctx.socket(zmq.PULL)\n    sock.bind(\"\
+      tcp://0.0.0.0:5001\")\n    print(\"[Control] Thread started on port 5001\")\n\
+      \n    while True:\n        try:\n            msg = sock.recv_json()\n      \
+      \      cmd = msg.get(\"cmd\")\n\n            if cmd == \"tune\":\n         \
+      \       flowgraph.set_is_active(True)\n                if \"freq_offset\" in\
+      \ msg:\n                    flowgraph.set_freq_offset(float(msg[\"freq_offset\"\
+      ]))\n                if \"bw\" in msg:\n                    flowgraph.set_bandwidth(float(msg[\"\
+      bw\"]))\n\n            elif cmd == \"idle\":\n                print(\"[Control]\
+      \ Going IDLE\")\n                flowgraph.set_is_active(False)\n          \
+      \      flowgraph.set_freq_offset(0)\n                flowgraph.set_bandwidth(1000)\n\
+      \n        except Exception as e:\n            print(f\"[Control] Error: {e}\"\
+      )\n\n# --- THREAD STARTUP ---\n# NOTE: Here we use 'self' because GRC calls\
+      \ the snippet with the current\n# block instance named 'self'.\nt = threading.Thread(target=control_loop,\
+      \ args=(self,))\nt.daemon = True\nt.start()"
+    comment: ''
+    priority: '0'
+    section: main_after_init
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [880, 16.0]
+    rotation: 0
+    state: enabled
+- name: zeromq_sub_source_0
+  id: zeromq_sub_source
+  parameters:
+    address: tcp://sdr-server:5000
+    affinity: ''
+    alias: ''
+    bind: 'False'
+    comment: ''
+    hwm: '-1'
+    key: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    pass_tags: 'False'
+    timeout: '100'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [48, 224.0]
+    rotation: 0
+    state: enabled
+
+connections:
+- [analog_nbfm_rx_0, '0', rational_resampler_xxx_0, '0']
+- [freq_xlating_fir_filter_xxx_0, '0', analog_nbfm_rx_0, '0']
+- [rational_resampler_xxx_0, '0', epy_block_0, '0']
+- [zeromq_sub_source_0, '0', freq_xlating_fir_filter_xxx_0, '0']
+
+metadata:
+  file_format: 1
+  grc_version: 3.10.12.0
