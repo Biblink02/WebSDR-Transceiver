@@ -37,7 +37,7 @@ spec:
     spec:
       containers:
         - name: audio-worker-container
-          image: your-repo/gnu-audio-worker:latest #TODO
+          image: websdr-transceiver/audio-worker:latest #TODO
           imagePullPolicy: IfNotPresent
           ports:
             # The port for receiving "tune" commands #TODO

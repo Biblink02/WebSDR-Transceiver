@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: graphics-worker-container
-          image: your-repo/gnu-graphics-worker:latest #TODO
+          image: websdr-transceiver/gnu-graphics-worker:latest #TODO
           imagePullPolicy: IfNotPresent
           env:
             # Tell the worker where to find the I/Q stream

@@ -28,6 +28,7 @@ spec:
       labels:
         app: sdr-server
     spec:
+      hostNetwork: true
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -40,8 +41,8 @@ spec:
       # ---------------------------------
       containers:
         - name: sdr-server-container
-          image: your-repo/gnu-sdr-server-real:latest #TODO
-          imagePullPolicy: Always
+          image: websdr-transceiver/sdr-server:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - name: iq-stream
               containerPort: 5000
