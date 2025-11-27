@@ -1,0 +1,71 @@
+#!/bin/bash
+
+set -euo pipefail
+
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+echo -e "${GREEN}Starting WebSDR deployment procedure...${NC}"
+
+# --- 1. CLUSTER AND HARDWARE SETUP ---
+echo -e "${YELLOW}[1/5] Setting up cluster and hardware...${NC}"
+
+if ! kind get clusters | grep -q "^kind$"; then
+    echo "Kind cluster not found. Creating a new cluster..."
+    kind create cluster --config kubernetes/kind-config.yaml
+
+    echo "Installing NGINX Ingress Controller..."
+    kubectl apply -f \
+      https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+else
+    echo "Kind cluster is already running."
+fi
+
+echo "Applying hardware label to node..."
+kubectl label nodes kind-control-plane hardware=sdr-true --overwrite
+
+# --- 2. BUILD AND LOAD IMAGES ---
+echo -e "${YELLOW}[2/5] Building and loading Docker images...${NC}"
+
+build_and_load() {
+    local image_name="$1"
+    local context_dir="$2"
+
+    echo "Building image: $image_name"
+    docker build -t "$image_name" "$context_dir"
+
+    echo "Loading image into Kind: $image_name"
+    kind load docker-image "$image_name"
+}
+
+build_and_load "websdr-transceiver/sdr-backend-controller:latest" "kubernetes/backend"
+build_and_load "websdr-transceiver/sdr-server:latest" "kubernetes/sdr-server"
+build_and_load "websdr-transceiver/gnu-audio-worker:latest" "kubernetes/audio-worker"
+
+echo -e "${RED}[TODO] Graphics Worker image skipped (Dockerfile missing)${NC}"
+# build_and_load "websdr-transceiver/gnu-graphics-worker:latest" "kubernetes/graphics-worker"
+
+# --- 3. CLEAN OLD PODS ---
+echo -e "${YELLOW}[3/5] Restarting pods...${NC}"
+
+kubectl delete pod -l app=backend-controller --ignore-not-found
+kubectl delete pod -l app=sdr-server --ignore-not-found
+kubectl delete pod -l app=audio-worker --ignore-not-found
+# kubectl delete pod -l app=graphics-worker --ignore-not-found
+
+# --- 4. APPLY MANIFESTS ---
+echo -e "${YELLOW}[4/5] Applying Kubernetes manifests...${NC}"
+
+kubectl apply -f kubernetes/ingress.yaml
+kubectl apply -f kubernetes/backend-controller.yaml
+kubectl apply -f kubernetes/sdr-server.yaml
+kubectl apply -f kubernetes/audio-workers.yaml
+kubectl apply -f kubernetes/graphics-worker.yaml
+
+# --- 5. FINAL STATUS ---
+echo -e "${GREEN}Deployment complete.${NC}"
+echo "Wait a few seconds for pods to enter Running state."
+echo "Monitor with: kubectl get pods -w"
+echo "Frontend available at: http://localhost"
