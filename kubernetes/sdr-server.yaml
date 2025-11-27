@@ -28,7 +28,10 @@ spec:
       labels:
         app: sdr-server
     spec:
+      # CRITICAL: Allows the pod to see the node IP 192.168.2.1
       hostNetwork: true
+
+      # Keep node affinity to ensure this pod runs on the machine with the Pluto
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -38,7 +41,7 @@ spec:
                     operator: In
                     values:
                       - sdr-true
-      # ---------------------------------
+
       containers:
         - name: sdr-server-container
           image: websdr-transceiver/sdr-server:latest
@@ -47,12 +50,7 @@ spec:
             - name: iq-stream
               containerPort: 5000
               protocol: TCP
-          securityContext:
-            privileged: true
-          volumeMounts:
-            - mountPath: /dev/bus/usb
-              name: usb-devices
-      volumes:
-        - name: usb-devices
-          hostPath:
-            path: /dev/bus/usb
+
+          # NO LONGER NEEDED: securityContext (privileged)
+          # NO LONGER NEEDED: volumeMounts (/dev/bus/usb)
+          # NO LONGER NEEDED: volumes
