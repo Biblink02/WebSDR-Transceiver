@@ -1,0 +1,259 @@
+options:
+  parameters:
+    author: ''
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: ''
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: no_gui
+    hier_block_src_path: '.:'
+    id: sdr_server
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: run
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: Not titled yet
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: SDR_CONTROL_PORT
+  id: variable
+  parameters:
+    comment: ''
+    value: '5001'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [776, 88.0]
+    rotation: 0
+    state: enabled
+- name: SDR_HOST
+  id: variable
+  parameters:
+    comment: ''
+    value: '"sdr-server"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [696, 16.0]
+    rotation: 0
+    state: enabled
+- name: SDR_IQ_PORT
+  id: variable
+  parameters:
+    comment: ''
+    value: '5000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [800, 16.0]
+    rotation: 0
+    state: enabled
+- name: buffer_size
+  id: variable
+  parameters:
+    comment: ''
+    value: '32768'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [368, 16.0]
+    rotation: 0
+    state: enabled
+- name: iio_uri
+  id: variable
+  parameters:
+    comment: ''
+    value: '"ip:192.168.2.1"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [568, 16.0]
+    rotation: 0
+    state: enabled
+- name: is_active
+  id: variable
+  parameters:
+    comment: ''
+    value: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [928, 16.0]
+    rotation: 0
+    state: enabled
+- name: lo_freq
+  id: variable
+  parameters:
+    comment: ''
+    value: '2450000000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [280, 16.0]
+    rotation: 0
+    state: enabled
+- name: rf_bandwidth
+  id: variable
+  parameters:
+    comment: ''
+    value: '20000000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [464, 16.0]
+    rotation: 0
+    state: enabled
+- name: samp_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: '2000000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [192, 16.0]
+    rotation: 0
+    state: enabled
+- name: epy_block_0
+  id: epy_block
+  parameters:
+    _source_code: "import numpy as np\nfrom gnuradio import gr\nimport zmq\n\nclass\
+      \ blk(gr.sync_block):\n    \"\"\"\n    Replaces zeromq_pub_sink. Sends I/Q data\
+      \ only when active=True.\n    \"\"\"\n    def __init__(self, active=True, iq_port=5000):\n\
+      \        gr.sync_block.__init__(\n            self,\n            name='ZMQ Conditional\
+      \ Publisher',\n            in_sig=[np.complex64],\n            out_sig=None\n\
+      \        )\n        self.active = active\n        self.port = iq_port\n\n  \
+      \      self.context = zmq.Context()\n        self.socket = self.context.socket(zmq.PUB)\n\
+      \        self.socket.bind(f\"tcp://0.0.0.0:{self.port}\")\n\n    def set_active(self,\
+      \ active):\n        \"\"\"Setter used by the control thread.\"\"\"\n       \
+      \ self.active = active\n\n    def work(self, input_items, output_items):\n \
+      \       in0 = input_items[0]\n        n = len(in0)\n\n        if not self.active:\n\
+      \            return n\n\n        if n > 0:\n            try:\n             \
+      \   self.socket.send(in0.tobytes())\n            except Exception as e:\n  \
+      \              print(f\"[SDR-ZMQ] Error sending data: {e}\")\n\n        return\
+      \ n\n"
+    active: is_active
+    affinity: ''
+    alias: ''
+    comment: ''
+    iq_port: SDR_IQ_PORT
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    _io_cache: ('ZMQ Conditional Publisher', 'blk', [('active', 'True'), ('iq_port',
+      '5000')], [('0', 'complex', 1)], [], '\nReplaces zeromq_pub_sink. Sends I/Q
+      data only when active=True.\n', ['active'])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [264, 240.0]
+    rotation: 0
+    state: enabled
+- name: iio_pluto_source_0
+  id: iio_pluto_source
+  parameters:
+    affinity: ''
+    alias: ''
+    bandwidth: rf_bandwidth
+    bbdc: 'True'
+    buffer_size: '32768'
+    comment: ''
+    filter: ''
+    filter_source: '''Auto'''
+    fpass: '0'
+    frequency: lo_freq
+    fstop: '0'
+    gain1: '''slow_attack'''
+    len_tag_key: ''
+    manual_gain1: '64'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    quadrature: 'True'
+    rfdc: 'True'
+    samplerate: samp_rate
+    type: fc32
+    uri: iio_uri
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [24, 172.0]
+    rotation: 0
+    state: enabled
+- name: import_0
+  id: import
+  parameters:
+    alias: ''
+    comment: ''
+    imports: import yaml, threading, zmq
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1008, 24.0]
+    rotation: 0
+    state: enabled
+- name: snippet_0
+  id: snippet
+  parameters:
+    alias: ''
+    code: "with open(\"/app/config.yaml\", \"r\") as f:\n    cfg = yaml.safe_load(f)\n\
+      \nself.cfg = cfg\n\nfor key, val in cfg.items():\n    setter_lower = f\"set_{key.lower()}\"\
+      \n    if hasattr(self, setter_lower):\n        getattr(self, setter_lower)(val)\n\
+      \        continue\n\n    setter_original = f\"set_{key}\"\n    if hasattr(self,\
+      \ setter_original):\n        getattr(self, setter_original)(val)\n\ndef control_loop(flowgraph):\n\
+      \    ctx = zmq.Context()\n    control_port = flowgraph.cfg[\"SDR_CONTROL_PORT\"\
+      ]\n\n    sock = ctx.socket(zmq.PULL)\n    sock.bind(f\"tcp://0.0.0.0:{control_port}\"\
+      )\n    print(f\"[SDR] Control Thread listening on {control_port}\")\n\n    zmq_pub_block\
+      \ = flowgraph.epy_block_0\n\n    while True:\n        try:\n            msg\
+      \ = sock.recv_json()\n            cmd = msg.get(\"cmd\")\n\n            if cmd\
+      \ == \"start\":\n                print(\"[SDR] Activating I/Q Stream (Start)\"\
+      )\n                zmq_pub_block.set_active(True)\n\n            elif cmd ==\
+      \ \"stop\":\n                print(\"[SDR] Pausing I/Q Stream (Stop)\")\n  \
+      \              zmq_pub_block.set_active(False)\n\n        except Exception as\
+      \ e:\n            print(f\"[SDR] Control Error: {e}\")\n\nt = threading.Thread(target=control_loop,\
+      \ args=(self,))\nt.daemon = True\nt.start()"
+    comment: ''
+    priority: '0'
+    section: main_after_init
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1176, 16.0]
+    rotation: 0
+    state: enabled
+
+connections:
+- [iio_pluto_source_0, '0', epy_block_0, '0']
+
+metadata:
+  file_format: 1
+  grc_version: 3.10.12.0
