@@ -4,12 +4,14 @@ import AudioComponent from "&/components/AudioComponent.vue";
 import SpectrogramComponent from "&/components/SpectrogramComponent.vue";
 import MyWorker from '@/workers/socket.worker.ts?worker'
 import {feedAudio} from "@/AudioPlayer";
+import FrequencyControl from "&/components/FrequencyControl.vue";
 
 
 // --- State ---
 const isConnected = ref(false);
 const statusText = ref('CONNECTING');
 const audioData = ref<Float32Array | null>(null);
+const frequency = ref(50);
 
 // Reference to our Worker
 let socketWorker: Worker | null = null;
@@ -25,7 +27,7 @@ const wsEventAudio = import.meta.env.VITE_WS_AUDIO_EVENT ?? 'update_audio';
 
 onMounted(() => {
     socketWorker = new MyWorker()
-    if(!socketWorker) return;
+    if (!socketWorker) return;
     socketWorker.onmessage = (event: MessageEvent) => {
         const {type, payload} = event.data;
 
@@ -63,16 +65,22 @@ onUnmounted(() => {
     }
 });
 
-function toggleConnection(): void {
+function onToggleConnection(): void {
     if (socketWorker) {
         socketWorker.postMessage({type: 'toggleConnection'});
     }
 
 }
 
-function toggleAudio(): void {
+function onToggleAudio(): void {
     if (socketWorker) {
         socketWorker.postMessage({type: 'toggleAudio'})
+    }
+}
+
+function onFrequencyUpdate(frequency: number): void {
+    if (socketWorker) {
+        socketWorker.postMessage({type: 'updateFrequency', payload: {frequency}})
     }
 }
 </script>
@@ -89,22 +97,21 @@ function toggleAudio(): void {
                     }}</span>
                 </p>
 
-                <button
-                    @click="toggleConnection"
-                    class="mb-4 px-4 py-2 cursor-pointer rounded-md text-white font-semibold transition-colors text-sm"
-                    :class="isConnected
-                        ? 'bg-red-500 hover:bg-red-600'
-                        : 'bg-green-500 hover:bg-green-600'"
-                >
-                    {{ isConnected ? 'Disconnect' : 'Connect' }}
-                </button>
+                <div class="flex flex-row space-x-4">
+                    <Button
+                        @click="onToggleConnection"
+                        :label="isConnected ? 'Disconnect' : 'Connect'"
+                        :severity="isConnected ? 'danger' : 'success'"
+                    />
+                    <AudioComponent :samples="audioData" @toggle-audio="onToggleAudio()"/>
+                </div>
 
                 <SpectrogramComponent
                     ref="spectrogramComponentRef"
-                    class="w-full h-80 rounded-md"
+                    class="w-full h-80 rounded-md mt-2"
                 />
-
-                <AudioComponent :samples="audioData" @toggle-audio="toggleAudio()"/>
+                <!-- Slider Control -->
+                <FrequencyControl class="w-full" v-model:frequency="frequency" @update:frequency="onFrequencyUpdate"/>
             </div>
         </template>
     </Card>

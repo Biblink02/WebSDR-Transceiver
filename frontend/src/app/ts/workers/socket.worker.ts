@@ -6,6 +6,7 @@ let processAudio = false;
 
 let wsEventGraphics = 'graphics_data';
 let wsEventAudio = 'update_audio';
+let wsEventFrequency = 'update_frequency';
 
 function connectSocket() {
     if (socket) {
@@ -78,7 +79,8 @@ self.onmessage = (event: MessageEvent) => {
         case 'init':
             wsUrl = payload.wsUrl;
             wsEventAudio = payload.wsEventAudio || 'update_audio';
-
+            wsEventGraphics = payload.wsEventGraphics || 'update_graphics'
+            wsEventFrequency = payload.wsEventFrequency || 'update_frequency'
             self.postMessage({
                 type: 'status',
                 payload: {status: 'CONNECTING', isConnected: false}
@@ -87,11 +89,7 @@ self.onmessage = (event: MessageEvent) => {
             break;
 
         case 'toggleConnection':
-            if (socket?.connected) {
-                socket.disconnect();
-            } else {
-                connectSocket();
-            }
+            socket?.connected ? socket.disconnect() : connectSocket();
             break;
 
         case 'disconnect':
@@ -100,6 +98,10 @@ self.onmessage = (event: MessageEvent) => {
 
         case 'toggleAudio':
             processAudio = !processAudio;
+            break;
+
+        case 'updateFrequency':
+            socket?.emit(wsEventFrequency, payload)
             break;
     }
 };
