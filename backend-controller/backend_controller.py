@@ -93,16 +93,19 @@ class AudioUdpProtocol(asyncio.DatagramProtocol):
 
     def datagram_received(self, data: bytes, addr: tuple):
         try:
-            worker_name_bytes, audio_data = data.split(b':', 1)
-            worker_name = worker_name_bytes.decode('utf-8')
+            mv = memoryview(data)
+            sep = data.find(b':')
+            if sep < 0:
+                return
 
+            worker_name = mv[:sep].tobytes().decode('utf-8')
             sid = self.worker_to_client_map.get(worker_name)
+            if not sid:
+                return
 
-            if sid:
-                self.loop.create_task(self.sio_server.emit('audio_data', audio_data, room=sid))
+            audio_data = mv[sep + 1:]
+            self.loop.create_task(self.sio_server.emit('audio_data', audio_data, room=sid))
 
-        except ValueError:
-            pass
         except Exception as e:
             logging.error(f"Audio routing error: {e}")
 
