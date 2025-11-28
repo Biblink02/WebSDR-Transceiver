@@ -33,6 +33,66 @@ options:
     state: enabled
 
 blocks:
+- name: BACKEND_HOST
+  id: variable
+  parameters:
+    comment: ''
+    value: '"backend-controller"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [448, 88.0]
+    rotation: 0
+    state: enabled
+- name: GRAPHICS_UDP_PORT
+  id: variable
+  parameters:
+    comment: ''
+    value: '9001'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [592, 88.0]
+    rotation: 0
+    state: enabled
+- name: SDR_HOST
+  id: variable
+  parameters:
+    comment: ''
+    value: '"sdr-server"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [456, 16.0]
+    rotation: 0
+    state: enabled
+- name: SDR_IQ_PORT
+  id: variable
+  parameters:
+    comment: ''
+    value: '5000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [560, 16.0]
+    rotation: 0
+    state: enabled
+- name: calibration
+  id: variable
+  parameters:
+    comment: ''
+    value: '-30'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [216, 88.0]
+    rotation: 0
+    state: enabled
 - name: fft_size
   id: variable
   parameters:
@@ -43,18 +103,6 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [296, 16.0]
-    rotation: 0
-    state: enabled
-- name: is_active
-  id: variable
-  parameters:
-    comment: ''
-    value: '0'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [456, 16.0]
     rotation: 0
     state: enabled
 - name: samp_rate
@@ -122,7 +170,7 @@ blocks:
     affinity: ''
     alias: ''
     comment: ''
-    k: '0'
+    k: calibration
     maxoutbuf: '0'
     minoutbuf: '0'
     n: '10'
@@ -191,36 +239,33 @@ blocks:
 - name: epy_block_0
   id: epy_block
   parameters:
-    _source_code: "import numpy as np\nfrom gnuradio import gr\nimport socket\nimport\
-      \ os\n\nclass blk(gr.sync_block):\n    \"\"\"\n    Sends FFT vectors via UDP\
-      \ only if active=True.\n    \"\"\"\n    def __init__(self, vector_len=2048,\
-      \ active=True):\n        gr.sync_block.__init__(\n            self,\n      \
-      \      name='UDP Vector Sender',\n            in_sig=[(np.float32, vector_len)],\n\
-      \            out_sig=None\n        )\n\n        self.active = active\n\n   \
-      \     self.host = os.environ.get(\"BACKEND_HOST\", \"backend-controller\")\n\
-      \        try:\n            self.port = int(os.environ.get(\"BACKEND_GRAPHICS_PORT\"\
-      , \"9001\"))\n        except ValueError:\n            self.port = 9001\n\n \
-      \       self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)\n     \
-      \   self.dest = (self.host, self.port)\n\n    def work(self, input_items, output_items):\n\
-      \        in0 = input_items[0]\n        n_items = len(in0)\n\n        if not\
-      \ self.active:\n            return n_items\n\n        for vector in in0:\n \
-      \           try:\n                self.sock.sendto(vector.tobytes(), self.dest)\n\
-      \            except Exception:\n                pass\n\n        return n_items\n"
-    active: is_active
+    _source_code: "import numpy as np\nfrom gnuradio import gr\nimport socket\n\n\
+      class blk(gr.sync_block):\n    \"\"\"\n    Sends FFT vectors via UDP.\n    \"\
+      \"\"\n    def __init__(self, vector_len=2048, host=\"localhost\", port=9001):\n\
+      \        gr.sync_block.__init__(\n            self,\n            name='UDP Vector\
+      \ Sender',\n            in_sig=[(np.float32, vector_len)],\n            out_sig=None\n\
+      \        )\n\n        self.host = host\n        self.port = port\n\n       \
+      \ self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)\n        self.dest\
+      \ = (self.host, self.port)\n\n    def work(self, input_items, output_items):\n\
+      \        in0 = input_items[0]\n        n = len(in0)\n\n        for v in in0:\n\
+      \            try:\n                self.sock.sendto(v.tobytes(), self.dest)\n\
+      \            except Exception:\n                pass\n\n        return n\n"
     affinity: ''
     alias: ''
     comment: ''
+    host: BACKEND_HOST
     maxoutbuf: '0'
     minoutbuf: '0'
+    port: GRAPHICS_UDP_PORT
     vector_len: fft_size
   states:
-    _io_cache: ('UDP Vector Sender', 'blk', [('vector_len', '2048'), ('active', 'True')],
-      [('0', 'float', 2048)], [], '\nSends FFT vectors via UDP only if active=True.\n',
-      ['active'])
+    _io_cache: ('UDP Vector Sender', 'blk', [('vector_len', '2048'), ('host', "'localhost'"),
+      ('port', '9001')], [('0', 'float', 2048)], [], '\nSends FFT vectors via UDP.\n',
+      ['host', 'port'])
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [752, 384.0]
+    coordinate: [760, 376.0]
     rotation: 0
     state: enabled
 - name: fft_vxx_0
@@ -249,29 +294,25 @@ blocks:
   parameters:
     alias: ''
     comment: ''
-    imports: import threading, zmq, json
+    imports: import yaml
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [544, 24.0]
+    coordinate: [712, 24.0]
     rotation: 0
     state: enabled
-- name: snippet_0
+- name: snippet_1
   id: snippet
   parameters:
     alias: ''
-    code: "def control_loop(flowgraph):\n    ctx = zmq.Context()\n    sock = ctx.socket(zmq.PULL)\n\
-      \    sock.bind(\"tcp://0.0.0.0:5001\")\n    print(\"[Graphics] Control Thread\
-      \ listening on 5001\")\n\n    while True:\n        try:\n            msg = sock.recv_json()\n\
-      \            cmd = msg.get(\"cmd\")\n\n            if cmd == \"start\":\n  \
-      \              if not flowgraph.get_is_active():\n                    print(\"\
-      [Graphics] Activating Stream\")\n                    flowgraph.set_is_active(True)\n\
-      \n            elif cmd == \"stop\":\n                print(\"[Graphics] Going\
-      \ IDLE (Stopped)\")\n                flowgraph.set_is_active(False)\n\n    \
-      \    except Exception as e:\n            print(f\"[Graphics] Error: {e}\")\n\
-      \nt = threading.Thread(target=control_loop, args=(self,))\nt.daemon = True\n\
-      t.start()"
+    code: "#CONFIG LOADER\n\nwith open(\"/app/config.yaml\", \"r\") as f:\n    cfg\
+      \ = yaml.safe_load(f)\n\nself.cfg = cfg  # Make configuration available to all\
+      \ other blocks/snippets\n\n# Apply GRC variables (e.g., sample_rate, lo_freq,\
+      \ iio_uri)\nfor key, val in cfg.items():\n\n    setter_lower = f\"set_{key.lower()}\"\
+      \n    if hasattr(self, setter_lower):\n        getattr(self, setter_lower)(val)\n\
+      \        continue\n\n    setter_original = f\"set_{key}\"\n    if hasattr(self,\
+      \ setter_original):\n        getattr(self, setter_original)(val)"
     comment: ''
     priority: '0'
     section: main_after_init
@@ -279,7 +320,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [712, 16.0]
+    coordinate: [816, 24.0]
     rotation: 0
     state: enabled
 - name: virtual_sink_0
@@ -311,7 +352,7 @@ blocks:
 - name: zeromq_sub_source_0
   id: zeromq_sub_source
   parameters:
-    address: tcp://sdr-server:5000
+    address: f"tcp://{SDR_HOST}:{SDR_IQ_PORT}"
     affinity: ''
     alias: ''
     bind: 'False'
