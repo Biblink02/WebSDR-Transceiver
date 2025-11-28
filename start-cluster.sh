@@ -40,12 +40,10 @@ build_and_load() {
     kind load docker-image "$image_name"
 }
 
-build_and_load "websdr-transceiver/sdr-backend-controller:latest" "kubernetes/backend"
+build_and_load "websdr-transceiver/backend-controller:latest" "kubernetes/backend-controller"
 build_and_load "websdr-transceiver/sdr-server:latest" "kubernetes/sdr-server"
-build_and_load "websdr-transceiver/gnu-audio-worker:latest" "kubernetes/audio-worker"
-
-echo -e "${RED}[TODO] Graphics Worker image skipped (Dockerfile missing)${NC}"
-# build_and_load "websdr-transceiver/gnu-graphics-worker:latest" "kubernetes/graphics-worker"
+build_and_load "websdr-transceiver/audio-worker:latest" "kubernetes/audio-worker"
+build_and_load "websdr-transceiver/graphics-worker:latest" "kubernetes/graphics-worker"
 
 # --- 3. CLEAN OLD PODS ---
 echo -e "${YELLOW}[3/5] Restarting pods...${NC}"
@@ -53,7 +51,7 @@ echo -e "${YELLOW}[3/5] Restarting pods...${NC}"
 kubectl delete pod -l app=backend-controller --ignore-not-found
 kubectl delete pod -l app=sdr-server --ignore-not-found
 kubectl delete pod -l app=audio-worker --ignore-not-found
-# kubectl delete pod -l app=graphics-worker --ignore-not-found
+kubectl delete pod -l app=graphics-worker --ignore-not-found
 
 # --- 4. APPLY MANIFESTS ---
 echo -e "${YELLOW}[4/5] Applying Kubernetes manifests...${NC}"
