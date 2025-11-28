@@ -1,3 +1,19 @@
+# Service exposing the ZMQ control port for the graphics worker
+apiVersion: v1
+kind: Service
+metadata:
+  name: graphics-worker
+spec:
+  type: ClusterIP
+  selector:
+    app: graphics-worker
+  ports:
+    - name: control
+      port: 5001
+      targetPort: 5001
+      protocol: TCP
+---
+# Deployment running the graphics worker container
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,16 +30,18 @@ spec:
     spec:
       containers:
         - name: graphics-worker-container
-          image: websdr-transceiver/gnu-graphics-worker:latest #TODO
+          image: websdr-transceiver/graphics-worker:latest
           imagePullPolicy: IfNotPresent
+          ports:
+            - name: control
+              containerPort: 5001
+              protocol: TCP
           env:
-            # Tell the worker where to find the I/Q stream
             - name: SDR_HOST
               value: "sdr-server.default.svc.cluster.local"
             - name: SDR_PORT
               value: "5000"
-            # Tell the worker where to send its FFT data
             - name: BACKEND_HOST
               value: "backend-controller.default.svc.cluster.local"
             - name: BACKEND_GRAPHICS_PORT
-              value: "9001" # Must match backend-controller service
+              value: "9001"
