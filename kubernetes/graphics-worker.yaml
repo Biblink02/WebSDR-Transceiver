@@ -1,4 +1,3 @@
-# Service exposing the ZMQ control port for the graphics worker
 apiVersion: v1
 kind: Service
 metadata:
@@ -13,7 +12,6 @@ spec:
       targetPort: 5001
       protocol: TCP
 ---
-# Deployment running the graphics worker container
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -36,12 +34,14 @@ spec:
             - name: control
               containerPort: 5001
               protocol: TCP
-          env:
-            - name: SDR_HOST
-              value: "sdr-server.default.svc.cluster.local"
-            - name: SDR_PORT
-              value: "5000"
-            - name: BACKEND_HOST
-              value: "backend-controller.default.svc.cluster.local"
-            - name: BACKEND_GRAPHICS_PORT
-              value: "9001"
+          volumeMounts:
+            - name: sdr-config-volume
+              mountPath: /app/config.yaml
+              subPath: config.yaml
+      volumes:
+        - name: sdr-config-volume
+          configMap:
+            name: sdr-config
+            items:
+              - key: config.yaml
+                path: config.yaml
