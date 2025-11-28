@@ -7,5 +7,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend_controller.py .
 COPY socket_handlers.py .
+COPY config.py .
 COPY static ./static
 CMD ["python", "backend_controller.py"]

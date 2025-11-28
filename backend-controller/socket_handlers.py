@@ -1,9 +1,9 @@
 import logging
-import os
+from config import SDR_CENTER_FREQ, SDR_SAMPLE_RATE
 
 
 class SocketHandlers:
-    def __init__(self, sio, pool_state, send_audio_func, send_graphics_func):
+    def __init__(self, sio, pool_state, send_audio_func, send_sdr_func):
         self.sio = sio
         self.worker_pool = pool_state['worker_pool']
         self.client_to_worker_map = pool_state['client_to_worker_map']
@@ -11,12 +11,14 @@ class SocketHandlers:
 
         # Injected functions to decouple logic from transport details
         self.send_audio = send_audio_func
-        self.send_graphics = send_graphics_func
+        # SDR control function (sends commands to sdr-server:5001)
+        self.send_sdr = send_sdr_func
 
         # Hardware configuration needed to calculate offsets
-        self.sdr_center_freq = float(os.environ.get("SDR_CENTER_FREQ", 100000000))
+        self.sdr_center_freq = SDR_CENTER_FREQ
+        self.sdr_sample_rate = SDR_SAMPLE_RATE
 
-        # Track active users to enable/disable the resource-heavy graphics worker
+        # Track active users to enable/disable the SDR I/Q stream
         self.connected_users_count = 0
 
         logging.info(f"SocketHandlers initialized. SDR Center Freq: {self.sdr_center_freq} Hz")
@@ -32,21 +34,13 @@ class SocketHandlers:
         self.connected_users_count += 1
         logging.info(f"Client connected {sid}. Users: {self.connected_users_count}")
 
-        # If this is the first user, wake up the graphics worker to save bandwidth/CPU when idle
+        # If this is the first user, wake up the central SDR I/Q stream
         if self.connected_users_count == 1:
-            logging.info("First user connected: Activating Graphics Worker.")
-            await self.send_graphics({"cmd": "start"})
+            logging.info("First user connected: Activating SDR I/Q Stream.")
+            # Send command to sdr-server:5001
+            await self.send_sdr({"cmd": "start"})
 
     async def on_disconnect(self, sid: str):
-        self.connected_users_count -= 1
-        logging.info(f"Client disconnected: {sid}. Total users: {self.connected_users_count}")
-
-        # If no users are left, put graphics worker to sleep
-        if self.connected_users_count <= 0:
-            self.connected_users_count = 0
-            logging.info("No users left: Idling Graphics Worker.")
-            await self.send_graphics({"cmd": "stop"})
-
         # Cleanup audio worker assignment if the user had one
         worker_name = self.client_to_worker_map.pop(sid, None)
         if worker_name:
@@ -54,6 +48,21 @@ class SocketHandlers:
             await self.send_audio(worker_name, {"cmd": "idle"})
             self.worker_pool[worker_name] = "idle"
             self.worker_to_client_map.pop(worker_name, None)
+            # We don't need to manually update connected_users_count here
+            # as it will be decremented below.
+
+        # Ensure we only decrement if the count is > 0
+        if self.connected_users_count > 0:
+            self.connected_users_count -= 1
+
+        logging.info(f"Client disconnected: {sid}. Total users: {self.connected_users_count}")
+
+        # If no users are left, put the central SDR I/Q stream to sleep
+        if self.connected_users_count <= 0:
+            self.connected_users_count = 0
+            logging.info("No users left: Idling SDR I/Q Stream.")
+            # Send command to sdr-server:5001
+            await self.send_sdr({"cmd": "stop"})
 
     async def on_request_audio_worker(self, sid: str, data: dict):
         logging.info(f"Client {sid} is requesting an audio worker.")
