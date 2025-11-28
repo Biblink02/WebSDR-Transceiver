@@ -11,7 +11,7 @@ spec:
     app: audio-worker
   ports:
     - name: control
-      port: 5001       # Port for ZMQ/control messages TODO
+      port: 5001       # Port for ZMQ/control messages
       targetPort: 5001
 ---
 # This is the StatefulSet for the "Hot Pool".
@@ -37,13 +37,13 @@ spec:
     spec:
       containers:
         - name: audio-worker-container
-          image: websdr-transceiver/audio-worker:latest #TODO
+          image: websdr-transceiver/audio-worker:latest
           imagePullPolicy: IfNotPresent
           ports:
-            # The port for receiving "tune" commands #TODO
+            # The port for receiving "tune" commands
             - name: control
               containerPort: 5001
-              protocol: TCP #ZMQ uses TCP? #TODO
+              protocol: TCP #ZMQ uses TCP?
             # The port for streaming audio out (can be any port)
             - name: audio-out
               containerPort: 5002
