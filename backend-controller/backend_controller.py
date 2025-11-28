@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 import socketio
 import uvicorn
 import zmq
@@ -10,23 +9,12 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from socket_handlers import SocketHandlers
 
-# --- Configuration ---
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-LISTEN_IP = "0.0.0.0"
-WEB_PORT = int(os.environ.get("PORT", 8080))
-
-# Worker Pool config
-POOL_SIZE = int(os.environ.get("POOL_SIZE", 3))
-WORKER_HEADLESS_SERVICE = os.environ.get("WORKER_HEADLESS_SERVICE", "audio-workers-headless.default.svc.cluster.local")
-WORKER_CONTROL_PORT = int(os.environ.get("WORKER_CONTROL_PORT", 5001))
-
-# Graphics Worker Config (Standard Service)
-GRAPHICS_WORKER_HOST = "graphics-worker"
-
-# Data ports
-GRAPHICS_LISTEN_PORT = int(os.environ.get("GRAPHICS_PORT", 9001))
-AUDIO_LISTEN_PORT = int(os.environ.get("AUDIO_PORT", 9002))
+# Import configuration from the dedicated module
+from config import (
+    WEB_PORT, LISTEN_IP, POOL_SIZE, WORKER_HEADLESS_SERVICE,
+    WORKER_CONTROL_PORT, SDR_CONTROL_PORT,
+    GRAPHICS_LISTEN_PORT, AUDIO_LISTEN_PORT, SDR_HOST
+)
 
 # --- Application State ---
 app_state = {
@@ -40,6 +28,7 @@ app_state = {
 zmq_context = zmq.asyncio.Context()
 zmq_sockets = {}
 
+
 async def _send_zmq_packet(target_id: str, address: str, command: dict):
     """
     Private helper: Handles the raw ZMQ connection and data sending.
@@ -51,34 +40,34 @@ async def _send_zmq_packet(target_id: str, address: str, command: dict):
             socket = zmq_context.socket(zmq.PUSH)
             socket.connect(address)
             zmq_sockets[target_id] = socket
-            # Allow time for the handshake to complete before sending
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.1)  # Wait for handshake
 
         socket = zmq_sockets[target_id]
         await socket.send_json(command)
 
     except Exception as e:
         logging.error(f"ZMQ Error sending to {target_id}: {e}")
-        # Invalid sockets must be removed to force reconnection next time
         if target_id in zmq_sockets:
             zmq_sockets.pop(target_id).close()
+
 
 # --- Public Control API ---
 
 async def send_audio_command(worker_id: str, command: dict):
     """
     Routes commands to a specific Audio Worker within the StatefulSet.
-    Requires constructing the full K8s DNS name for the specific pod.
     """
     address = f"tcp://{worker_id}.{WORKER_HEADLESS_SERVICE}:{WORKER_CONTROL_PORT}"
     await _send_zmq_packet(worker_id, address, command)
 
-async def send_graphics_command(command: dict):
+
+async def send_sdr_command(command: dict):
     """
-    Routes commands to the single Graphics Worker Service.
+    Routes commands to the central SDR Server control port (5001).
     """
-    address = f"tcp://{GRAPHICS_WORKER_HOST}:{WORKER_CONTROL_PORT}"
-    await _send_zmq_packet("graphics-worker", address, command)
+    address = f"tcp://{SDR_HOST}:{SDR_CONTROL_PORT}"
+    await _send_zmq_packet("sdr-server", address, command)
+
 
 # --- UDP Data Handlers ---
 
@@ -89,11 +78,11 @@ class GraphicsUdpProtocol(asyncio.DatagramProtocol):
         super().__init__()
 
     def datagram_received(self, data: bytes, addr: tuple):
-        # Graphics data is broadcast to all connected clients
         self.loop.create_task(self.sio_server.emit('graphics_data', data))
 
     def error_received(self, exc: Exception):
         logging.error(f"Graphics UDP error: {exc}")
+
 
 class AudioUdpProtocol(asyncio.DatagramProtocol):
     def __init__(self, sio_server: socketio.AsyncServer, state: dict):
@@ -103,10 +92,6 @@ class AudioUdpProtocol(asyncio.DatagramProtocol):
         super().__init__()
 
     def datagram_received(self, data: bytes, addr: tuple):
-        """
-        Expects format: b'worker-name:audio-payload'
-        Routes audio only to the specific client assigned to that worker.
-        """
         try:
             worker_name_bytes, audio_data = data.split(b':', 1)
             worker_name = worker_name_bytes.decode('utf-8')
@@ -124,9 +109,11 @@ class AudioUdpProtocol(asyncio.DatagramProtocol):
     def error_received(self, exc: Exception):
         logging.error(f"Audio UDP error: {exc}")
 
+
 # --- Setup & Lifespan ---
 
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -146,12 +133,12 @@ async def lifespan(app: FastAPI):
     )
     logging.info(f"Audio UDP server listening on :{AUDIO_LISTEN_PORT}")
 
-    # 2. Init Logic Handlers (Injecting the specific send functions)
+    # 2. Init Logic Handlers
     handlers = SocketHandlers(
         sio=sio,
         pool_state=app_state,
         send_audio_func=send_audio_command,
-        send_graphics_func=send_graphics_command
+        send_sdr_func=send_sdr_command
     )
     await handlers.register_events()
 
@@ -159,6 +146,7 @@ async def lifespan(app: FastAPI):
 
     logging.info("Application shutting down...")
     zmq_context.term()
+
 
 app = FastAPI(lifespan=lifespan)
 app.mount("/socket.io", socketio.ASGIApp(sio))
