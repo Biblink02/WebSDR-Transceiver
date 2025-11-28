@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -euo pipefail
+cd "$(dirname "$0")"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -14,7 +15,7 @@ echo -e "${YELLOW}[1/5] Setting up cluster and hardware...${NC}"
 
 if ! kind get clusters | grep -q "^kind$"; then
     echo "Kind cluster not found. Creating a new cluster..."
-    kind create cluster --config kubernetes/kind-config.yaml
+    kind create cluster --config kind-config.yaml
 
     echo "Installing NGINX Ingress Controller..."
     kubectl apply -f \
@@ -40,10 +41,10 @@ build_and_load() {
     kind load docker-image "$image_name"
 }
 
-build_and_load "websdr-transceiver/backend-controller:latest" "kubernetes/backend-controller"
-build_and_load "websdr-transceiver/sdr-server:latest" "kubernetes/sdr-server"
-build_and_load "websdr-transceiver/audio-worker:latest" "kubernetes/audio-worker"
-build_and_load "websdr-transceiver/graphics-worker:latest" "kubernetes/graphics-worker"
+build_and_load "websdr-transceiver/backend-controller:latest" "../backend-controller"
+build_and_load "websdr-transceiver/sdr-server:latest" "../sdr-server"
+build_and_load "websdr-transceiver/audio-worker:latest" "../audio-worker"
+build_and_load "websdr-transceiver/graphics-worker:latest" "../graphics-worker"
 
 # --- 3. CLEAN OLD PODS ---
 echo -e "${YELLOW}[3/5] Restarting pods...${NC}"
@@ -56,14 +57,15 @@ kubectl delete pod -l app=graphics-worker --ignore-not-found
 # --- 4. APPLY MANIFESTS ---
 echo -e "${YELLOW}[4/5] Applying Kubernetes manifests...${NC}"
 
-kubectl apply -f kubernetes/ingress.yaml
-kubectl apply -f kubernetes/backend-controller.yaml
-kubectl apply -f kubernetes/sdr-server.yaml
-kubectl apply -f kubernetes/audio-workers.yaml
-kubectl apply -f kubernetes/graphics-worker.yaml
+kubectl create configmap sdr-config --from-file=config.yaml=../config/config.yaml --dry-run=client -o yaml | kubectl apply -f -
+kubectl apply -f ingress.yaml
+kubectl apply -f backend-controller.yaml
+kubectl apply -f sdr-server.yaml
+kubectl apply -f audio-workers.yaml
+kubectl apply -f graphics-worker.yaml
 
 # --- 5. FINAL STATUS ---
 echo -e "${GREEN}Deployment complete.${NC}"
 echo "Wait a few seconds for pods to enter Running state."
 echo "Monitor with: kubectl get pods -w"
-echo "Frontend available at: http://localhost"
+echo "Frontend available at: http://localhost" #TODO
