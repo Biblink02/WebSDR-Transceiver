@@ -1,0 +1,33 @@
+# GRC variables used by workers and the sdr-server (PlutoSDR)
+samp_rate: 2000000
+
+# Graphics Worker Variables (graphics_worker.grc)
+fft_size: 2048
+calibration: -30
+skip: 20
+
+# Audio Worker Variables (audio_worker.grc)
+audio_rate: 48000
+freq_offset: 0
+bandwidth: 15000
+
+# Parameters for the SDR Source block in sdr_server.grc
+lo_freq: 2450000000
+buffer_size: 32768
+rf_bandwidth: 20000000
+iio_uri: "ip:192.168.2.1"
+# === ZMQ / Network Configuration (Global) ===
+# Communication details between K8s services
+SDR_HOST: "sdr-server"
+SDR_IQ_PORT: 5000
+SDR_CONTROL_PORT: 5001
+
+BACKEND_HOST: "backend-controller"
+
+GRAPHICS_UDP_PORT: 9001
+AUDIO_UDP_PORT: 9002
+
+# === Pool Configuration (for backend-controller) ===
+POOL_SIZE: 3
+WORKER_HEADLESS_SERVICE: "audio-workers-headless.default.svc.cluster.local"
+WORKER_CONTROL_PORT: 5001
