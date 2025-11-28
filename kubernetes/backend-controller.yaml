@@ -13,10 +13,11 @@ spec:
     - name: http-web
       port: 80
       targetPort: 8080
-    # Port for receiving data from the graphics-worker TODO
+    # Port for receiving data from the graphics-worker
     - name: graphics-in
       port: 9001
       targetPort: 9001
+      protocol: UDP
     # Port for receiving audio from ALL audio-workers
     - name: audio-in
       port: 9002
@@ -39,8 +40,7 @@ spec:
     spec:
       containers:
         - name: backend-controller-container
-          # TODO
-          image: websdr-transceiver/sdr-backend-controller:latest
+          image: websdr-transceiver/backend-controller:latest
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
