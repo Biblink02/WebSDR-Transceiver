@@ -217,21 +217,22 @@ blocks:
   id: snippet
   parameters:
     alias: ''
-    code: "# --- Function that receives the flowgraph as an argument ---\ndef control_loop(flowgraph):\n\
-      \    ctx = zmq.Context()\n    sock = ctx.socket(zmq.PULL)\n    sock.bind(\"\
-      tcp://0.0.0.0:5001\")\n    print(\"[Control] Thread started on port 5001\")\n\
-      \n    while True:\n        try:\n            msg = sock.recv_json()\n      \
-      \      cmd = msg.get(\"cmd\")\n\n            if cmd == \"tune\":\n         \
-      \       flowgraph.set_is_active(True)\n                if \"freq_offset\" in\
-      \ msg:\n                    flowgraph.set_freq_offset(float(msg[\"freq_offset\"\
-      ]))\n                if \"bw\" in msg:\n                    flowgraph.set_bandwidth(float(msg[\"\
-      bw\"]))\n\n            elif cmd == \"idle\":\n                print(\"[Control]\
-      \ Going IDLE\")\n                flowgraph.set_is_active(False)\n          \
-      \      flowgraph.set_freq_offset(0)\n                flowgraph.set_bandwidth(1000)\n\
-      \n        except Exception as e:\n            print(f\"[Control] Error: {e}\"\
-      )\n\n# --- THREAD STARTUP ---\n# NOTE: Here we use 'self' because GRC calls\
-      \ the snippet with the current\n# block instance named 'self'.\nt = threading.Thread(target=control_loop,\
-      \ args=(self,))\nt.daemon = True\nt.start()"
+    code: "def control_loop(flowgraph):\n    ctx = zmq.Context()\n    sock = ctx.socket(zmq.PULL)\n\
+      \    sock.bind(\"tcp://0.0.0.0:5001\")\n    print(\"[Audio] Control Thread listening\
+      \ on 5001\")\n\n    while True:\n        try:\n            msg = sock.recv_json()\n\
+      \            cmd = msg.get(\"cmd\")\n\n            if cmd == \"tune\":\n   \
+      \             print(\"[Audio] Tuning / Activating Stream\")\n              \
+      \  flowgraph.set_is_active(True)\n\n                if \"freq_offset\" in msg:\n\
+      \                    f = float(msg[\"freq_offset\"])\n                    print(f\"\
+      [Audio] New freq offset: {f}\")\n                    flowgraph.set_freq_offset(f)\n\
+      \n                if \"bw\" in msg:\n                    bw = float(msg[\"bw\"\
+      ])\n                    print(f\"[Audio] New bandwidth: {bw}\")\n          \
+      \          flowgraph.set_bandwidth(bw)\n\n            elif cmd == \"idle\":\n\
+      \                print(\"[Audio] Going IDLE\")\n                flowgraph.set_is_active(False)\n\
+      \                flowgraph.set_freq_offset(0)\n                flowgraph.set_bandwidth(1000)\n\
+      \n        except Exception as e:\n            print(f\"[Audio] Error: {e}\"\
+      )\n\nt = threading.Thread(target=control_loop, args=(self,))\nt.daemon = True\n\
+      t.start()"
     comment: ''
     priority: '0'
     section: main_after_init
