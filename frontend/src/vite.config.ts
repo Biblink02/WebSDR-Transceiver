@@ -30,6 +30,9 @@ export default ({ mode }: Params) => {
             }),
             vue({
                 template: {
+                    compilerOptions: {
+                        isCustomElement: (tag) => tag.startsWith('Tres'),
+                    },
                     transformAssetUrls: {
                         base: null,
                         includeAbsolute: false,

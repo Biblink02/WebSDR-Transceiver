@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+import Card from 'primevue/card';       // Assuming PrimeVue components
+import Slider from 'primevue/slider';   // Assuming PrimeVue components
 
+// 1. Define the props the component accepts. 'frequency' is the value passed down.
 const props = defineProps({
     frequency: {
         type: Number,
@@ -8,8 +11,11 @@ const props = defineProps({
     },
 });
 
+// 2. Define the event it can emit. 'update:frequency' is the convention for v-model:frequency.
 const emit = defineEmits(['update:frequency']);
 
+// 3. Create a computed property to handle getting and setting the value.
+//    This avoids mutating the prop directly.
 const frequencyValue = computed({
     get: () => props.frequency,
     set: (newValue) => emit('update:frequency', newValue),
