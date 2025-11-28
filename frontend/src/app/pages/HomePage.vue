@@ -5,8 +5,6 @@ import TabbedSettings from "&/components/TabbedSettings.vue";
 import AppLayout from "&/layouts/AppLayout.vue";
 import SignalContainer from "&/components/SignalContainer.vue";
 
-// Reactive state for the main frequency slider
-const frequency = ref(50);
 
 // Reactive state for the tabbed settings panels
 const audioSettings = reactive({
@@ -38,8 +36,7 @@ const physicsSettings = reactive({
                 <!-- Graph Placeholder -->
                 <SignalContainer/>
 
-                <!-- Slider Control -->
-                <FrequencyControl v-model:frequency="frequency"/>
+
 
                 <!-- Tabbed Settings -->
                 <TabbedSettings v-model:audio-settings="audioSettings"

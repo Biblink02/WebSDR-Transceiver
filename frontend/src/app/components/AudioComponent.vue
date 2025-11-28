@@ -15,9 +15,11 @@ function toggle() {
 </script>
 
 <template>
-    <Button class="cursor-pointer mt-6 mx-auto" @click="toggle">
-        {{ isPlaying ? 'Stop Audio' : 'Play Audio' }}
-    </Button>
+    <Button
+        @click="toggle"
+        :label="isPlaying ? 'Play Audio' : 'Stop Audio'"
+        :severity="isPlaying ? 'success' : 'danger'"
+    />
 </template>
 
 <style scoped>
