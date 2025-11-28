@@ -35,7 +35,7 @@ class SocketHandlers:
         # If this is the first user, wake up the graphics worker to save bandwidth/CPU when idle
         if self.connected_users_count == 1:
             logging.info("First user connected: Activating Graphics Worker.")
-            await self.send_graphics({"cmd": "tune"})
+            await self.send_graphics({"cmd": "start"})
 
     async def on_disconnect(self, sid: str):
         self.connected_users_count -= 1
@@ -45,7 +45,7 @@ class SocketHandlers:
         if self.connected_users_count <= 0:
             self.connected_users_count = 0
             logging.info("No users left: Idling Graphics Worker.")
-            await self.send_graphics({"cmd": "idle"})
+            await self.send_graphics({"cmd": "stop"})
 
         # Cleanup audio worker assignment if the user had one
         worker_name = self.client_to_worker_map.pop(sid, None)

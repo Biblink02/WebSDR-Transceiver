@@ -26,6 +26,7 @@
         <p>Socket ID: <span id="socketId" style="color: yellow">Disconnected</span></p>
         <p>Worker: <span id="workerStatus">None</span></p>
         <p>Audio Rate: <span id="audioRate">0</span> packets/sec <span class="data-indicator" id="audioLed"></span></p>
+        <p>Graphics Rate: <span id="graphicsRate">0</span> packets/sec <span class="data-indicator" id="graphicsLed"></span></p>
     </div>
 
     <div class="box">
@@ -46,10 +47,11 @@
 
     <script>
         // --- CONFIGURAZIONE ---
-        const socket = io(); // Si connette automaticamente allo stesso host
+        const socket = io();
         let audioContext = null;
         let nextStartTime = 0;
         let packetCount = 0;
+        let graphicsPacketCount = 0; // Contatore per i pacchetti FFT
 
         // --- GESTIONE LOG ---
         function log(msg, type = 'info') {
@@ -59,7 +61,6 @@
             entry.style.color = type === 'err' ? 'red' : (type === 'data' ? '#aaa' : '#0f0');
             entry.innerText = `[${new Date().toLocaleTimeString()}] ${msg}`;
             div.prepend(entry);
-            // Loggare in console permette di ispezionare gli oggetti
             console.log(msg);
         }
 
@@ -77,7 +78,7 @@
         socket.on('worker_assigned', (data) => {
             document.getElementById('workerStatus').innerText = `Assigned to ${data.worker} @ ${data.freq}Hz`;
             log(`Worker Assigned! Name: ${data.worker}`, 'info');
-            initAudio(); // Prepara l'audio browser
+            initAudio();
         });
 
         socket.on('worker_released', () => {
@@ -94,25 +95,16 @@
             packetCount++;
             blinkLed();
 
-            // 1. Logga il tipo di dato (per debug)
-            // console.log("Audio Packet:", arrayBuffer);
-
-            // 2. Riproduzione Audio (Semplificata per test)
             if (audioContext && arrayBuffer.byteLength > 0) {
                 try {
-                    // Convertiamo i bytes grezzi in Float32
                     const float32Data = new Float32Array(arrayBuffer);
-
-                    // Creiamo un buffer audio per il browser
                     const audioBuffer = audioContext.createBuffer(1, float32Data.length, 48000);
                     audioBuffer.getChannelData(0).set(float32Data);
 
-                    // Scheduliamo la riproduzione
                     const source = audioContext.createBufferSource();
                     source.buffer = audioBuffer;
                     source.connect(audioContext.destination);
 
-                    // Logica semplice per evitare sovrapposizioni
                     if (nextStartTime < audioContext.currentTime) {
                         nextStartTime = audioContext.currentTime;
                     }
@@ -125,9 +117,16 @@
         });
 
         // --- RICEZIONE GRAFICA (FFT) ---
-        socket.on('graphics_data', (data) => {
-            // Arriva come ArrayBuffer o Blob
-            // console.log("Graphics Packet size:", data.byteLength);
+        socket.on('graphics_data', (arrayBuffer) => {
+            if (arrayBuffer && arrayBuffer.byteLength > 0) {
+                const fftPoints = arrayBuffer.byteLength / 4;
+
+                graphicsPacketCount++; // Aggiorna il contatore
+                blinkGraphicsLed();
+
+                // Log in console
+                console.log(`[GRAPHICS DATA] Received ${fftPoints} FFT points (Total bytes: ${arrayBuffer.byteLength})`);
+            }
         });
 
         // --- COMANDI UTENTE ---
@@ -136,7 +135,6 @@
             log(`Requesting worker at ${freq} Hz...`);
             socket.emit('request_audio_worker', { freq: freq, bw: 15000 });
 
-            // Necessario per sbloccare l'audio nei browser moderni
             if(!audioContext) initAudio();
         }
 
@@ -168,10 +166,20 @@
             setTimeout(() => led.classList.remove('active'), 50);
         }
 
-        // Calcolo rate pacchetti
+        function blinkGraphicsLed() {
+            const led = document.getElementById('graphicsLed');
+            led.classList.add('active');
+            setTimeout(() => led.classList.remove('active'), 50);
+        }
+
+        // Calcolo rate pacchetti (si aggiorna ogni secondo)
         setInterval(() => {
             document.getElementById('audioRate').innerText = packetCount;
+            document.getElementById('graphicsRate').innerText = graphicsPacketCount;
+
+            // Reset contatori
             packetCount = 0;
+            graphicsPacketCount = 0;
         }, 1000);
 
     </script>
