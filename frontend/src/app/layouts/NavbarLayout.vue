@@ -28,19 +28,19 @@
         About us
       </router-link>
       <router-link
-        to="/ressources"
+        to="/resources"
         class="px-3 py-2 transition-transform duration-300 hover:scale-125 whitespace-nowrap"
         active-class="scale-125"
       >
         Resources
       </router-link>
-      <router-link
-        to="/satellite-tracker"
-        class="px-3 py-2 transition-transform duration-300 hover:scale-125 whitespace-nowrap"
-        active-class="scale-125"
-      >
-        Satellite Tracker
-      </router-link>
+<!--      <router-link-->
+<!--        to="/satellite-tracker"-->
+<!--        class="px-3 py-2 transition-transform duration-300 hover:scale-125 whitespace-nowrap"-->
+<!--        active-class="scale-125"-->
+<!--      >-->
+<!--        Satellite Tracker-->
+<!--      </router-link>-->
       </div>
     </div>
   </nav>
