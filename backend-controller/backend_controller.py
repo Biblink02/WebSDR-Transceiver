@@ -95,15 +95,18 @@ class AudioUdpProtocol(asyncio.DatagramProtocol):
         try:
             mv = memoryview(data)
             sep = data.find(b':')
+
             if sep < 0:
                 return
 
             worker_name = mv[:sep].tobytes().decode('utf-8')
+
             sid = self.worker_to_client_map.get(worker_name)
             if not sid:
                 return
 
-            audio_data = mv[sep + 1:]
+            audio_data = mv[sep + 1:].tobytes()
+
             self.loop.create_task(self.sio_server.emit('audio_data', audio_data, room=sid))
 
         except Exception as e:
