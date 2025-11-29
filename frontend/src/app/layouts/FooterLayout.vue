@@ -1,5 +1,4 @@
 <script setup lang="ts">
-// Pas de logique supplémentaire nécessaire
 </script>
 
 <template>
@@ -19,7 +18,7 @@
         <!-- Center section: Navigation links -->
         <div class="footer__nav">
           <router-link
-            v-for="item in ['Home', 'SDR', 'About', 'Resources', 'satellite-tracker']"
+            v-for="item in ['Home', 'SDR', 'About', 'Resources']"
             :key="item"
             :to="item === 'Home' ? '/' : `/${item.toLowerCase()}`"
             class="footer__link"
@@ -28,20 +27,19 @@
           </router-link>
         </div>
 
-        <!-- Right section: Copyright and legal notice -->
-        <div class="footer__right">
-          <p class="footer__copyright">
-            © {{ new Date().getFullYear() }} PRI05
-          </p>
-          <router-link
-            to="/legal-notice"
-            class="footer__legal-link"
-          >
-            Legal Notice
-          </router-link>
+<!--        &lt;!&ndash; Right section: Copyright and legal notice &ndash;&gt;-->
+<!--        <div class="footer__right">-->
+<!--          <p class="footer__copyright">-->
+<!--            © {{ new Date().getFullYear() }} PRI05-->
+<!--          </p>-->
+<!--          <router-link-->
+<!--            to="/legal-notice"-->
+<!--            class="footer__legal-link"-->
+<!--          >-->
+<!--            Legal Notice-->
+<!--          </router-link>-->
         </div>
       </div>
-    </div>
   </footer>
 </template>
 

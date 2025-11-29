@@ -6,7 +6,7 @@ const resources = [
     id: 1,
     title: "Es'hail NB (Narrow Band)",
     url: "https://eshail.batc.org.uk/nb/",
-    description: `This site provides an example of a ground station and a GUI to configure the transmitter in the 2.4 GHz band with features like bandwidth control 
+    description: `This site provides an example of a ground station and a GUI to configure the transmitter in the 2.4 GHz band with features like bandwidth control
       (max 7.35 kHz). A practical source for designing the SSB modulation transmitter the France team must build.`,
     thumbnail: "https://wiki.batc.org.uk/images/thumb/5/50/GH_view.JPG/600px-GH_view.JPG"
   },
@@ -14,7 +14,7 @@ const resources = [
     id: 2,
     title: "Es'hail-2 Ground Station Wiki",
     url: "https://wiki.batc.org.uk/Es%27hail-2_Ground_Station",
-    description: `Detailed wiki describing the Es'hail-2 ground station. Very useful to understand the full architecture and used components, 
+    description: `Detailed wiki describing the Es'hail-2 ground station. Very useful to understand the full architecture and used components,
       including SSB modulation, reception, and transmission. A key reference for software and hardware design.`,
     thumbnail: "https://wiki.batc.org.uk/images/thumb/4/40/GHY_Software_Block_V1.jpg/900px-GHY_Software_Block_V1.jpg"
   },
@@ -22,16 +22,15 @@ const resources = [
     id: 3,
     title: "QO-100 WebSDR Overview (AMSAT-DL Wiki)",
     url: "https://wiki.amsat-dl.org/doku.php?id=en:qo100websdr:overview",
-    description: `Comprehensive documentation on WebSDR for QO-100 reception. Helps understand real-time reception functionalities and the desired web interface 
+    description: `Comprehensive documentation on WebSDR for QO-100 reception. Helps understand real-time reception functionalities and the desired web interface
       (waterfall plot, frequency control, sound, etc.) to develop.`,
     thumbnail: "https://wiki.amsat-dl.org/lib/exe/fetch.php?w=400&tok=c96144&media=de:qo100websdr:c4.png"
   },
   {
     id: 4,
-    title: "QO100 Transceiver GitHub",
-    url: "https://github.com/dj0abr/QO100_Transceiver",
-    description: `Source code of a QO-100 transceiver developed for Raspberry Pi. Useful to understand which Linux libraries are used, modular code, 
-      and SSB functions implemented on Linux platforms.`,
+    title: "PSE SatCom Ground Station GitHub",
+    url: "https://github.com/Biblink02/WebSDR-Transceiver",
+    description: `Source code of our complete ground station software suite. It consist of an SSB Transmitter, a real-time SSB Receiver, and a Web-based User Interface (WebSDR).`,
     thumbnail: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
   },
   {
