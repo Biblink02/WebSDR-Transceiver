@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-nginx
+spec:
+  type: ClusterIP
+  selector:
+    app: frontend-nginx
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend-nginx
+  template:
+    metadata:
+      labels:
+        app: frontend-nginx
+    spec:
+      containers:
+        - name: frontend-nginx
+          image: websdr-transceiver/frontend-nginx:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
