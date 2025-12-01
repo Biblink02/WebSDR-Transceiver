@@ -7,7 +7,7 @@ spec:
   selector:
     app: backend-controller
   ports:
-    - name: http-web
+    - name: http
       port: 80
       targetPort: 8080
     - name: graphics-in
