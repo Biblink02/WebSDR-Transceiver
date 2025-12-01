@@ -5,7 +5,6 @@ import uvicorn
 import zmq
 import zmq.asyncio
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from socket_handlers import SocketHandlers
 
@@ -120,7 +119,6 @@ class AudioUdpProtocol(asyncio.DatagramProtocol):
 
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logging.info("Application starting up...")
@@ -155,9 +153,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-app.mount("/socket.io", socketio.ASGIApp(sio))
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+combined_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
 if __name__ == "__main__":
     logging.info(f"Starting server on http://{LISTEN_IP}:{WEB_PORT}")
-    uvicorn.run(app, host=LISTEN_IP, port=WEB_PORT)
+    uvicorn.run(combined_app, host=LISTEN_IP, port=WEB_PORT)
