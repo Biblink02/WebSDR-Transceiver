@@ -18,7 +18,7 @@ let socketWorker: Worker | null = null;
 const spectrogramComponentRef = ref<InstanceType<typeof SpectrogramComponent> | null>(null);
 
 // Information to pass to the Worker
-const wsUrl = import.meta.env.VITE_WS_URL ?? 'http://localhost:8001';
+const wsUrl = import.meta.env.VITE_WS_URL ?? 'http://localhost:80';
 // Get the specific event names from .env
 const wsEventGraphics = import.meta.env.VITE_WS_GRAPHICS_EVENT ?? 'update_graphic';
 const wsEventAudio = import.meta.env.VITE_WS_AUDIO_EVENT ?? 'update_audio';
