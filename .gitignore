@@ -1,2 +1,6 @@
 .idea
 backend-controller/static
+frontend/dist
+audio-worker/*.py
+graphics-worker/*.py
+sdr-server/*.py

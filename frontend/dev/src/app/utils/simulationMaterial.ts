@@ -49,18 +49,18 @@ export class SimulationMaterial extends THREE.ShaderMaterial {
 
       void main() {
         vec3 originalPos = texture2D(positions, vUv).rgb;
-        
+
         float continuousTime = uTime * uTimeScale * (6.28318530718 / uLoopPeriod);
-        
+
         vec3 noiseInput = originalPos * uNoiseScale;
-        
+
         float displacementX = periodicNoise(noiseInput + vec3(0.0, 0.0, 0.0), continuousTime);
         float displacementY = periodicNoise(noiseInput + vec3(50.0, 0.0, 0.0), continuousTime + 2.094);
         float displacementZ = periodicNoise(noiseInput + vec3(0.0, 50.0, 0.0), continuousTime + 4.188);
-        
+
         vec3 distortion = vec3(displacementX, displacementY, displacementZ) * uNoiseIntensity;
         vec3 finalPos = originalPos + distortion;
-        
+
         gl_FragColor = vec4(finalPos, 1.0);
       }`,
       uniforms: {

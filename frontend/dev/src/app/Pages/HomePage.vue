@@ -26,7 +26,7 @@ function goToSdr() {
             @mouseenter="hovered = true"
             @mouseleave="hovered = false"
             @click="goToSdr"
-            class="mt-8 bg-blue-600/50 hover:bg-blue-700/70 text-white focus:outline-none focus:ring-4 focus:ring-blue-500/50 rounded-lg px-12 py-4 text-2xl font-semibold shadow-lg transition-all duration-300 backdrop-blur-sm"
+            class="cursor-pointer mt-8 bg-blue-600/50 hover:bg-blue-700/70 text-white focus:outline-none focus:ring-4 focus:ring-blue-500/50 rounded-lg px-12 py-4 text-2xl font-semibold shadow-lg transition-all duration-300 backdrop-blur-sm"
           >
             Start
           </button>

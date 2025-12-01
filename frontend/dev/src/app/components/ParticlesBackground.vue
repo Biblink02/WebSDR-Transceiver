@@ -54,7 +54,7 @@ function initParticles() {
   if (!container.value) return
   const width = container.value.clientWidth
   const height = container.value.clientHeight
-  
+
   particles = Array(PARTICLE_COUNT).fill(null).map(() => createParticle(width, height))
 }
 
@@ -95,7 +95,7 @@ function updateParticles(width: number, height: number) {
       const dx = mouseX - particle.x
       const dy = mouseY - particle.y
       const distance = Math.sqrt(dx * dx + dy * dy)
-      
+
       if (distance < MOUSE_RADIUS) {
         const force = (MOUSE_RADIUS - distance) / MOUSE_RADIUS
         particle.x -= dx * force * MOUSE_STRENGTH
@@ -106,7 +106,7 @@ function updateParticles(width: number, height: number) {
     // Mouvement constant
     particle.baseX += particle.vx
     particle.baseY += particle.vy
-    
+
     // Retour progressif à la position de base après interaction souris
     if (isMouseInside) {
       particle.x += (particle.baseX - particle.x) * BASE_RETURN_STRENGTH
@@ -119,7 +119,7 @@ function updateParticles(width: number, height: number) {
     // Rebond sur les bords
     if (particle.x < 0 || particle.x > width) particle.vx *= -1
     if (particle.y < 0 || particle.y > height) particle.vy *= -1
-    
+
     // Maintenir les particules dans les limites
     particle.x = Math.max(0, Math.min(width, particle.x))
     particle.y = Math.max(0, Math.min(height, particle.y))
@@ -133,7 +133,7 @@ function animate() {
   const height = container.value.clientHeight
 
   ctx.clearRect(0, 0, width, height)
-  
+
   updateParticles(width, height)
   drawConnections(ctx)
   particles.forEach(particle => drawParticle(ctx, particle))
@@ -143,11 +143,11 @@ function animate() {
 
 function handleResize() {
   if (!container.value || !ctx?.canvas) return
-  
+
   const canvas = ctx.canvas
   canvas.width = container.value.clientWidth
   canvas.height = container.value.clientHeight
-  
+
   // Réinitialiser les particules avec les nouvelles dimensions
   initParticles()
 }

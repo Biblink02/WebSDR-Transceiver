@@ -36,7 +36,6 @@
         "./app/ts/**/*.ts",
         "./app/**/*.d.ts",
         "./app/**/*.vue",
-        "./postcss.config.js",
         "./vite.config.ts"
     ],
     "exclude": [

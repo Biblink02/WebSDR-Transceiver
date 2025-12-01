@@ -35,7 +35,7 @@ export default [
         },
     },
     {
-        // disable single-word component names for Inertia and Nuxt pages
+        // disable single-word component names for Inertia and Nuxt Pages
         files: ['resources/ts/vue/Pages/**/*.vue'],
         rules: {
             'vue/multi-word-component-names': 'off',

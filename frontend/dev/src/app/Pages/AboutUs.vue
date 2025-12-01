@@ -11,31 +11,31 @@ const teamMembers = [
     },
     {
         id: 2,
-        name: "Vedant",
-        university: "Technical University of Darmstadt",
-        role: "Computer Engineering Student",
-        github: "vedant-224"
-    },
-    {
-        id: 3,
         name: "Alexandre",
         university: "University of Télécom Saint-Étienne",
         role: "Computer Engineering Student",
         github: "TheAnacondA57"
     },
     {
-        id: 4,
-        name: "Lorenzo",
-        university: "University of Padua",
+        id: 3,
+        name: "Clément",
+        university: "University of Télécom Saint-Étienne",
         role: "Computer Engineering Student",
-        github: "Fireentity"
+        github: "clfusero"
     },
     {
-        id: 5,
+        id: 4,
         name: "Fatemah",
         university: "University of Padua",
         role: "Computer Engineering Student",
         github: "Pitclair"
+    },
+    {
+        id: 5,
+        name: "Lorenzo",
+        university: "University of Padua",
+        role: "Computer Engineering Student",
+        github: "Fireentity"
     },
     {
         id: 6,
@@ -46,12 +46,13 @@ const teamMembers = [
     },
     {
         id: 7,
-        name: "Clément",
-        university: "University of Télécom Saint-Étienne",
+        name: "Vedant",
+        university: "Technical University of Darmstadt",
         role: "Computer Engineering Student",
-        github: "clfusero"
+        github: "vedant-224"
     }
 ]
+
 </script>
 
 <template>

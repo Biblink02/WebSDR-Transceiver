@@ -1,0 +1,3 @@
+.env
+src/dist
+src/node_modules
