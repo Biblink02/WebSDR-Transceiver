@@ -1,5 +1,4 @@
 import { io, Socket } from 'socket.io-client';
-import {randInt} from "three/src/math/MathUtils";
 
 let socket: Socket | null = null;
 let processAudio = false;
@@ -44,7 +43,6 @@ function connectSocket(url: string) {
     // --- High Frequency Streams ---
 
     socket.on(EVENTS.GRAPHICS, (rawData: ArrayBuffer) => {
-        console.log('grafica evento')
         try {
             if (!rawData) return;
             // Transferable object for performance
@@ -59,13 +57,12 @@ function connectSocket(url: string) {
     });
 
     socket.on(EVENTS.AUDIO, (rawData: ArrayBuffer) => {
-        console.log('audio evento')
-        if(randInt(1,100)>80) console.log(rawData);
+
         try {
             if (!rawData || !processAudio) return;
             // Transferable object
             const data = new Float32Array(rawData);
-            if(randInt(1,100)>80) console.log(data);
+            console.log("Right Audio");
             self.postMessage(
                 { type: 'audioData', payload: data },
                 { transfer: [data.buffer] }
