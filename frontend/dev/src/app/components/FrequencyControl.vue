@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
+import { getConfig } from "@/ConfigStore";
 
 const props = defineProps<{
     frequency: number;
@@ -8,16 +9,19 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:frequency', 'update:bandwidth']);
 
-// TODO: Fetch these limits from backend configuration
-const FREQ_LIMITS = { min: 7000000, max: 30000000 };
-const BW_LIMITS = { min: 100, max: 10000 };
+// Use Config for limits
+const config = getConfig();
+const minFreq = computed(() => config.lo_freq - (config.samp_rate / 2));
+const maxFreq = computed(() => config.lo_freq + (config.samp_rate / 2));
+
+const BW_LIMITS = { min: 100, max: 200000 }; // Max 200k as per backend limit
 
 const localFreq = ref(props.frequency);
 const localBw = ref(props.bandwidth);
 
 const handleFreqChange = () => {
-    if (localFreq.value < FREQ_LIMITS.min) localFreq.value = FREQ_LIMITS.min;
-    if (localFreq.value > FREQ_LIMITS.max) localFreq.value = FREQ_LIMITS.max;
+    if (localFreq.value < minFreq.value) localFreq.value = minFreq.value;
+    if (localFreq.value > maxFreq.value) localFreq.value = maxFreq.value;
     emit('update:frequency', localFreq.value);
 };
 
@@ -41,12 +45,12 @@ watch(() => props.bandwidth, (val) => localBw.value = val);
                     type="number"
                     v-model="localFreq"
                     @change="handleFreqChange"
-                    :min="FREQ_LIMITS.min"
-                    :max="FREQ_LIMITS.max"
+                    :min="minFreq"
+                    :max="maxFreq"
                     class="bg-black border border-gray-600 rounded px-2 py-1 text-green-400 font-mono text-sm focus:outline-none focus:border-green-500 w-40"
                 />
                 <span class="text-xs text-gray-500">
-          Range: {{ FREQ_LIMITS.min / 1e6 }} - {{ FREQ_LIMITS.max / 1e6 }} MHz
+          Range: {{ (minFreq / 1e6).toFixed(2) }} - {{ (maxFreq / 1e6).toFixed(2) }} MHz
         </span>
             </div>
         </div>

@@ -1,48 +1,72 @@
-import { Float32PcmPlayer } from '@yume-chan/pcm-player';
+import audioWorkletUrl from '@/workers/audio.worker.ts?worker&url';
+import { getConfig } from "@/ConfigStore";
 
 const SAMPLE_RATE = 48000;
-const CHANNEL_COUNT = 1;
 
-let player: Float32PcmPlayer | null = null;
-let currentVolume = 1.0;
+let audioContext: AudioContext | null = null;
+let workletNode: AudioWorkletNode | null = null;
+let gainNode: GainNode | null = null;
 
-export function initAudio() {
-    if (!player) {
-        player = new Float32PcmPlayer(SAMPLE_RATE, CHANNEL_COUNT);
+export async function initAudio() {
+    if (audioContext && audioContext.state !== 'closed') {
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+        return;
+    }
+
+    const config = getConfig();
+
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    audioContext = new AudioContextClass({
+        sampleRate: SAMPLE_RATE,
+        latencyHint: 'interactive'
+    });
+
+    try {
+        await audioContext.audioWorklet.addModule(audioWorkletUrl);
+
+        workletNode = new AudioWorkletNode(audioContext, 'pcm-processor', {
+            processorOptions: {
+                bufferThreshold: config.BUFFER_THRESHOLD,
+                maxQueueSize: config.MAX_QUEUE_SIZE
+            }
+        });
+
+        gainNode = audioContext.createGain();
+        gainNode.gain.value = 1.0;
+
+        workletNode.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        console.log("Audio Engine Initialized");
+    } catch (e) {
+        console.error("Failed to load Audio Worklet:", e);
     }
 }
 
 export function feedAudio(samples: Float32Array) {
-    if (!player) return;
-
-    try {
-        if (currentVolume !== 1.0) {
-            for (let i = 0; i < samples.length; i++) {
-                samples[i] *= currentVolume;
-            }
-        }
-        player.feed(samples);
-    } catch (e) {
-        console.warn("Audio packet dropped:", e);
+    if (workletNode) {
+        workletNode.port.postMessage(samples);
     }
 }
 
-export function startAudioPlayback() {
-    initAudio();
-    player?.start().catch(e => console.error("Audio playback failed:", e));
+export async function startAudioPlayback() {
+    await initAudio();
 }
 
 export function stopAudioPlayback() {
-    if (player) {
-        player.stop();
-        player = null;
+    if (audioContext) {
+        audioContext.close();
+        audioContext = null;
+        workletNode = null;
+        gainNode = null;
     }
 }
 
-export function getVolume(): number {
-    return currentVolume;
-}
-
 export function setVolume(val: number) {
-    currentVolume = Math.max(0, Math.min(1, val));
+    if (gainNode && audioContext) {
+        const clamped = Math.max(0, Math.min(1, val));
+        gainNode.gain.setTargetAtTime(clamped, audioContext.currentTime, 0.05);
+    }
 }

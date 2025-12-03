@@ -1,33 +1,31 @@
 <script setup lang="ts">
-import {onMounted, onUnmounted, ref} from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import AudioComponent from "&/components/AudioComponent.vue";
 import SpectrogramComponent from "&/components/SpectrogramComponent.vue";
-import MyWorker from '@/workers/socket.worker.ts?worker'
-import {feedAudio} from "@/AudioPlayer";
+import MyWorker from '@/workers/socket.worker.ts?worker';
+import { feedAudio } from "@/AudioPlayer";
+import { getConfig } from "@/ConfigStore";
 
+const config = getConfig();
 
-// --- State ---
 const isConnected = ref(false);
 const statusText = ref('CONNECTING');
 const audioData = ref<Float32Array | null>(null);
 
-// Reference to our Worker
 let socketWorker: Worker | null = null;
-
-// Reference to the SpectrogramComponent instance
 const spectrogramComponentRef = ref<InstanceType<typeof SpectrogramComponent> | null>(null);
 
-// Information to pass to the Worker
-const wsUrl = import.meta.env.VITE_WS_URL ?? 'http://localhost:80';
-// Get the specific event names from .env
-const wsEventGraphics = import.meta.env.VITE_WS_GRAPHICS_EVENT ?? 'update_graphic';
-const wsEventAudio = import.meta.env.VITE_WS_AUDIO_EVENT ?? 'update_audio';
+// Get config from store
+const wsUrl = config.WS_URL;
+const wsEventGraphics = config.WS_GRAPHICS_EVENT;
+const wsEventAudio = config.WS_AUDIO_EVENT;
 
 onMounted(() => {
-    socketWorker = new MyWorker()
-    if(!socketWorker) return;
+    socketWorker = new MyWorker();
+    if (!socketWorker) return;
+
     socketWorker.onmessage = (event: MessageEvent) => {
-        const {type, payload} = event.data;
+        const { type, payload } = event.data;
 
         switch (type) {
             case 'status':
@@ -52,27 +50,26 @@ onMounted(() => {
 
     socketWorker.postMessage({
         type: 'init',
-        payload: {wsUrl, wsEventGraphics, wsEventAudio}
+        payload: { wsUrl, wsEventGraphics, wsEventAudio }
     });
 });
 
 onUnmounted(() => {
     if (socketWorker) {
-        socketWorker.postMessage({type: 'disconnect'});
+        socketWorker.postMessage({ type: 'disconnect' });
         socketWorker.terminate();
     }
 });
 
 function toggleConnection(): void {
     if (socketWorker) {
-        socketWorker.postMessage({type: 'toggleConnection'});
+        socketWorker.postMessage({ type: 'toggleConnection' });
     }
-
 }
 
 function toggleAudio(): void {
     if (socketWorker) {
-        socketWorker.postMessage({type: 'toggleAudio'})
+        socketWorker.postMessage({ type: 'toggleAudio' });
     }
 }
 </script>
@@ -102,9 +99,13 @@ function toggleAudio(): void {
                 <SpectrogramComponent
                     ref="spectrogramComponentRef"
                     class="w-full h-80 rounded-md"
+                    :model-value="config.lo_freq"
+                    :bandwidth="config.bandwidth"
+                    :sample-rate="config.samp_rate"
+                    :hardware-center-freq="config.lo_freq"
                 />
 
-                <AudioComponent :samples="audioData" @toggle-audio="toggleAudio()"/>
+                <AudioComponent :samples="audioData" @toggle-audio="toggleAudio()" />
             </div>
         </template>
     </Card>
