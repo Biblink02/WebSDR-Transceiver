@@ -24,7 +24,7 @@ ENV LD_LIBRARY_PATH=/usr/local/lib
 ENV PATH=/usr/local/bin:$PATH
 
 WORKDIR /app
-COPY *.py .
+COPY *.py ./
 
 EXPOSE 5000 5001
 CMD ["python3", "-u", "sdr_server.py"]
