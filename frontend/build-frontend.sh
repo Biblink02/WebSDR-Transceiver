@@ -10,7 +10,7 @@ docker run --rm \
     -v "$(pwd)/$FRONTEND_DIR:/app" \
     -w /app \
     node:20 \
-    bash -c "npm ci || npm install && npm run build"
+    bash -c "npm install && npm run build"
 
 # --- Copy build output to repository root ---
 rm -rf "$DIST_DIR"

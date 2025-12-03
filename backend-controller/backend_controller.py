@@ -12,7 +12,8 @@ from socket_handlers import SocketHandlers
 from config import (
     WEB_PORT, LISTEN_IP, POOL_SIZE, WORKER_HEADLESS_SERVICE,
     WORKER_CONTROL_PORT, SDR_CONTROL_PORT,
-    GRAPHICS_LISTEN_PORT, AUDIO_LISTEN_PORT, SDR_HOST
+    GRAPHICS_LISTEN_PORT, AUDIO_LISTEN_PORT, SDR_HOST,
+    WS_GRAPHICS_EVENT, WS_AUDIO_EVENT
 )
 
 # --- Application State ---
@@ -77,7 +78,7 @@ class GraphicsUdpProtocol(asyncio.DatagramProtocol):
         super().__init__()
 
     def datagram_received(self, data: bytes, addr: tuple):
-        self.loop.create_task(self.sio_server.emit('graphics_data', data))
+        self.loop.create_task(self.sio_server.emit(WS_GRAPHICS_EVENT, data))
 
     def error_received(self, exc: Exception):
         logging.error(f"Graphics UDP error: {exc}")
@@ -106,7 +107,7 @@ class AudioUdpProtocol(asyncio.DatagramProtocol):
 
             audio_data = mv[sep + 1:].tobytes()
 
-            self.loop.create_task(self.sio_server.emit('audio_data', audio_data, room=sid))
+            self.loop.create_task(self.sio_server.emit(WS_AUDIO_EVENT, audio_data, room=sid))
 
         except Exception as e:
             logging.error(f"Audio routing error: {e}")
