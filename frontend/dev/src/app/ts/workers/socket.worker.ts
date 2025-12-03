@@ -62,7 +62,6 @@ function connectSocket(url: string) {
             if (!rawData || !processAudio) return;
             // Transferable object
             const data = new Float32Array(rawData);
-            console.log("Right Audio");
             self.postMessage(
                 { type: 'audioData', payload: data },
                 { transfer: [data.buffer] }
