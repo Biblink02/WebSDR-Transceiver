@@ -9,23 +9,27 @@ import '@fontsource-variable/inter'
 import PrimeVue from 'primevue/config'
 import LocaleIt from 'primelocale/it.json'
 import Aura from '@primevue/themes/aura'
-import {definePreset} from '@primevue/themes'
 import {createHead} from '@unhead/vue/client'
+import {loadConfig} from "@/ConfigStore";
 
-const head = createHead()
-const app = createApp(App)
+const initApp = async () => {
+    await loadConfig()
 
+    const head = createHead()
+    const app = createApp(App)
 
-app.use(router)
-    .use(PrimeVue, {
-        theme: {
-            preset: Aura,
-            options: {
-                darkModeSelector: ".dark",
+    app.use(router)
+        .use(PrimeVue, {
+            theme: {
+                preset: Aura,
+                options: {
+                    darkModeSelector: ".dark",
+                },
             },
-        },
+            locale: LocaleIt['it'],
+        })
+        .use(head)
+        .mount('#app')
+}
 
-        locale: LocaleIt['it'],
-    })
-    .use(head)
-    .mount('#app')
+initApp().then()
