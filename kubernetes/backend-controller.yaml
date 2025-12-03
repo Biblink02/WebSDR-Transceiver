@@ -9,7 +9,7 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 8080
+      targetPort: 80
     - name: graphics-in
       port: 9001
       targetPort: 9001
@@ -39,7 +39,7 @@ spec:
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: 80
             - name: graphics
               containerPort: 9001
             - name: audio
