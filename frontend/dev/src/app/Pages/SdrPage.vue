@@ -5,6 +5,11 @@ import SpectrogramComponent from '&/components/SpectrogramComponent.vue';
 import FrequencyControl from '&/components/FrequencyControl.vue';
 import SocketWorker from '@/workers/socket.worker.ts?worker';
 import { setVolume, feedAudio, startAudioPlayback, stopAudioPlayback } from "@/AudioPlayer";
+import { getConfig } from "@/ConfigStore";
+import { useToast } from 'vue-toast-notification';
+
+const config = getConfig();
+const $toast = useToast();
 
 // --- State ---
 const isConnected = ref(false);
@@ -12,16 +17,20 @@ const statusText = ref('CONNECTING');
 const workerStatus = ref<'IDLE' | 'LISTENING' | 'FULL'>('IDLE');
 const assignedWorkerId = ref<string | null>(null);
 
-const CENTER_FREQ = 102500000;
+// --- Configuration Constants ---
+const CENTER_FREQ = config.lo_freq;
+const SAMPLE_RATE = config.samp_rate;
+const WS_URL = config.WS_URL;
+
+// --- Tuning State ---
 const tuneFreq = ref(CENTER_FREQ);
-const bandwidth = ref(15000);
+const bandwidth = ref(config.bandwidth);
 const volume = ref(100);
 
 const spectrogramRef = ref<InstanceType<typeof SpectrogramComponent> | null>(null);
 let socketWorker: Worker | null = null;
-const wsUrl = import.meta.env.VITE_WS_URL || 'http://localhost:80';
 
-// --- Worker Logic ---
+// --- Worker Lifecycle ---
 onMounted(() => {
     socketWorker = new SocketWorker();
     if (!socketWorker) return;
@@ -47,7 +56,16 @@ onMounted(() => {
             case 'workerAssigned':
                 workerStatus.value = 'LISTENING';
                 assignedWorkerId.value = payload.worker;
+
+                // Update UI if backend returned specific frequency/BW
                 if (payload.freq) tuneFreq.value = payload.freq;
+
+                if (payload.error) {
+                    $toast.warning(payload.error);
+                } else {
+                    $toast.success(`Connected to ${payload.worker}`);
+                }
+
                 startAudioPlayback();
                 break;
 
@@ -55,20 +73,30 @@ onMounted(() => {
                 workerStatus.value = 'IDLE';
                 assignedWorkerId.value = null;
                 stopAudioPlayback();
+                $toast.info("Receiver stopped");
                 break;
 
             case 'serverFull':
                 workerStatus.value = 'FULL';
-                alert("Server busy: No audio workers available.");
+                $toast.error("Server busy: No audio workers available.");
+                break;
+
+            case 'correctionApplied':
+                // Backend adjusted values (e.g. clamped bandwidth)
+                $toast.info(payload.message);
+                if (payload.freq) tuneFreq.value = payload.freq;
+                if (payload.bw) bandwidth.value = payload.bw;
                 break;
 
             case 'error':
                 console.error("Worker Error:", payload);
+                $toast.error(`Error: ${payload}`);
                 break;
         }
     };
 
-    socketWorker.postMessage({ type: 'init', payload: { wsUrl } });
+    // Initialize worker with dynamic URL from config
+    socketWorker.postMessage({ type: 'init', payload: { wsUrl: WS_URL } });
 });
 
 onUnmounted(() => {
@@ -109,7 +137,6 @@ function updateTuning() {
     }
 }
 
-// Handlers for the FrequencyControl Component
 function onFreqUpdate(newFreq: number) {
     tuneFreq.value = newFreq;
     updateTuning();
@@ -172,17 +199,21 @@ function updateVolume() {
                 </div>
             </div>
 
-            <div class="relative w-full flex-grow bg-black rounded-lg overflow-hidden border border-gray-700 shadow-2xl flex flex-col">
+            <div class="relative w-full h-[450px] shrink-0 bg-black rounded-lg overflow-hidden border border-gray-700 shadow-2xl flex flex-col group">
 
                 <SpectrogramComponent
                     ref="spectrogramRef"
                     class="w-full h-full block"
-                    :frequency="tuneFreq"
+                    v-model:model-value="tuneFreq"
+                    v-model:bandwidth="bandwidth"
+                    :sample-rate="SAMPLE_RATE"
+                    :hardware-center-freq="CENTER_FREQ"
+                    :fft-size="config.fft_size"
+                    @update:model-value="onFreqUpdate"
+                    @update:bandwidth="onBwUpdate"
                 />
 
-                <div class="absolute top-0 bottom-0 left-1/2 w-px bg-red-500/60 pointer-events-none z-0"></div>
-
-                <div class="absolute bottom-0 left-0 w-full z-10">
+                <div class="absolute bottom-0 left-0 w-full z-20 transition-transform duration-300 translate-y-full group-hover:translate-y-0 opacity-90">
                     <FrequencyControl
                         :frequency="tuneFreq"
                         :bandwidth="bandwidth"
