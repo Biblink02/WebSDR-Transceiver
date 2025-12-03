@@ -39,7 +39,6 @@ The application is containerized and orchestrated using Kubernetes (Kind).
 - Kind
 - kubectl
 - GNU Radio (required locally for grcc)
-- Node.js and npm
 
 ## Installation & Deployment
 
