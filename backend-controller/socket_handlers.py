@@ -66,7 +66,7 @@ class SocketHandlers:
     # -----------------------------
     # Connection Handlers
     # -----------------------------
-    async def on_connect(self, sid: str):
+    async def on_connect(self, sid: str, environ: dict):
         self.connected_users_count += 1
         logging.info(f"Client connected {sid}")
 
