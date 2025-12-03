@@ -3,7 +3,7 @@ import { ref } from "vue";
 import Drawer from "primevue/drawer";
 import {items} from "&/router";
 const menuOpen = ref(false);
-
+import logo from "~/images/logo.ico"
 </script>
 
 <template>
@@ -14,7 +14,7 @@ const menuOpen = ref(false);
 
             <!-- Logo -->
             <div class="flex items-center gap-3 md:absolute md:left-4">
-                <img src="/resources/images/logo.ico" alt="Logo" class="h-16" />
+                <img :src="logo" alt="Logo" class="h-16" />
             </div>
 
             <!-- Desktop Menu -->
