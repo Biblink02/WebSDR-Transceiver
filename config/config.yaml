@@ -76,12 +76,12 @@ WORKER_CONTROL_PORT: 5001
 WS_GRAPHICS_EVENT: "graphics_data"
 WS_AUDIO_EVENT: "audio_data"
 WS_CORRECTION_EVENT: "correction_applied"
-WS_URL: "http://localhost"
+WS_URL: "http://websdr.fbi.h-da.de"
 
 # =====================================================
 # ===              FRONTEND                 ===
 # =====================================================
-CHANNEL_COUNT: 2
+CHANNEL_COUNT: 1
 BUFFER_THRESHOLD: 4
 MAX_QUEUE_SIZE: 50
 RANGE_DB: 80
