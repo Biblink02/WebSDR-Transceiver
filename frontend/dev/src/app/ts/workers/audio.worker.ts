@@ -1,4 +1,8 @@
-// Type definitions for the AudioWorklet environment
+// NOTE: CANNOT BE USED IN HTTP BECAUSE AUDIOWORKLET NEEDS SECURECONTEXT!
+//       This works well and it's tested in local.
+
+
+
 declare class AudioWorkletProcessor {
     port: MessagePort;
     constructor(options?: { processorOptions?: Record<string, any> });
