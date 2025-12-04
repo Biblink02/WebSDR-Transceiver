@@ -1,28 +1,25 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
+import { useToast } from 'primevue/usetoast';
 import AppLayout from '&/layouts/AppLayout.vue';
 import SpectrogramComponent from '&/components/SpectrogramComponent.vue';
 import FrequencyControl from '&/components/FrequencyControl.vue';
 import SocketWorker from '@/workers/socket.worker.ts?worker';
-import { setVolume, feedAudio, startAudioPlayback, stopAudioPlayback } from "@/AudioPlayer";
+import { initAudio, feedAudio, startAudioPlayback, stopAudioPlayback, setVolume } from "@/AudioPlayer";
 import { getConfig } from "@/ConfigStore";
-import { useToast } from 'vue-toast-notification';
 
 const config = getConfig();
-const $toast = useToast();
+const toast = useToast();
 
-// --- State ---
 const isConnected = ref(false);
 const statusText = ref('CONNECTING');
 const workerStatus = ref<'IDLE' | 'LISTENING' | 'FULL'>('IDLE');
 const assignedWorkerId = ref<string | null>(null);
 
-// --- Configuration Constants ---
 const CENTER_FREQ = config.lo_freq;
 const SAMPLE_RATE = config.samp_rate;
 const WS_URL = config.WS_URL;
 
-// --- Tuning State ---
 const tuneFreq = ref(CENTER_FREQ);
 const bandwidth = ref(config.bandwidth);
 const volume = ref(100);
@@ -30,8 +27,9 @@ const volume = ref(100);
 const spectrogramRef = ref<InstanceType<typeof SpectrogramComponent> | null>(null);
 let socketWorker: Worker | null = null;
 
-// --- Worker Lifecycle ---
 onMounted(() => {
+    setVolume(volume.value / 100);
+
     socketWorker = new SocketWorker();
     if (!socketWorker) return;
 
@@ -57,13 +55,12 @@ onMounted(() => {
                 workerStatus.value = 'LISTENING';
                 assignedWorkerId.value = payload.worker;
 
-                // Update UI if backend returned specific frequency/BW
                 if (payload.freq) tuneFreq.value = payload.freq;
 
                 if (payload.error) {
-                    $toast.warning(payload.error);
+                    toast.add({ severity: 'warn', summary: 'Warning', detail: payload.error, life: 3000 });
                 } else {
-                    $toast.success(`Connected to ${payload.worker}`);
+                    //toast.add({ severity: 'success', summary: 'Connected', detail: `Connected to ${payload.worker}`, life: 3000 });
                 }
 
                 startAudioPlayback();
@@ -73,29 +70,27 @@ onMounted(() => {
                 workerStatus.value = 'IDLE';
                 assignedWorkerId.value = null;
                 stopAudioPlayback();
-                $toast.info("Receiver stopped");
+                //toast.add({ severity: 'info', summary: 'Stopped', detail: 'Receiver stopped', life: 3000 });
                 break;
 
             case 'serverFull':
                 workerStatus.value = 'FULL';
-                $toast.error("Server busy: No audio workers available.");
+                toast.add({ severity: 'error', summary: 'Server Busy', detail: 'No audio workers available.', life: 3000 });
                 break;
 
             case 'correctionApplied':
-                // Backend adjusted values (e.g. clamped bandwidth)
-                $toast.info(payload.message);
+                toast.add({ severity: 'info', summary: 'Correction', detail: payload.message, life: 3000 });
                 if (payload.freq) tuneFreq.value = payload.freq;
                 if (payload.bw) bandwidth.value = payload.bw;
                 break;
 
             case 'error':
                 console.error("Worker Error:", payload);
-                $toast.error(`Error: ${payload}`);
+                toast.add({ severity: 'error', summary: 'Error', detail: payload, life: 3000 });
                 break;
         }
     };
 
-    // Initialize worker with dynamic URL from config
     socketWorker.postMessage({ type: 'init', payload: { wsUrl: WS_URL } });
 });
 
@@ -107,13 +102,15 @@ onUnmounted(() => {
     }
 });
 
-// --- Actions ---
 function toggleAudio() {
     if (!socketWorker) return;
 
     if (workerStatus.value === 'LISTENING') {
         socketWorker.postMessage({ type: 'releaseWorker' });
     } else {
+        // Initialize AudioContext immediately on user click to comply with browser policies
+        initAudio();
+
         socketWorker.postMessage({
             type: 'requestWorker',
             payload: { freq: tuneFreq.value, bw: bandwidth.value }
@@ -148,12 +145,13 @@ function onBwUpdate(newBw: number) {
 }
 
 function updateVolume() {
-    setVolume(volume.value / 100);
+    setVolume(Number(volume.value) / 100);
 }
 </script>
 
 <template>
     <AppLayout>
+        <Toast />
         <div class="flex flex-col h-[calc(100vh-theme('spacing.24'))] max-w-7xl mx-auto w-full p-4 gap-4">
 
             <div class="flex flex-wrap justify-between items-center bg-gray-900/90 p-4 rounded-lg backdrop-blur border border-gray-700 shadow-lg shrink-0">
@@ -194,7 +192,7 @@ function updateVolume() {
                             ? 'bg-red-600/90 hover:bg-red-600 text-white border-red-500'
                             : 'bg-blue-600/90 hover:bg-blue-600 text-white border-blue-500 disabled:opacity-50 disabled:grayscale'"
                     >
-                        {{ workerStatus === 'LISTENING' ? 'STOP RECEIVER' : 'START RECEIVER' }}
+                        {{ workerStatus === 'LISTENING' ? 'STOP AUDIO' : 'START AUDIO' }}
                     </button>
                 </div>
             </div>
