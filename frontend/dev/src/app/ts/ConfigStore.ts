@@ -14,7 +14,7 @@ export interface AppConfig {
 
     // Audio
     audio_rate: number
-    CHANNELS: number
+    CHANNEL_COUNT: number
     MAX_QUEUE_SIZE: number
     BUFFER_THRESHOLD: number
 
