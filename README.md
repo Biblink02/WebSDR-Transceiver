@@ -57,7 +57,13 @@ Access the web interface:
 ```
 http://localhost
 ```
+## Configuration
 
+The entire system behavior is controlled by a single configuration file located at `config/config.yaml`. This makes the Frontend, Backend, and DSP workers utilize synchronized parameters.
+
+### Key Settings to Customize
+
+Before running the cluster, you **must** update the `iio_uri` to match your hardware setup, and for deployment make sure to change also the `WS_URL`.
 ## Development Team (PRI05)
 
 - Alberto (Biblink02) — University of Padua
