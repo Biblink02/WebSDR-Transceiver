@@ -55,7 +55,9 @@ export default ({ mode }: Params) => {
                 input: 'index.html', // Ensures Vite knows where to start
             },
         },
-
+        optimizeDeps: {
+            exclude: ['@yume-chan/pcm-player']
+        },
         server: {
             host: '0.0.0.0',
             port: parseInt(process.env.VITE_PORT ?? '3100'),
