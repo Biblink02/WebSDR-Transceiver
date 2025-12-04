@@ -1,72 +1,66 @@
-import audioWorkletUrl from '@/workers/audio.worker.ts?worker&url';
-import { getConfig } from "@/ConfigStore";
+import {getConfig} from "@/ConfigStore";
 
-const SAMPLE_RATE = 48000;
-
-let audioContext: AudioContext | null = null;
-let workletNode: AudioWorkletNode | null = null;
-let gainNode: GainNode | null = null;
+let audioContext: AudioContext | null = null
+let gainNode: GainNode | null = null
+let nextStartTime = 0
+let currentVolume = 1.0;
 
 export async function initAudio() {
-    if (audioContext && audioContext.state !== 'closed') {
-        if (audioContext.state === 'suspended') {
-            await audioContext.resume();
-        }
-        return;
-    }
-
     const config = getConfig();
-
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    audioContext = new AudioContextClass({
-        sampleRate: SAMPLE_RATE,
-        latencyHint: 'interactive'
-    });
-
-    try {
-        await audioContext.audioWorklet.addModule(audioWorkletUrl);
-
-        workletNode = new AudioWorkletNode(audioContext, 'pcm-processor', {
-            processorOptions: {
-                bufferThreshold: config.BUFFER_THRESHOLD,
-                maxQueueSize: config.MAX_QUEUE_SIZE
-            }
-        });
-
-        gainNode = audioContext.createGain();
-        gainNode.gain.value = 1.0;
-
-        workletNode.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        console.log("Audio Engine Initialized");
-    } catch (e) {
-        console.error("Failed to load Audio Worklet:", e);
+    if (audioContext && audioContext.state !== 'closed') {
+        if (audioContext.state === 'suspended') await audioContext.resume()
+        return
     }
+
+    const AC = window.AudioContext || (window as any).webkitAudioContext
+
+    audioContext = new AC({
+        sampleRate: config.audio_rate,
+        latencyHint: 'interactive'
+    })
+
+    gainNode = audioContext.createGain()
+    gainNode.gain.value = currentVolume;
+    gainNode.connect(audioContext.destination)
+
+    nextStartTime = audioContext.currentTime
 }
 
 export function feedAudio(samples: Float32Array) {
-    if (workletNode) {
-        workletNode.port.postMessage(samples);
-    }
+    if (!audioContext || !gainNode) return
+
+    const cfg = getConfig()
+
+    const buffer = audioContext.createBuffer(1, samples.length, cfg.audio_rate)
+    buffer.copyToChannel(samples, 0)
+
+    const offset = 0.02
+    if (nextStartTime < audioContext.currentTime)
+        nextStartTime = audioContext.currentTime + offset
+
+    const source = audioContext.createBufferSource()
+    source.buffer = buffer
+    source.connect(gainNode)
+    source.start(nextStartTime)
+
+    nextStartTime += buffer.duration
 }
 
 export async function startAudioPlayback() {
-    await initAudio();
+    await initAudio()
 }
 
 export function stopAudioPlayback() {
-    if (audioContext) {
-        audioContext.close();
-        audioContext = null;
-        workletNode = null;
-        gainNode = null;
-    }
+    if (!audioContext) return
+    audioContext.close().then()
+    audioContext = null
+    gainNode = null
+    nextStartTime = 0
 }
 
-export function setVolume(val: number) {
+export function setVolume(v: number) {
+    currentVolume = Math.max(0, Math.min(1, v));
     if (gainNode && audioContext) {
-        const clamped = Math.max(0, Math.min(1, val));
-        gainNode.gain.setTargetAtTime(clamped, audioContext.currentTime, 0.05);
+        gainNode.gain.setTargetAtTime(currentVolume, audioContext.currentTime, 0.05)
     }
 }
