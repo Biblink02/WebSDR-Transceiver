@@ -4,10 +4,16 @@ from config import (
     SDR_SAMPLE_RATE,
     MAX_BW_LIMIT,
     MAX_OFFSET_LIMIT,
-    WS_CORRECTION_EVENT
+    WS_CORRECTION_EVENT,
+    WS_SERVER_FULL_EVENT,
+    WS_WORKER_ASSIGNED_EVENT,
+    WS_WORKER_RELEASED_EVENT,
+    WS_CONNECT_EVENT,
+    WS_DISCONNECT_EVENT,
+    WS_REQUEST_WORKER_EVENT,
+    WS_DISMISS_WORKER_EVENT,
+    WS_TUNE_EVENT
 )
-
-
 
 class SocketHandlers:
     def __init__(self, sio, pool_state, send_audio_func, send_sdr_func):
@@ -29,11 +35,11 @@ class SocketHandlers:
         logging.info(f"SocketHandlers initialized. SDR Center Freq: {self.sdr_center_freq} Hz")
 
     async def register_events(self):
-        self.sio.on("connect", self.on_connect)
-        self.sio.on("disconnect", self.on_disconnect)
-        self.sio.on("request_audio_worker", self.on_request_audio_worker)
-        self.sio.on("release_audio_worker", self.on_release_audio_worker)
-        self.sio.on("tune", self.on_tune)
+        self.sio.on(WS_CONNECT_EVENT, self.on_connect)
+        self.sio.on(WS_DISCONNECT_EVENT, self.on_disconnect)
+        self.sio.on(WS_REQUEST_WORKER_EVENT, self.on_request_audio_worker)
+        self.sio.on(WS_DISMISS_WORKER_EVENT, self.on_release_audio_worker)
+        self.sio.on(WS_TUNE_EVENT, self.on_tune)
 
     # -----------------------------
     # Validation
@@ -105,7 +111,7 @@ class SocketHandlers:
                 break
 
         if not assigned_worker:
-            await self.sio.emit("server_full", room=sid)
+            await self.sio.emit(WS_SERVER_FULL_EVENT, room=sid)
             return
 
         self.worker_pool[assigned_worker] = sid
@@ -114,8 +120,9 @@ class SocketHandlers:
 
         await self.sio.enter_room(sid, sid)
 
+        # Default logic if data is missing
         target_freq = float(data.get("freq", self.sdr_center_freq))
-        bw = float(data.get("bw", 150e3))
+        bw = float(data.get("bw", 15000.0))
 
         offset, validated_bw, error = self._validate_tune(target_freq, bw)
 
@@ -128,7 +135,7 @@ class SocketHandlers:
         if error:
             resp["error"] = error
 
-        await self.sio.emit("worker_assigned", resp, room=sid)
+        await self.sio.emit(WS_WORKER_ASSIGNED_EVENT, resp, room=sid)
 
     # -----------------------------
     # Tune Command
@@ -139,7 +146,7 @@ class SocketHandlers:
             return
 
         target_freq = float(data.get("freq", self.sdr_center_freq))
-        bw = float(data.get("bw", 150e3))
+        bw = float(data.get("bw", 15000.0))
 
         offset, validated_bw, error = self._validate_tune(target_freq, bw)
 
@@ -165,4 +172,4 @@ class SocketHandlers:
             await self.send_audio(worker_name, {"cmd": "idle"})
             self.worker_pool[worker_name] = "idle"
             self.worker_to_client_map.pop(worker_name, None)
-            await self.sio.emit("worker_released", room=sid)
+            await self.sio.emit(WS_WORKER_RELEASED_EVENT, room=sid)
