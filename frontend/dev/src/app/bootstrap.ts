@@ -1,4 +1,4 @@
-import Axios, { AxiosStatic } from 'axios'
+import Axios, {AxiosStatic} from 'axios'
 
 declare global {
     // Extending the DOM Window Interface
