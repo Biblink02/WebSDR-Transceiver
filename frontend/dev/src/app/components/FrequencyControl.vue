@@ -15,7 +15,10 @@ const config = store.settings;
 const minFreq = computed(() => config.lo_freq - (config.samp_rate / 2));
 const maxFreq = computed(() => config.lo_freq + (config.samp_rate / 2));
 
-const BW_LIMITS = { min: 100, max: config.max_bw_limit };
+const minFreqRF = computed(() => minFreq.value + config.lnb_lo_freq);
+const maxFreqRF = computed(() => maxFreq.value + config.lnb_lo_freq);
+
+const BW_LIMITS = { min: config.min_bw_limit, max: config.max_bw_limit };
 
 const localFreq = ref(props.frequency);
 const localBw = ref(props.bandwidth);
@@ -50,7 +53,7 @@ watch(() => props.bandwidth, (val) => localBw.value = Math.round(val));
     <div class="w-full flex items-center justify-between px-6 py-3 bg-gray-900/90 backdrop-blur-sm border-t border-gray-700 text-white">
 
         <div class="flex flex-col gap-1">
-            <label class="text-[10px] uppercase tracking-wider text-gray-400">Frequency (Hz)</label>
+            <label class="text-[10px] uppercase tracking-wider text-gray-400">Frequency (IF Offset)</label>
             <div class="flex items-center gap-2">
                 <input
                     type="number"
@@ -62,8 +65,8 @@ watch(() => props.bandwidth, (val) => localBw.value = Math.round(val));
                     class="bg-black border border-gray-600 rounded px-2 py-1 text-green-400 font-mono text-sm focus:outline-none focus:border-green-500 w-40"
                 />
                 <span class="text-xs text-gray-500">
-          Range: {{ (minFreq / 1e6).toFixed(2) }} - {{ (maxFreq / 1e6).toFixed(2) }} MHz
-        </span>
+                  Range: {{ (minFreqRF / 1e6).toFixed(3) }} - {{ (maxFreqRF / 1e6).toFixed(3) }} MHz
+                </span>
             </div>
         </div>
 
