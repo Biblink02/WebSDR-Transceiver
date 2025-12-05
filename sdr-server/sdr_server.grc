@@ -33,42 +33,6 @@ options:
     state: enabled
 
 blocks:
-- name: SDR_CONTROL_PORT
-  id: variable
-  parameters:
-    comment: ''
-    value: '5001'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [776, 88.0]
-    rotation: 0
-    state: enabled
-- name: SDR_HOST
-  id: variable
-  parameters:
-    comment: ''
-    value: '"sdr-server"'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [696, 16.0]
-    rotation: 0
-    state: enabled
-- name: SDR_IQ_PORT
-  id: variable
-  parameters:
-    comment: ''
-    value: '5000'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [800, 16.0]
-    rotation: 0
-    state: enabled
 - name: buffer_size
   id: variable
   parameters:
@@ -141,6 +105,42 @@ blocks:
     coordinate: [192, 16.0]
     rotation: 0
     state: enabled
+- name: sdr_control_port
+  id: variable
+  parameters:
+    comment: ''
+    value: '5001'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [776, 88.0]
+    rotation: 0
+    state: enabled
+- name: sdr_host
+  id: variable
+  parameters:
+    comment: ''
+    value: '"sdr-server"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [696, 16.0]
+    rotation: 0
+    state: enabled
+- name: sdr_iq_port
+  id: variable
+  parameters:
+    comment: ''
+    value: '5000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [800, 16.0]
+    rotation: 0
+    state: enabled
 - name: epy_block_0
   id: epy_block
   parameters:
@@ -163,7 +163,7 @@ blocks:
     affinity: ''
     alias: ''
     comment: ''
-    iq_port: SDR_IQ_PORT
+    iq_port: sdr_iq_port
     maxoutbuf: '0'
     minoutbuf: '0'
   states:
@@ -229,7 +229,7 @@ blocks:
       \n    if hasattr(self, setter_lower):\n        getattr(self, setter_lower)(val)\n\
       \        continue\n\n    setter_original = f\"set_{key}\"\n    if hasattr(self,\
       \ setter_original):\n        getattr(self, setter_original)(val)\n\ndef control_loop(flowgraph):\n\
-      \    ctx = zmq.Context()\n    control_port = flowgraph.cfg[\"SDR_CONTROL_PORT\"\
+      \    ctx = zmq.Context()\n    control_port = flowgraph.cfg[\"sdr_control_port\"\
       ]\n\n    sock = ctx.socket(zmq.PULL)\n    sock.bind(f\"tcp://0.0.0.0:{control_port}\"\
       )\n    print(f\"[SDR] Control Thread listening on {control_port}\")\n\n    zmq_pub_block\
       \ = flowgraph.epy_block_0\n\n    while True:\n        try:\n            msg\
