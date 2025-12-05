@@ -1,9 +1,6 @@
-import { ref } from 'vue'
+import {ref} from 'vue'
 
-export const images = {
+export const images = {}
 
-}
-
-export const responsiveOptions = ref([
-])
+export const responsiveOptions = ref([])
 

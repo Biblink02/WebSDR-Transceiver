@@ -1,5 +1,5 @@
-<script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+<script lang="ts" setup>
+import {onBeforeUnmount, onMounted, ref} from 'vue'
 
 interface Particle {
     x: number
@@ -197,7 +197,7 @@ onBeforeUnmount(() => {
     width: 100%;
     height: 100%;
     pointer-events: none;
-    background: rgb(0,8,20);
+    background: rgb(0, 8, 20);
     overflow: hidden;
     cursor: none;
     margin: 0;
