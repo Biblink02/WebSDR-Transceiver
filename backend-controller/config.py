@@ -55,7 +55,8 @@ SDR_CENTER_FREQ = float(get_cfg("lo_freq", 739675000))
 SDR_SAMPLE_RATE = int(get_cfg("samp_rate", 2000000))
 
 # Frontend Constraints
-MAX_BW_LIMIT = int(get_cfg("max_bw_limit", 200000))
+MAX_BW_LIMIT = int(get_cfg("max_bw_limit", 6000))
+MIN_BW_LIMIT = int(get_cfg("min_bw_limit", 1))
 MAX_OFFSET_LIMIT = SDR_SAMPLE_RATE / 2
 
 # ==========================================

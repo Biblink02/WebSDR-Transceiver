@@ -3,6 +3,7 @@ from config import (
     SDR_CENTER_FREQ,
     SDR_SAMPLE_RATE,
     MAX_BW_LIMIT,
+    MIN_BW_LIMIT,
     MAX_OFFSET_LIMIT,
     WS_CORRECTION_EVENT,
     WS_SERVER_FULL_EVENT,
@@ -28,6 +29,7 @@ class SocketHandlers:
         self.sdr_center_freq = SDR_CENTER_FREQ
         self.sdr_sample_rate = SDR_SAMPLE_RATE
         self.max_bw_limit = MAX_BW_LIMIT
+        self.min_bw_limit = MIN_BW_LIMIT
         self.max_offset_limit = MAX_OFFSET_LIMIT
 
         self.connected_users_count = 0
@@ -41,11 +43,7 @@ class SocketHandlers:
         self.sio.on(WS_DISMISS_WORKER_EVENT, self.on_release_audio_worker)
         self.sio.on(WS_TUNE_EVENT, self.on_tune)
 
-    # -----------------------------
-    # Validation
-    # -----------------------------
     def _validate_tune(self, target_freq: float, bandwidth: float):
-        """Validate and clamp frequency offset and bandwidth."""
         offset = target_freq - self.sdr_center_freq
         error = None
 
@@ -63,15 +61,11 @@ class SocketHandlers:
             )
             logging.warning(error)
             bandwidth = self.max_bw_limit
-
-        if bandwidth <= 0:
-            bandwidth = 10000.0
+        elif bandwidth < self.min_bw_limit:
+            bandwidth = self.min_bw_limit
 
         return offset, bandwidth, error
 
-    # -----------------------------
-    # Connection Handlers
-    # -----------------------------
     async def on_connect(self, sid: str, environ: dict):
         self.connected_users_count += 1
         logging.info(f"Client connected {sid}")
@@ -97,9 +91,6 @@ class SocketHandlers:
             logging.info("Idling SDR I/Q stream")
             await self.send_sdr({"cmd": "stop"})
 
-    # -----------------------------
-    # Worker Allocation
-    # -----------------------------
     async def on_request_audio_worker(self, sid: str, data: dict):
         if sid in self.client_to_worker_map:
             return
@@ -120,7 +111,6 @@ class SocketHandlers:
 
         await self.sio.enter_room(sid, sid)
 
-        # Default logic if data is missing
         target_freq = float(data.get("freq", self.sdr_center_freq))
         bw = float(data.get("bw", 15000.0))
 
@@ -137,9 +127,6 @@ class SocketHandlers:
 
         await self.sio.emit(WS_WORKER_ASSIGNED_EVENT, resp, room=sid)
 
-    # -----------------------------
-    # Tune Command
-    # -----------------------------
     async def on_tune(self, sid: str, data: dict):
         worker_name = self.client_to_worker_map.get(sid)
         if not worker_name:
@@ -162,9 +149,6 @@ class SocketHandlers:
                 room=sid,
             )
 
-    # -----------------------------
-    # Release Worker
-    # -----------------------------
     async def on_release_audio_worker(self, sid: str):
         worker_name = self.client_to_worker_map.pop(sid, None)
 

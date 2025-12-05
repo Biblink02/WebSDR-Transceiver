@@ -5,9 +5,11 @@ export interface AppConfig {
     samp_rate: number
     fft_size: number
     lo_freq: number
+    lnb_lo_freq: number
 
     // Frontend Limits
     max_bw_limit: number
+    min_bw_limit: number
     channel_count: number
     buffer_threshold: number
     max_queue_size: number
