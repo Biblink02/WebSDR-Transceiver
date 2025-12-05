@@ -1,6 +1,6 @@
-import {AppConfig} from "@/ConfigStore";
+import {AppConfig} from "@/ConfigService";
 
-let config: AppConfig|null = null;
+let config: AppConfig | null = null;
 
 let maxDb = -20;
 let minDb = -100;
@@ -86,14 +86,16 @@ function processFFT(data: Float32Array) {
     }
 
     if (peak > -200 && peak < 100) {
+        // Use snake_case keys
         if (peak > maxDb) {
-            maxDb += (peak - maxDb) * config.GAIN_ATTACK;
+            maxDb += (peak - maxDb) * config.gain_attack;
         } else {
-            maxDb -= (maxDb - peak) * config.GAIN_RELEASE;
+            maxDb -= (maxDb - peak) * config.gain_release;
         }
     }
 
-    minDb = maxDb - config.RANGE_DB;
+    // Use snake_case keys
+    minDb = maxDb - config.range_db;
 
     offscreenCtx.drawImage(offscreenCanvas, 0, 0, bufferWidth, bufferHeight - 1, 0, 1, bufferWidth, bufferHeight - 1);
 

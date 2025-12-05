@@ -2,19 +2,7 @@ import { io, Socket } from 'socket.io-client';
 
 let socket: Socket | null = null;
 let processAudio = false;
-
-// Event names fixed by backend protocol
-const EVENTS = {
-    GRAPHICS: 'graphics_data',
-    AUDIO: 'audio_data',
-    ASSIGNED: 'worker_assigned',
-    RELEASED: 'worker_released',
-    FULL: 'server_full',
-    // Outgoing
-    REQUEST_WORKER: 'request_audio_worker',
-    RELEASE_WORKER: 'release_audio_worker',
-    TUNE: 'tune'
-};
+let EVENTS: Record<string, string> = {};
 
 function connectSocket(url: string) {
     if (socket) {
@@ -25,12 +13,12 @@ function connectSocket(url: string) {
         transports: ['websocket', 'polling']
     });
 
-    socket.on('connect', () => {
+    socket.on(EVENTS.WS_CONNECT_EVENT, () => {
         postStatus('CONNECTED', true);
         console.log('Worker: Socket connected');
     });
 
-    socket.on('disconnect', () => {
+    socket.on(EVENTS.WS_DISCONNECT_EVENT, () => {
         postStatus('DISCONNECTED', false);
         console.log('Worker: Socket disconnected');
     });
@@ -40,12 +28,9 @@ function connectSocket(url: string) {
         self.postMessage({ type: 'error', payload: err.message });
     });
 
-    // --- High Frequency Streams ---
-
-    socket.on(EVENTS.GRAPHICS, (rawData: ArrayBuffer) => {
+    socket.on(EVENTS.WS_GRAPHICS_EVENT, (rawData: ArrayBuffer) => {
         try {
             if (!rawData) return;
-            // Transferable object for performance
             const data = new Float32Array(rawData);
             self.postMessage(
                 { type: 'graphicData', payload: data },
@@ -56,11 +41,9 @@ function connectSocket(url: string) {
         }
     });
 
-    socket.on(EVENTS.AUDIO, (rawData: ArrayBuffer) => {
-
+    socket.on(EVENTS.WS_AUDIO_EVENT, (rawData: ArrayBuffer) => {
         try {
             if (!rawData || !processAudio) return;
-            // Transferable object
             const data = new Float32Array(rawData);
             self.postMessage(
                 { type: 'audioData', payload: data },
@@ -71,18 +54,20 @@ function connectSocket(url: string) {
         }
     });
 
-    // --- Control Events ---
-
-    socket.on(EVENTS.ASSIGNED, (data) => {
+    socket.on(EVENTS.WS_WORKER_ASSIGNED_EVENT, (data) => {
         self.postMessage({ type: 'workerAssigned', payload: data });
     });
 
-    socket.on(EVENTS.RELEASED, () => {
+    socket.on(EVENTS.WS_WORKER_RELEASED_EVENT, () => {
         self.postMessage({ type: 'workerReleased' });
     });
 
-    socket.on(EVENTS.FULL, () => {
+    socket.on(EVENTS.WS_SERVER_FULL_EVENT, () => {
         self.postMessage({ type: 'serverFull' });
+    });
+
+    socket.on(EVENTS.WS_CORRECTION_EVENT, (data) => {
+        self.postMessage({ type: 'correctionApplied', payload: data });
     });
 }
 
@@ -98,6 +83,7 @@ self.onmessage = (event: MessageEvent) => {
 
     switch (type) {
         case 'init':
+            EVENTS = payload.events;
             postStatus('CONNECTING', false);
             connectSocket(payload.wsUrl);
             break;
@@ -107,25 +93,21 @@ self.onmessage = (event: MessageEvent) => {
             break;
 
         case 'toggleAudio':
-            processAudio = payload; // payload is boolean
+            processAudio = payload;
             break;
 
-        // --- Outgoing Commands ---
-
         case 'requestWorker':
-            // payload: { freq: number, bw: number }
-            socket?.emit(EVENTS.REQUEST_WORKER, payload);
+            socket?.emit(EVENTS.WS_REQUEST_WORKER_EVENT, payload);
             processAudio = true;
             break;
 
         case 'releaseWorker':
-            socket?.emit(EVENTS.RELEASE_WORKER);
+            socket?.emit(EVENTS.WS_DISMISS_WORKER_EVENT);
             processAudio = false;
             break;
 
         case 'tune':
-            // payload is { freq: number, bw: number }
-            socket?.emit(EVENTS.TUNE, payload);
+            socket?.emit(EVENTS.WS_TUNE_EVENT, payload);
             break;
     }
 };

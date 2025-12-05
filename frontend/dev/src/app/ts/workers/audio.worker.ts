@@ -2,12 +2,14 @@
 //       This works well and it's tested in local.
 
 
-
 declare class AudioWorkletProcessor {
     port: MessagePort;
+
     constructor(options?: { processorOptions?: Record<string, any> });
+
     process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean;
 }
+
 declare function registerProcessor(name: string, processorCtor: (new (options?: any) => AudioWorkletProcessor)): void;
 
 class PCMWorkletProcessor extends AudioWorkletProcessor {
