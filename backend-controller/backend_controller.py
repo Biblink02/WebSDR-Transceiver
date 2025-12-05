@@ -17,6 +17,7 @@ from config import (
 )
 
 # --- Application State ---
+# Assuming Audio Workers are named sequentially via StatefulSet: audio-worker-0, audio-worker-1...
 app_state = {
     "worker_pool": {f"audio-worker-{i}": "idle" for i in range(POOL_SIZE)},
     "client_to_worker_map": {},
@@ -56,6 +57,7 @@ async def _send_zmq_packet(target_id: str, address: str, command: dict):
 async def send_audio_command(worker_id: str, command: dict):
     """
     Routes commands to a specific Audio Worker within the StatefulSet.
+    Constructs the K8s DNS name: pod_name.headless_service_name
     """
     address = f"tcp://{worker_id}.{WORKER_HEADLESS_SERVICE}:{WORKER_CONTROL_PORT}"
     await _send_zmq_packet(worker_id, address, command)
@@ -63,7 +65,7 @@ async def send_audio_command(worker_id: str, command: dict):
 
 async def send_sdr_command(command: dict):
     """
-    Routes commands to the central SDR Server control port (5001).
+    Routes commands to the central SDR Server control port.
     """
     address = f"tcp://{SDR_HOST}:{SDR_CONTROL_PORT}"
     await _send_zmq_packet("sdr-server", address, command)
@@ -78,6 +80,7 @@ class GraphicsUdpProtocol(asyncio.DatagramProtocol):
         super().__init__()
 
     def datagram_received(self, data: bytes, addr: tuple):
+        # Broadcast graphics data to all connected clients
         self.loop.create_task(self.sio_server.emit(WS_GRAPHICS_EVENT, data))
 
     def error_received(self, exc: Exception):
@@ -93,6 +96,7 @@ class AudioUdpProtocol(asyncio.DatagramProtocol):
 
     def datagram_received(self, data: bytes, addr: tuple):
         try:
+            # Audio packets come with a header: "worker-name:RAW_BYTES"
             mv = memoryview(data)
             sep = data.find(b':')
 
@@ -101,12 +105,14 @@ class AudioUdpProtocol(asyncio.DatagramProtocol):
 
             worker_name = mv[:sep].tobytes().decode('utf-8')
 
+            # Find which client owns this worker
             sid = self.worker_to_client_map.get(worker_name)
             if not sid:
                 return
 
             audio_data = mv[sep + 1:].tobytes()
 
+            # Route audio ONLY to the specific client room
             self.loop.create_task(self.sio_server.emit(WS_AUDIO_EVENT, audio_data, room=sid))
 
         except Exception as e:
@@ -126,17 +132,20 @@ async def lifespan(app: FastAPI):
     loop = asyncio.get_running_loop()
 
     # 1. Start UDP Listeners
-    await loop.create_datagram_endpoint(
-        lambda: GraphicsUdpProtocol(sio_server=sio),
-        local_addr=(LISTEN_IP, GRAPHICS_LISTEN_PORT)
-    )
-    logging.info(f"Graphics UDP server listening on :{GRAPHICS_LISTEN_PORT}")
+    try:
+        await loop.create_datagram_endpoint(
+            lambda: GraphicsUdpProtocol(sio_server=sio),
+            local_addr=(LISTEN_IP, GRAPHICS_LISTEN_PORT)
+        )
+        logging.info(f"Graphics UDP server listening on {LISTEN_IP}:{GRAPHICS_LISTEN_PORT}")
 
-    await loop.create_datagram_endpoint(
-        lambda: AudioUdpProtocol(sio_server=sio, state=app_state),
-        local_addr=(LISTEN_IP, AUDIO_LISTEN_PORT)
-    )
-    logging.info(f"Audio UDP server listening on :{AUDIO_LISTEN_PORT}")
+        await loop.create_datagram_endpoint(
+            lambda: AudioUdpProtocol(sio_server=sio, state=app_state),
+            local_addr=(LISTEN_IP, AUDIO_LISTEN_PORT)
+        )
+        logging.info(f"Audio UDP server listening on {LISTEN_IP}:{AUDIO_LISTEN_PORT}")
+    except Exception as e:
+        logging.critical(f"Failed to bind UDP ports: {e}")
 
     # 2. Init Logic Handlers
     handlers = SocketHandlers(

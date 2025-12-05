@@ -33,7 +33,19 @@ options:
     state: enabled
 
 blocks:
-- name: AUDIO_UDP_PORT
+- name: audio_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: '48000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [296, 16.0]
+    rotation: 0
+    state: enabled
+- name: audio_udp_port
   id: variable
   parameters:
     comment: ''
@@ -45,7 +57,7 @@ blocks:
     coordinate: [568, 168.0]
     rotation: 0
     state: enabled
-- name: BACKEND_HOST
+- name: backend_host
   id: variable
   parameters:
     comment: ''
@@ -55,54 +67,6 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [424, 168.0]
-    rotation: 0
-    state: enabled
-- name: SDR_HOST
-  id: variable
-  parameters:
-    comment: ''
-    value: '"sdr-server"'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [432, 96.0]
-    rotation: 0
-    state: enabled
-- name: SDR_IQ_PORT
-  id: variable
-  parameters:
-    comment: ''
-    value: '5000'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [536, 96.0]
-    rotation: 0
-    state: enabled
-- name: WORKER_CONTROL_PORT
-  id: variable
-  parameters:
-    comment: ''
-    value: '5001'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [736, 144.0]
-    rotation: 0
-    state: enabled
-- name: audio_rate
-  id: variable
-  parameters:
-    comment: ''
-    value: '48000'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [296, 16.0]
     rotation: 0
     state: enabled
 - name: bandwidth
@@ -165,6 +129,42 @@ blocks:
     coordinate: [208, 16.0]
     rotation: 0
     state: enabled
+- name: sdr_host
+  id: variable
+  parameters:
+    comment: ''
+    value: '"sdr-server"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [432, 96.0]
+    rotation: 0
+    state: enabled
+- name: sdr_iq_port
+  id: variable
+  parameters:
+    comment: ''
+    value: '5000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [536, 96.0]
+    rotation: 0
+    state: enabled
+- name: worker_control_port
+  id: variable
+  parameters:
+    comment: ''
+    value: '5001'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [736, 144.0]
+    rotation: 0
+    state: enabled
 - name: analog_nbfm_rx_0
   id: analog_nbfm_rx
   parameters:
@@ -212,10 +212,10 @@ blocks:
     affinity: ''
     alias: ''
     comment: ''
-    host: BACKEND_HOST
+    host: backend_host
     maxoutbuf: '0'
     minoutbuf: '0'
-    port: AUDIO_UDP_PORT
+    port: audio_udp_port
   states:
     _io_cache: ('UDP Sender with Header', 'blk', [('active', 'True'), ('host', "'localhost'"),
       ('port', '9002')], [('0', 'float', 1)], [], "\nUDP sender that can be muted
@@ -289,7 +289,7 @@ blocks:
       \n    if hasattr(self, setter_lower):\n        getattr(self, setter_lower)(val)\n\
       \        continue\n\n    setter_original = f\"set_{key}\"\n    if hasattr(self,\
       \ setter_original):\n        getattr(self, setter_original)(val)\n\ndef control_loop(flowgraph):\n\
-      \    ctx = zmq.Context()\n    control_port = flowgraph.cfg[\"WORKER_CONTROL_PORT\"\
+      \    ctx = zmq.Context()\n    control_port = flowgraph.cfg[\"worker_control_port\"\
       ]\n\n    sock = ctx.socket(zmq.PULL)\n    sock.bind(f\"tcp://0.0.0.0:{control_port}\"\
       )\n    print(f\"[Audio] Control Thread listening on {control_port}\")\n\n  \
       \  while True:\n        try:\n            msg = sock.recv_json()\n         \
@@ -319,7 +319,7 @@ blocks:
 - name: zeromq_sub_source_0
   id: zeromq_sub_source
   parameters:
-    address: f"tcp://{SDR_HOST}:{SDR_IQ_PORT}"
+    address: f"tcp://{sdr_host}:{sdr_iq_port}"
     affinity: ''
     alias: ''
     bind: 'False'

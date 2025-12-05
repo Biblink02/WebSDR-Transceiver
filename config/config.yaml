@@ -1,89 +1,76 @@
-# =====================================================
-# ===                SDR Hardware                   ===
-# =====================================================
+# =============================================================================
+# ===                         GLOBAL SDR SETTINGS                           ===
+# =============================================================================
+samp_rate: 2000000          # 2 MSps
+lo_freq: 739675000          # Local Oscillator
 
-# Baseband sample rate used across all workers (Hz)
-samp_rate: 2000000          # 2 MHz → ±1 MHz FFT span
-
-# LO frequency for the PlutoSDR (Hz)
-lo_freq: 102500000         # 2.45 GHz
-
-# Analog RF bandwidth of the AD936x (Hz)
-rf_bandwidth: 2000000        # Should match samp_rate order
-
-# IIO URI of the PlutoSDR
+# =============================================================================
+# ===                        HARDWARE INTERFACE                             ===
+# =============================================================================
 iio_uri: "ip:192.168.2.1"
-
-# PlutoSDR buffer size
+rf_bandwidth: 250000
 buffer_size: 32768
 
-
-# =====================================================
-# ===            Graphics Worker (Waterfall)        ===
-# =====================================================
-
-fft_size: 4096
-calibration: -20
+# =============================================================================
+# ===                         GRAPHICS WORKER                               ===
+# =============================================================================
+fft_size: 2048
+calibration: -72
 skip: 30
 
+# =============================================================================
+# ===                          AUDIO WORKER                                 ===
+# =============================================================================
+audio_rate: 48000
+quad_rate: 50000
+bandwidth: 15000
+freq_offset: 0
+is_active: 0
 
-# =====================================================
-# ===             Audio Worker (Demod)              ===
-# =====================================================
+# =============================================================================
+# ===                        FRONTEND VALIDATION                            ===
+# =============================================================================
+max_bw_limit: 200000
+channel_count: 1
+buffer_threshold: 4
+max_queue_size: 50
 
-audio_rate: 48000           # Output audio rate (Hz)
-bandwidth: 15000            # Default demod bandwidth (Hz)
-freq_offset: 0              # Default (can be overridden)
+# =============================================================================
+# ===                        VISUALIZATION (UI)                             ===
+# =============================================================================
+range_db: 80
+gain_attack: 0.001
+gain_release: 0.05
 
+# =============================================================================
+# ===                       NETWORK ARCHITECTURE                            ===
+# =============================================================================
+sdr_host: "sdr-server"
+sdr_iq_port: 5000
+sdr_control_port: 5001
 
-# =====================================================
-# ===              Backend Validation               ===
-# =====================================================
+backend_host: "backend-controller"
+graphics_udp_port: 9001
+audio_udp_port: 9002
 
-# Maximum demodulation bandwidth accepted from frontend (Hz)
-MAX_BW_LIMIT: 200000        # 200 kHz
+worker_control_port: 5001
+pool_size: 3
+worker_headless_service: "audio-workers-headless.default.svc.cluster.local"
 
-# Max frequency offset = samp_rate/2 is computed internally
+# =============================================================================
+# ===                        WEBSOCKET CONFIG                               ===
+# =============================================================================
+ws_url: "http://websdr.fbi.h-da.de"
 
-
-# =====================================================
-# ===         Global Network / ZMQ / Services       ===
-# =====================================================
-
-SDR_HOST: "sdr-server"
-SDR_IQ_PORT: 5000
-SDR_CONTROL_PORT: 5001
-
-BACKEND_HOST: "backend-controller"
-
-GRAPHICS_UDP_PORT: 9001
-AUDIO_UDP_PORT: 9002
-
-
-# =====================================================
-# ===         Backend Worker Pool Configuration     ===
-# =====================================================
-
-POOL_SIZE: 3
-WORKER_HEADLESS_SERVICE: "audio-workers-headless.default.svc.cluster.local"
-WORKER_CONTROL_PORT: 5001
-
-
-# =====================================================
-# ===              WebSocket Events                 ===
-# =====================================================
-
-WS_GRAPHICS_EVENT: "graphics_data"
-WS_AUDIO_EVENT: "audio_data"
-WS_CORRECTION_EVENT: "correction_applied"
-WS_URL: "http://websdr.fbi.h-da.de"
-
-# =====================================================
-# ===              FRONTEND                 ===
-# =====================================================
-CHANNEL_COUNT: 1
-BUFFER_THRESHOLD: 4
-MAX_QUEUE_SIZE: 50
-RANGE_DB: 80
-GAIN_ATTACK: 0.001
-GAIN_RELEASE: 0.05
+# Event Protocol
+ws_graphics_event: "graphics_data"
+ws_audio_event: "audio_data"
+ws_server_full_event: "server_full"
+ws_worker_assigned_event: "worker_assigned"
+ws_worker_released_event: "worker_released"
+ws_correction_event: "correction_applied"
+ws_connect_event: "connect"
+ws_disconnect_event: "disconnect"
+ws_request_worker_event: "request_audio_worker"
+ws_dismiss_worker_event: "dismiss_audio_worker"
+ws_tune_event: "tune"
