@@ -1,6 +1,7 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 
 import {useRouter} from "vue-router";
+
 const router = useRouter()
 </script>
 
@@ -14,13 +15,14 @@ const router = useRouter()
                 </div>
                 <div class="flex items-center gap-6">
 
-                    <Button @click="router.push('/about-us')" target="_blank" label="About Us" variant="text"/>
+                    <Button label="About Us" target="_blank" variant="text" @click="router.push('/about-us')"/>
 
-                    <Button as="a" href="https://github.com/Biblink02/WebSDR-Transceiver" target="_blank" label="Github" icon="pi pi-github" variant="text"/>
+                    <Button as="a" href="https://github.com/Biblink02/WebSDR-Transceiver" icon="pi pi-github" label="Github"
+                            target="_blank" variant="text"/>
 
-                    <Button @click="router.push('/')" label="Web SDR" variant="text"/>
+                    <Button label="Web SDR" variant="text" @click="router.push('/')"/>
 
-                    <Button icon="pi pi-chart-line" rounded text plain aria-label="Activity" />
+                    <Button aria-label="Activity" icon="pi pi-chart-line" plain rounded text/>
                 </div>
             </div>
         </div>
