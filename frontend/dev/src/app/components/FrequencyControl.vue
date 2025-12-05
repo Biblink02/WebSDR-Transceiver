@@ -1,6 +1,6 @@
-<script setup lang="ts">
-import { ref, watch, computed } from 'vue';
-import { getConfig } from "@/ConfigStore";
+<script lang="ts" setup>
+import { computed, ref, watch } from 'vue';
+import { useSdrStore } from "@/stores/sdr.store";
 
 const props = defineProps<{
     frequency: number;
@@ -9,30 +9,41 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:frequency', 'update:bandwidth']);
 
-// Use Config for limits
-const config = getConfig();
+const store = useSdrStore();
+const config = store.settings;
+
 const minFreq = computed(() => config.lo_freq - (config.samp_rate / 2));
 const maxFreq = computed(() => config.lo_freq + (config.samp_rate / 2));
 
-const BW_LIMITS = { min: 100, max: 200000 }; // Max 200k as per backend limit
+const BW_LIMITS = { min: 100, max: config.max_bw_limit };
 
 const localFreq = ref(props.frequency);
 const localBw = ref(props.bandwidth);
 
 const handleFreqChange = () => {
-    if (localFreq.value < minFreq.value) localFreq.value = minFreq.value;
-    if (localFreq.value > maxFreq.value) localFreq.value = maxFreq.value;
-    emit('update:frequency', localFreq.value);
+    let val = Math.round(localFreq.value);
+
+    if (val < minFreq.value) val = minFreq.value;
+    if (val > maxFreq.value) val = maxFreq.value;
+
+    if (localFreq.value !== val) localFreq.value = val;
+
+    emit('update:frequency', val);
 };
 
 const handleBwChange = () => {
-    if (localBw.value < BW_LIMITS.min) localBw.value = BW_LIMITS.min;
-    if (localBw.value > BW_LIMITS.max) localBw.value = BW_LIMITS.max;
-    emit('update:bandwidth', localBw.value);
+    let val = Math.round(localBw.value);
+
+    if (val < BW_LIMITS.min) val = BW_LIMITS.min;
+    if (val > BW_LIMITS.max) val = BW_LIMITS.max;
+
+    if (localBw.value !== val) localBw.value = val;
+
+    emit('update:bandwidth', val);
 };
 
-watch(() => props.frequency, (val) => localFreq.value = val);
-watch(() => props.bandwidth, (val) => localBw.value = val);
+watch(() => props.frequency, (val) => localFreq.value = Math.round(val));
+watch(() => props.bandwidth, (val) => localBw.value = Math.round(val));
 </script>
 
 <template>
@@ -43,6 +54,7 @@ watch(() => props.bandwidth, (val) => localBw.value = val);
             <div class="flex items-center gap-2">
                 <input
                     type="number"
+                    step="1"
                     v-model="localFreq"
                     @change="handleFreqChange"
                     :min="minFreq"
@@ -59,6 +71,7 @@ watch(() => props.bandwidth, (val) => localBw.value = val);
             <label class="text-[10px] uppercase tracking-wider text-gray-400">Bandwidth (Hz)</label>
             <input
                 type="number"
+                step="1"
                 v-model="localBw"
                 @change="handleBwChange"
                 :min="BW_LIMITS.min"
