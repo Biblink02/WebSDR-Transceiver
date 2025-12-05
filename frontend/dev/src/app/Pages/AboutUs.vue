@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import AppLayout from '&/layouts/AppLayout.vue'
 
 const teamMembers = [
@@ -66,14 +66,14 @@ const teamMembers = [
                 <div
                     v-for="member in teamMembers"
                     :key="member.id"
+                    :style="{'--delay': member.id}"
                     class="rounded-lg p-6 flex flex-col items-center text-center motion-safe:animate-fadeIn backdrop-blur-sm"
                     style="animation-delay: calc(var(--delay) * 100ms)"
-                    :style="{'--delay': member.id}"
                 >
                     <div class="mb-6">
                         <img
-                            :src="`https://github.com/${member.github}.png`"
                             :alt="`Photo of ${member.name}`"
+                            :src="`https://github.com/${member.github}.png`"
                             class="w-48 h-48 rounded-full object-cover border-4 border-favourite_yellow shadow-md"
                         />
                     </div>
@@ -83,11 +83,11 @@ const teamMembers = [
                             {{ member.name }}
                         </h2>
                         <a
-                            :href="`https://github.com/${member.github}`"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            class="text-2xl hover:opacity-70 transition-opacity"
                             :aria-label="`Visit ${member.name}'s GitHub profile`"
+                            :href="`https://github.com/${member.github}`"
+                            class="text-2xl hover:opacity-70 transition-opacity"
+                            rel="noopener noreferrer"
+                            target="_blank"
                         >
                             🔗
                         </a>
