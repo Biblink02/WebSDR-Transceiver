@@ -1,10 +1,10 @@
 import * as THREE from "three"
-import { periodicNoiseGLSL } from "./utils"
+import {periodicNoiseGLSL} from "./utils"
 
 export class DofPointsMaterial extends THREE.ShaderMaterial {
-  constructor() {
-    super({
-      vertexShader: /* glsl */ `
+    constructor() {
+        super({
+            vertexShader: /* glsl */ `
       uniform sampler2D positions;
       uniform sampler2D initialPositions;
       uniform float uTime;
@@ -27,7 +27,7 @@ export class DofPointsMaterial extends THREE.ShaderMaterial {
         vInitialPosition = initialPos;
         gl_PointSize = max(vDistance * uBlur * uPointSize, 3.0);
       }`,
-      fragmentShader: /* glsl */ `
+            fragmentShader: /* glsl */ `
       uniform float uOpacity;
       uniform float uRevealFactor;
       uniform float uRevealProgress;
@@ -97,21 +97,21 @@ export class DofPointsMaterial extends THREE.ShaderMaterial {
 
         gl_FragColor = vec4(vec3(1.0), mix(alpha, sparkleBrightness - 1.1, uTransition));
       }`,
-      uniforms: {
-        positions: { value: null },
-        initialPositions: { value: null },
-        uTime: { value: 0 },
-        uFocus: { value: 5.1 },
-        uFov: { value: 50 },
-        uBlur: { value: 30 },
-        uTransition: { value: 0.0 },
-        uPointSize: { value: 2.0 },
-        uOpacity: { value: 1.0 },
-        uRevealFactor: { value: 0.0 },
-        uRevealProgress: { value: 0.0 },
-      },
-      transparent: true,
-      depthWrite: false,
-    })
-  }
+            uniforms: {
+                positions: {value: null},
+                initialPositions: {value: null},
+                uTime: {value: 0},
+                uFocus: {value: 5.1},
+                uFov: {value: 50},
+                uBlur: {value: 30},
+                uTransition: {value: 0.0},
+                uPointSize: {value: 2.0},
+                uOpacity: {value: 1.0},
+                uRevealFactor: {value: 0.0},
+                uRevealProgress: {value: 0.0},
+            },
+            transparent: true,
+            depthWrite: false,
+        })
+    }
 }
