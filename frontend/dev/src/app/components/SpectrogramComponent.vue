@@ -113,7 +113,6 @@ function drawOverlay() {
     ctxO.stroke();
     ctxO.setLineDash([]);
 
-    // Info Box
     let infoX = cx + 8;
     if (infoX > w - 130) infoX = cx - 138;
     const infoY = SELECTOR_HEIGHT + 20;
@@ -124,7 +123,9 @@ function drawOverlay() {
     ctxO.textAlign = "left";
     ctxO.fillStyle = "#fff";
     ctxO.font = "bold 12px monospace";
-    ctxO.fillText(`${(props.modelValue / 1e6).toFixed(5)} MHz`, infoX, infoY);
+
+    const trueFreq = props.modelValue + config.lnb_lo_freq;
+    ctxO.fillText(`${(trueFreq / 1e6).toFixed(5)} MHz`, infoX, infoY);
 
     ctxO.fillStyle = "#fbbf24";
     ctxO.font = "11px monospace";

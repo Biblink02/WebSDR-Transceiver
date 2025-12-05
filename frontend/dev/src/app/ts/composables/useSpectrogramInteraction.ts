@@ -73,7 +73,8 @@ export function useSpectrogramInteraction(
     }
 
     function formatFreq(hz: number): string {
-        return (hz / 1e6).toFixed(hz % 1000 !== 0 ? 4 : 3)
+        const trueFreq = hz + config.lnb_lo_freq
+        return (trueFreq / 1e6).toFixed(hz % 1000 !== 0 ? 4 : 3)
     }
 
     // Event Handlers
