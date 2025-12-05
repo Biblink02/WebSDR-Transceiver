@@ -33,7 +33,7 @@ options:
     state: enabled
 
 blocks:
-- name: BACKEND_HOST
+- name: backend_host
   id: variable
   parameters:
     comment: ''
@@ -43,42 +43,6 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [448, 88.0]
-    rotation: 0
-    state: enabled
-- name: GRAPHICS_UDP_PORT
-  id: variable
-  parameters:
-    comment: ''
-    value: '9001'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [592, 88.0]
-    rotation: 0
-    state: enabled
-- name: SDR_HOST
-  id: variable
-  parameters:
-    comment: ''
-    value: '"sdr-server"'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [456, 16.0]
-    rotation: 0
-    state: enabled
-- name: SDR_IQ_PORT
-  id: variable
-  parameters:
-    comment: ''
-    value: '5000'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [560, 16.0]
     rotation: 0
     state: enabled
 - name: calibration
@@ -105,6 +69,18 @@ blocks:
     coordinate: [296, 16.0]
     rotation: 0
     state: enabled
+- name: graphics_udp_port
+  id: variable
+  parameters:
+    comment: ''
+    value: '9001'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [592, 88.0]
+    rotation: 0
+    state: enabled
 - name: samp_rate
   id: variable
   parameters:
@@ -115,6 +91,30 @@ blocks:
     bus_source: false
     bus_structure: null
     coordinate: [208, 16.0]
+    rotation: 0
+    state: enabled
+- name: sdr_host
+  id: variable
+  parameters:
+    comment: ''
+    value: '"sdr-server"'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [456, 16.0]
+    rotation: 0
+    state: enabled
+- name: sdr_iq_port
+  id: variable
+  parameters:
+    comment: ''
+    value: '5000'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [560, 16.0]
     rotation: 0
     state: enabled
 - name: skip
@@ -253,10 +253,10 @@ blocks:
     affinity: ''
     alias: ''
     comment: ''
-    host: BACKEND_HOST
+    host: backend_host
     maxoutbuf: '0'
     minoutbuf: '0'
-    port: GRAPHICS_UDP_PORT
+    port: graphics_udp_port
     vector_len: fft_size
   states:
     _io_cache: ('UDP Vector Sender', 'blk', [('vector_len', '2048'), ('host', "'localhost'"),
@@ -315,7 +315,7 @@ blocks:
       \ setter_original):\n        getattr(self, setter_original)(val)"
     comment: ''
     priority: '0'
-    section: main_after_init
+    section: main_after_start
   states:
     bus_sink: false
     bus_source: false
@@ -352,7 +352,7 @@ blocks:
 - name: zeromq_sub_source_0
   id: zeromq_sub_source
   parameters:
-    address: f"tcp://{SDR_HOST}:{SDR_IQ_PORT}"
+    address: f"tcp://{sdr_host}:{sdr_iq_port}"
     affinity: ''
     alias: ''
     bind: 'False'
