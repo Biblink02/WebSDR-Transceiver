@@ -1,9 +1,10 @@
-<script setup lang="ts">
-import { ref } from "vue";
+<script lang="ts" setup>
+import {ref} from "vue";
 import Drawer from "primevue/drawer";
 import {items} from "&/router";
-const menuOpen = ref(false);
 import logo from "~/images/logo.ico"
+
+const menuOpen = ref(false);
 </script>
 
 <template>
@@ -14,7 +15,7 @@ import logo from "~/images/logo.ico"
 
             <!-- Logo -->
             <div class="flex items-center gap-3 md:absolute md:left-4">
-                <img :src="logo" alt="Logo" class="h-16" />
+                <img :src="logo" alt="Logo" class="h-16"/>
             </div>
 
             <!-- Desktop Menu -->
@@ -23,8 +24,8 @@ import logo from "~/images/logo.ico"
                     v-for="item in items"
                     :key="item.to"
                     :to="item.to"
-                    class="px-3 py-2 transition-transform duration-300 hover:scale-125 whitespace-nowrap"
                     active-class="scale-125"
+                    class="px-3 py-2 transition-transform duration-300 hover:scale-125 whitespace-nowrap"
                 >
                     {{ item.label }}
                 </router-link>
@@ -43,10 +44,10 @@ import logo from "~/images/logo.ico"
         <!-- Drawer -->
         <Drawer
             v-model:visible="menuOpen"
-            position="right"
             :dismissable="true"
             :showCloseIcon="true"
             class="!bg-black/40 backdrop-blur-md"
+            position="right"
         >
             <div class="flex flex-col mt-10 space-y-8 px-6">
 

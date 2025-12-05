@@ -1,5 +1,3 @@
-
-
 // Shader utility functions
 
 export const periodicNoiseGLSL = /* glsl */ `

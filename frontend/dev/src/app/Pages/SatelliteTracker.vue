@@ -1,5 +1,5 @@
-<script setup lang="ts">
-import { useDark, useToggle } from '@vueuse/core'
+<script lang="ts" setup>
+import {useDark, useToggle} from '@vueuse/core'
 import NavbarLayout from '../layouts/NavbarLayout.vue'
 import FooterLayout from '../layouts/FooterLayout.vue'
 import ParticlesBackground from '../components/ParticlesBackground.vue'
@@ -10,13 +10,13 @@ const toggleDarkMode = useToggle(isDarkMode)
 
 <template>
     <div class="min-h-screen w-full relative">
-        <ParticlesBackground class="absolute inset-0 z-0" />
+        <ParticlesBackground class="absolute inset-0 z-0"/>
 
         <div class="relative z-10 w-full pt-7">
             <button
-                @click="toggleDarkMode()"
-                class="lg:fixed absolute cursor-pointer top-9 right-9 text-favourite_yellow"
                 :title="'Toggle ' + (isDarkMode ? 'Light' : 'Dark') + ' Mode'"
+                class="lg:fixed absolute cursor-pointer top-9 right-9 text-favourite_yellow"
+                @click="toggleDarkMode()"
             >
                 <div class="hidden dark:block">
                     <i class="pi pi-sun" style="font-size: 1.6rem"></i>
@@ -26,7 +26,7 @@ const toggleDarkMode = useToggle(isDarkMode)
                 </div>
             </button>
 
-            <NavbarLayout class="relative z-20" />
+            <NavbarLayout class="relative z-20"/>
 
             <div class="w-full">
                 <div class="text-center py-2">
@@ -35,17 +35,18 @@ const toggleDarkMode = useToggle(isDarkMode)
                     </h1>
                 </div>
 
-                <div class="w-full min-h-[930px] h-[calc(100vh-200px)] px-1 pb-1 flex items-center justify-center overflow-hidden">
+                <div
+                    class="w-full min-h-[930px] h-[calc(100vh-200px)] px-1 pb-1 flex items-center justify-center overflow-hidden">
                     <iframe
-                        src="https://sattrack.app?zoom=0.6"
-                        class="w-full h-full border-0 rounded-lg shadow-2xl"
-                        title="Satellite Tracker"
                         allowfullscreen
+                        class="w-full h-full border-0 rounded-lg shadow-2xl"
                         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+                        src="https://sattrack.app?zoom=0.6"
+                        title="Satellite Tracker"
                     ></iframe>
                 </div>
 
-                <FooterLayout class="relative z-20" />
+                <FooterLayout class="relative z-20"/>
             </div>
         </div>
     </div>

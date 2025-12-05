@@ -1,5 +1,5 @@
-import { biquadLP, cos, osc, sin, type IProc } from "@thi.ng/dsp";
-import { comp, iterator, map, takeNth } from "@thi.ng/transducers";
+import {biquadLP, cos, type IProc, osc, sin} from "@thi.ng/dsp";
+import {comp, iterator, map, takeNth} from "@thi.ng/transducers";
 
 type Complex = number[];
 
