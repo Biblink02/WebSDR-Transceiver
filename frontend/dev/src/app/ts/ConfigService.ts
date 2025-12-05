@@ -21,6 +21,7 @@ export interface AppConfig {
 
     // Audio
     audio_rate: number
+    bandwidth: number
 
     // Connection
     ws_url: string

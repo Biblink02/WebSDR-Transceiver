@@ -13,8 +13,8 @@ export const useSdrStore = defineStore('sdr', () => {
 
     // Default values (will be overwritten by init)
     const tuneFreq = ref(0)
-    const bandwidth = ref(15000)
-    const volume = ref(100)
+    const bandwidth = ref()
+    const volume = ref(50)
 
     // --- Actions ---
 
@@ -22,6 +22,7 @@ export const useSdrStore = defineStore('sdr', () => {
         config.value = loadedConfig
         // Set defaults from config
         tuneFreq.value = loadedConfig.lo_freq
+        bandwidth.value = loadedConfig.bandwidth
     }
 
     function setConnectionStatus(connected: boolean, text: string) {
