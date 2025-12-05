@@ -75,7 +75,7 @@ export function useSdrWorker() {
                 break
 
             case 'serverFull':
-                store.setWorkerStatus('FULL')
+                store.setWorkerStatus('FULL',null,2000)
                 toast.add({ severity: 'error', summary: 'Server Busy', detail: 'No audio workers available.', life: 3000 })
                 break
 
