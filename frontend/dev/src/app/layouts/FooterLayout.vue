@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script lang="ts" setup>
 import {items} from "&/router";
 </script>
 
@@ -30,7 +30,6 @@ import {items} from "&/router";
                         {{ item.label }}
                     </router-link>
                 </div>
-
 
 
                 <!-- Right -->
