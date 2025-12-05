@@ -29,9 +29,18 @@ export const useSdrStore = defineStore('sdr', () => {
         statusText.value = text
     }
 
-    function setWorkerStatus(status: 'IDLE' | 'LISTENING' | 'FULL', workerId: string | null = null) {
+    function setWorkerStatus(
+        status: 'IDLE' | 'LISTENING' | 'FULL',
+        workerId: string | null = null,
+        timer: number | null = null
+    ) {
         workerStatus.value = status
         assignedWorkerId.value = workerId
+        if (timer && timer > 0 && status == 'FULL') {
+            setTimeout(() => {
+                workerStatus.value = 'IDLE'
+            }, timer)
+        }
     }
 
     function setFrequency(freq: number) {
@@ -50,7 +59,7 @@ export const useSdrStore = defineStore('sdr', () => {
 
     const settings = computed((): AppConfig => {
         if (!config.value) {
-            throw new Error("Configuration not loaded in Store")
+            throw new Error('Configuration not loaded in Store')
         }
         return config.value
     })
@@ -70,6 +79,6 @@ export const useSdrStore = defineStore('sdr', () => {
         setWorkerStatus,
         setFrequency,
         setBandwidth,
-        setVolume
+        setVolume,
     }
 })

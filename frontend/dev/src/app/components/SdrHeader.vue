@@ -46,7 +46,7 @@ const onVolumeChange = (event: Event) => {
           ? 'bg-red-600/90 hover:bg-red-600 text-white border-red-500'
           : 'bg-blue-600/90 hover:bg-blue-600 text-white border-blue-500 disabled:opacity-50 disabled:grayscale'"
                 :disabled="!store.isConnected || store.workerStatus === 'FULL'"
-                class="px-6 py-2 rounded font-bold text-sm transition-all shadow-lg border border-transparent"
+                class="px-6 py-2 rounded font-bold text-sm transition-all shadow-lg border border-transparent cursor-pointer"
                 @click="emit('toggle-audio')"
             >
                 {{ store.workerStatus === 'LISTENING' ? 'STOP AUDIO' : 'START AUDIO' }}
