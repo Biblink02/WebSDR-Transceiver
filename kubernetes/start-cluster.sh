@@ -2,11 +2,14 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+FRESH_INSTALL=false
+
 echo "[1/4] Checking Kind cluster..."
 
 if ! kind get clusters | grep -q "^kind$"; then
     echo "Creating Kind cluster..."
     kind create cluster --config kind-config.yaml
+    FRESH_INSTALL=true
 
     echo "Installing NGINX Ingress Controller..."
     kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/kind/deploy.yaml
@@ -33,7 +36,7 @@ if ! kind get clusters | grep -q "^kind$"; then
         --timeout=300s
 
 else
-    echo "Kind cluster already exists."
+    echo "Kind cluster already exists. Updating mode."
 fi
 
 echo "Applying SDR hardware label..."
@@ -46,19 +49,12 @@ kind load docker-image websdr-transceiver/sdr-server:latest
 kind load docker-image websdr-transceiver/audio-worker:latest
 kind load docker-image websdr-transceiver/graphics-worker:latest
 
-echo "[3/4] Cleaning old pods..."
-kubectl delete pod -l app=backend-controller --ignore-not-found
-kubectl delete pod -l app=sdr-server --ignore-not-found
-kubectl delete pod -l app=audio-worker --ignore-not-found
-kubectl delete pod -l app=graphics-worker --ignore-not-found
-kubectl delete pod -l app=frontend-nginx --ignore-not-found
-
-echo "[4/4] Applying Kubernetes manifests..."
-
+echo "[3/4] Updating Configuration..."
 kubectl create configmap sdr-config \
     --from-file=config.yaml=../config/config.yaml \
     --dry-run=client -o yaml | kubectl apply -f -
 
+echo "[4/4] Applying Kubernetes manifests..."
 kubectl apply -f backend-controller.yaml
 kubectl apply -f sdr-server.yaml
 kubectl apply -f audio-workers.yaml
@@ -66,10 +62,27 @@ kubectl apply -f graphics-worker.yaml
 kubectl apply -f frontend.yaml
 kubectl apply -f ingress.yaml
 
-echo "Waiting for application pods..."
-kubectl wait --for=condition=ready pod -l app --timeout=300s
+if [ "$FRESH_INSTALL" = false ]; then
+    echo "Existing cluster detected: Restarting deployments to apply config changes..."
+    kubectl rollout restart deployment/backend-controller
+    kubectl rollout restart deployment/sdr-server
+    kubectl rollout restart deployment/graphics-worker
+    kubectl rollout restart deployment/frontend-nginx
+    kubectl rollout restart statefulset/audio-worker
+else
+    echo "Fresh cluster detected: Skipping rollout restart."
+fi
+
+echo "Waiting for rollouts to complete..."
+kubectl rollout status deployment/backend-controller
+kubectl rollout status deployment/sdr-server
+kubectl rollout status deployment/graphics-worker
+kubectl rollout status deployment/frontend-nginx
+kubectl rollout status statefulset/audio-worker
+
+WS_URL=$(grep "ws_url:" ../config/config.yaml | awk '{print $2}' | tr -d '"')
 
 echo "------------------------------------------------"
 echo "Cluster ready."
-echo "Frontend available at: http://localhost"
+echo "Frontend available at: $WS_URL"
 echo "------------------------------------------------"
