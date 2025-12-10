@@ -43,20 +43,29 @@ The application is containerized and orchestrated using Kubernetes (Kind).
 ## Installation & Deployment
 
 Clone the repository:
-```
-git clone https://github.com/Biblink02/WebSDR-Transceiver.git
+```bash
+git clone [https://github.com/Biblink02/WebSDR-Transceiver.git](https://github.com/Biblink02/WebSDR-Transceiver.git)
 cd WebSDR-Transceiver
 ```
 
-Deploy the cluster:
-```
+**Full Deployment (First Run or Code Changes):**
+If you are running for the first time or have modified the source code (Python, Vue.js, GRC files), run:
+```bash
 ./deploy.sh
+```
+
+**Fast Configuration Reload:**
+If you only modified `config/config.yaml` (e.g., tuning frequencies, gains, or ports) and want to apply changes immediately without rebuilding Docker images:
+```bash
+./reload.sh
+# Or manually: bash kubernetes/start-cluster.sh
 ```
 
 Access the web interface:
 ```
 http://localhost
 ```
+
 ## Configuration
 
 The entire system behavior is controlled by a single configuration file located at `config/config.yaml`. This makes the Frontend, Backend, and DSP workers utilize synchronized parameters.
@@ -64,6 +73,7 @@ The entire system behavior is controlled by a single configuration file located 
 ### Key Settings to Customize
 
 Before running the cluster, you **must** update the `iio_uri` to match your hardware setup, and for deployment make sure to change also the `WS_URL`.
+
 ## Development Team (PRI05)
 
 - Alberto (Biblink02) — University of Padua
@@ -76,4 +86,3 @@ Before running the cluster, you **must** update the `iio_uri` to match your hard
 
 ## License
 MIT License
-
