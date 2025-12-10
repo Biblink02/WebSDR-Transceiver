@@ -1,25 +1,30 @@
 <script lang="ts" setup>
 import { onMounted, onUnmounted, ref, watch } from "vue";
 import WaterfallWorker from '@/workers/waterfall.worker.ts?worker';
-import { useSdrStore } from "@/stores/sdr.store"; // Use Store
+import { useSdrStore } from "@/stores/sdr.store";
 import { useSpectrogramInteraction } from "@/composables/useSpectrogramInteraction";
 
 const props = defineProps<{
     modelValue: number;
     bandwidth: number;
+    contrast: number;
+    brightness: number;
+    palette: string; // New Prop
 }>();
 
 const emit = defineEmits(["update:modelValue", "update:bandwidth"]);
 
 const store = useSdrStore();
-const config = store.settings; // Access settings from store
+const config = store.settings;
 
 const containerRef = ref<HTMLElement | null>(null);
 const canvasWaterfall = ref<HTMLCanvasElement | null>(null);
 const canvasOverlay = ref<HTMLCanvasElement | null>(null);
+const canvasRuler = ref<HTMLCanvasElement | null>(null);
 
 let ctxW: CanvasRenderingContext2D | null = null;
 let ctxO: CanvasRenderingContext2D | null = null;
+let ctxR: CanvasRenderingContext2D | null = null;
 const worker = ref<Worker | null>(null);
 
 const {
@@ -35,10 +40,9 @@ const {
     hzToPx,
     getAdaptiveStep,
     formatFreq
-} = useSpectrogramInteraction(config, () => props, emit, () => canvasOverlay.value);
+} = useSpectrogramInteraction(config, () => props, emit, () => containerRef.value);
 
-const RULER_HEIGHT = 25;
-const SELECTOR_HEIGHT = 60;
+const RULER_HEIGHT = 30;
 
 function updateWorkerView() {
     if (!worker.value) return;
@@ -51,6 +55,92 @@ function updateWorkerView() {
     });
 }
 
+function updateWorkerConfig() {
+    if(!worker.value) return;
+    worker.value.postMessage({
+        type: 'config',
+        payload: {
+            gain_attack: config.gain_attack,
+            gain_release: config.gain_release,
+            range_db: props.contrast,
+            brightness: props.brightness
+        }
+    });
+}
+
+// Watch palette changes
+watch(() => props.palette, (newPalette) => {
+    worker.value?.postMessage({ type: 'palette', payload: newPalette });
+});
+
+watch(() => [props.contrast, props.brightness], updateWorkerConfig);
+
+function drawRuler() {
+    if (!ctxR || !canvasRuler.value) return;
+    const w = canvasRuler.value.width;
+    const h = canvasRuler.value.height;
+
+    ctxR.fillStyle = "#18181b";
+    ctxR.fillRect(0, 0, w, h);
+
+    ctxR.beginPath();
+    ctxR.moveTo(0, h);
+    ctxR.lineTo(w, h);
+    ctxR.strokeStyle = "#3f3f46";
+    ctxR.stroke();
+
+    const hzVisible = viewMax.value - viewMin.value;
+    const step = getAdaptiveStep(hzVisible, w);
+    const startTick = Math.ceil(viewMin.value / step) * step;
+
+    ctxR.font = "bold 11px monospace";
+    ctxR.textAlign = "center";
+    ctxR.fillStyle = "#a1a1aa";
+    ctxR.strokeStyle = "#52525b";
+    ctxR.lineWidth = 1;
+
+    ctxR.beginPath();
+    for (let f = startTick; f < viewMax.value; f += step) {
+        const x = hzToPx(f, w);
+        ctxR.moveTo(x, h);
+        ctxR.lineTo(x, h - 5);
+        ctxR.fillText(formatFreq(f), x, h - 8);
+    }
+    ctxR.stroke();
+
+    const left = hzToPx(props.modelValue - props.bandwidth/2, w);
+    const bwPx = (props.bandwidth / hzVisible) * w;
+    const right = left + bwPx;
+
+    ctxR.fillStyle = "rgba(74, 222, 128, 0.2)";
+    ctxR.fillRect(left, 0, bwPx, h);
+
+    ctxR.fillStyle = "#4ade80";
+    ctxR.fillRect(left, h-10, 2, 10);
+    ctxR.fillRect(right-2, h-10, 2, 10);
+
+    const cx = hzToPx(props.modelValue, w);
+    ctxR.beginPath();
+    ctxR.strokeStyle = "#22c55e";
+    ctxR.lineWidth = 2;
+    ctxR.moveTo(cx, 0);
+    ctxR.lineTo(cx, h);
+    ctxR.stroke();
+
+    ctxR.fillStyle = "#22c55e";
+    ctxR.beginPath();
+    ctxR.moveTo(cx - 5, 0);
+    ctxR.lineTo(cx + 5, 0);
+    ctxR.lineTo(cx, 6);
+    ctxR.fill();
+
+    ctxR.beginPath();
+    ctxR.moveTo(0, h);
+    ctxR.lineTo(w, h);
+    ctxR.strokeStyle = "#3f3f46";
+    ctxR.stroke();
+}
+
 function drawOverlay() {
     if (!ctxO || !canvasOverlay.value) return;
     const w = canvasOverlay.value.width;
@@ -59,88 +149,48 @@ function drawOverlay() {
     ctxO.clearRect(0, 0, w, h);
 
     const hzVisible = viewMax.value - viewMin.value;
-    const cx = hzToPx(props.modelValue, w);
-    const bwPx = (props.bandwidth / hzVisible) * w;
-    const left = cx - bwPx / 2;
-    const right = cx + bwPx / 2;
-
-    // Grid/Ticks
     const step = getAdaptiveStep(hzVisible, w);
     const startTick = Math.ceil(viewMin.value / step) * step;
 
     ctxO.beginPath();
-    ctxO.fillStyle = "rgba(255, 255, 255, 0.8)";
-    ctxO.strokeStyle = "rgba(255, 255, 255, 0.15)";
-    ctxO.font = "11px monospace";
-    ctxO.textAlign = "center";
+    ctxO.strokeStyle = "rgba(255, 255, 255, 0.1)";
     ctxO.lineWidth = 1;
-
     for (let f = startTick; f < viewMax.value; f += step) {
         const x = hzToPx(f, w);
         ctxO.moveTo(x, 0);
-        ctxO.lineTo(x, 10);
-        ctxO.moveTo(x, RULER_HEIGHT);
         ctxO.lineTo(x, h);
-        ctxO.fillText(formatFreq(f), x, 22);
     }
     ctxO.stroke();
 
-    // Selector
-    ctxO.fillStyle = "rgba(255, 204, 0, 0.15)";
+    const left = hzToPx(props.modelValue - props.bandwidth/2, w);
+    const bwPx = (props.bandwidth / hzVisible) * w;
+    const right = left + bwPx;
+
+    ctxO.fillStyle = "rgba(74, 222, 128, 0.1)";
     ctxO.fillRect(left, 0, bwPx, h);
 
-    ctxO.fillStyle = "rgba(255, 204, 0, 0.9)";
+    ctxO.fillStyle = "rgba(74, 222, 128, 0.5)";
     ctxO.fillRect(left, 0, 1, h);
     ctxO.fillRect(right - 1, 0, 1, h);
 
-    ctxO.fillRect(left - 2, 0, 5, SELECTOR_HEIGHT);
-    ctxO.fillRect(right - 3, 0, 5, SELECTOR_HEIGHT);
-    ctxO.fillRect(left, SELECTOR_HEIGHT - 2, bwPx, 2);
-
+    const cx = hzToPx(props.modelValue, w);
     ctxO.beginPath();
-    ctxO.strokeStyle = "#ff3333";
-    ctxO.lineWidth = 2;
+    ctxO.strokeStyle = "rgba(74, 222, 128, 0.4)";
+    ctxO.setLineDash([5, 5]);
     ctxO.moveTo(cx, 0);
-    ctxO.lineTo(cx, SELECTOR_HEIGHT);
-    ctxO.stroke();
-
-    ctxO.beginPath();
-    ctxO.setLineDash([4, 4]);
-    ctxO.strokeStyle = "rgba(255, 51, 51, 0.6)";
-    ctxO.lineWidth = 1;
-    ctxO.moveTo(cx, SELECTOR_HEIGHT);
     ctxO.lineTo(cx, h);
     ctxO.stroke();
     ctxO.setLineDash([]);
-
-    let infoX = cx + 8;
-    if (infoX > w - 130) infoX = cx - 138;
-    const infoY = SELECTOR_HEIGHT + 20;
-
-    ctxO.fillStyle = "rgba(0, 0, 0, 0.6)";
-    ctxO.fillRect(infoX - 4, infoY - 14, 130, 32);
-
-    ctxO.textAlign = "left";
-    ctxO.fillStyle = "#fff";
-    ctxO.font = "bold 12px monospace";
-
-    const trueFreq = props.modelValue + config.lnb_lo_freq;
-    ctxO.fillText(`${(trueFreq / 1e6).toFixed(5)} MHz`, infoX, infoY);
-
-    ctxO.fillStyle = "#fbbf24";
-    ctxO.font = "11px monospace";
-    ctxO.fillText(`BW: ${(props.bandwidth / 1e3).toFixed(1)} kHz`, infoX, infoY + 14);
-
-    ctxO.textAlign = "right";
-    ctxO.fillStyle = zoom.value > 1.01 ? "#4ade80" : "rgba(255,255,255,0.3)";
-    ctxO.fillText(`${zoom.value.toFixed(1)}x`, w - 6, 16);
 }
 
 watch(
     () => [props.modelValue, props.bandwidth, zoom.value, panHz.value],
     () => {
         updateWorkerView();
-        requestAnimationFrame(drawOverlay);
+        requestAnimationFrame(() => {
+            drawOverlay();
+            drawRuler();
+        });
     },
     { immediate: true }
 );
@@ -153,30 +203,30 @@ function setLatestData(data: Float32Array) {
 defineExpose({ setLatestData });
 
 onMounted(() => {
-    if (!containerRef.value || !canvasWaterfall.value || !canvasOverlay.value) return;
+    if (!containerRef.value || !canvasWaterfall.value || !canvasOverlay.value || !canvasRuler.value) return;
 
-    const w = containerRef.value.clientWidth;
-    const h = containerRef.value.clientHeight;
+    const w = Math.max(1, containerRef.value.clientWidth);
+    const totalH = containerRef.value.clientHeight;
+
+    const waterfallH = Math.max(1, totalH - RULER_HEIGHT);
+
+    canvasRuler.value.width = w;
+    canvasRuler.value.height = RULER_HEIGHT;
 
     canvasWaterfall.value.width = w;
-    canvasWaterfall.value.height = h;
+    canvasWaterfall.value.height = waterfallH;
+
     canvasOverlay.value.width = w;
-    canvasOverlay.value.height = h;
+    canvasOverlay.value.height = waterfallH;
 
     ctxW = canvasWaterfall.value.getContext("2d", { alpha: false });
     ctxO = canvasOverlay.value.getContext("2d");
+    ctxR = canvasRuler.value.getContext("2d");
 
     worker.value = new WaterfallWorker();
     if (!worker.value) return;
 
-    worker.value.postMessage({
-        type: 'config',
-        payload: {
-            gain_attack: config.gain_attack,
-            gain_release: config.gain_release,
-            range_db: config.range_db
-        }
-    });
+    updateWorkerConfig();
 
     worker.value.postMessage({
         type: 'init',
@@ -186,7 +236,8 @@ onMounted(() => {
             viewMinFreq: viewMin.value,
             viewMaxFreq: viewMax.value,
             fftSize: config.fft_size,
-            height: h
+            height: waterfallH, // Now safely > 0
+            palette: props.palette
         }
     });
 
@@ -199,16 +250,21 @@ onMounted(() => {
 
     const observer = new ResizeObserver(() => {
         if (!containerRef.value) return;
-        const nw = containerRef.value.clientWidth;
+
+        // FIX 3: Apply same safety checks to ResizeObserver
+        const nw = Math.max(1, containerRef.value.clientWidth);
         const nh = containerRef.value.clientHeight;
+        const nWaterfallH = Math.max(1, nh - RULER_HEIGHT);
 
+        canvasRuler.value!.width = nw;
         canvasWaterfall.value!.width = nw;
-        canvasWaterfall.value!.height = nh;
+        canvasWaterfall.value!.height = nWaterfallH;
         canvasOverlay.value!.width = nw;
-        canvasOverlay.value!.height = nh;
+        canvasOverlay.value!.height = nWaterfallH;
 
-        worker.value?.postMessage({ type: 'resize', payload: { height: nh } });
+        worker.value?.postMessage({ type: 'resize', payload: { height: nWaterfallH } });
         drawOverlay();
+        drawRuler();
     });
     observer.observe(containerRef.value);
 });
@@ -219,17 +275,24 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div ref="containerRef" class="relative w-full h-full bg-black overflow-hidden select-none group">
-        <canvas ref="canvasWaterfall" class="absolute top-0 left-0 w-full h-full block" />
+    <div
+        ref="containerRef"
+        class="relative w-full h-full bg-black flex flex-col overflow-hidden select-none group border border-gray-700 rounded-lg"
+        :style="{ cursor: hoverCursor }"
+        @mousedown="onDown"
+        @mouseleave="onUp"
+        @mousemove="onMove"
+        @mouseup="onUp"
+        @wheel="onWheel"
+    >
         <canvas
-            ref="canvasOverlay"
-            class="absolute top-0 left-0 w-full h-full z-10 block"
-            :style="{ cursor: hoverCursor }"
-            @mousedown="onDown"
-            @mouseleave="onUp"
-            @mousemove="onMove"
-            @mouseup="onUp"
-            @wheel="onWheel"
+            ref="canvasRuler"
+            class="w-full block z-20 shadow-sm pointer-events-none"
+            :style="{ height: RULER_HEIGHT + 'px', flex: '0 0 ' + RULER_HEIGHT + 'px' }"
         />
+        <div class="relative flex-1 w-full overflow-hidden bg-black pointer-events-none">
+            <canvas ref="canvasWaterfall" class="absolute top-0 left-0 w-full h-full block" />
+            <canvas ref="canvasOverlay" class="absolute top-0 left-0 w-full h-full z-10 block" />
+        </div>
     </div>
 </template>
