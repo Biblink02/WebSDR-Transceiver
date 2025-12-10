@@ -11,16 +11,16 @@ export const useSdrStore = defineStore('sdr', () => {
     const workerStatus = ref<'IDLE' | 'LISTENING' | 'FULL'>('IDLE')
     const assignedWorkerId = ref<string | null>(null)
 
-    // Default values (will be overwritten by init)
+    // Default values
     const tuneFreq = ref(0)
     const bandwidth = ref()
     const volume = ref(50)
+    const palette = ref('classic') // NUOVO STATO
 
     // --- Actions ---
 
     function init(loadedConfig: AppConfig) {
         config.value = loadedConfig
-        // Set defaults from config
         tuneFreq.value = loadedConfig.lo_freq
         bandwidth.value = loadedConfig.bandwidth
     }
@@ -75,6 +75,7 @@ export const useSdrStore = defineStore('sdr', () => {
         tuneFreq,
         bandwidth,
         volume,
+        palette, // Esporto palette
         init,
         setConnectionStatus,
         setWorkerStatus,
