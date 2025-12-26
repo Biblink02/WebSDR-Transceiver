@@ -42,7 +42,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [320, 16.0]
+    coordinate: [296, 16.0]
     rotation: 0
     state: enabled
 - name: audio_udp_port
@@ -69,26 +69,6 @@ blocks:
     coordinate: [424, 168.0]
     rotation: 0
     state: enabled
-- name: band_pass_filter_taps
-  id: variable_band_pass_filter_taps
-  parameters:
-    beta: '6.76'
-    comment: ''
-    gain: '1.0'
-    high_cutoff_freq: '3500'
-    low_cutoff_freq: '300'
-    samp_rate: '48000'
-    type: complex_band_pass
-    value: ''
-    width: '200'
-    win: window.WIN_HAMMING
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [280, 428.0]
-    rotation: 0
-    state: true
 - name: bandwidth
   id: variable
   parameters:
@@ -134,14 +114,14 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [208, 96.0]
+    coordinate: [192, 88.0]
     rotation: 0
     state: enabled
 - name: samp_rate
   id: variable
   parameters:
     comment: ''
-    value: '520834'
+    value: '2000000'
   states:
     bus_sink: false
     bus_source: false
@@ -185,40 +165,25 @@ blocks:
     coordinate: [736, 144.0]
     rotation: 0
     state: enabled
-- name: blocks_complex_to_real_0
-  id: blocks_complex_to_real
+- name: analog_nbfm_rx_0
+  id: analog_nbfm_rx
   parameters:
     affinity: ''
     alias: ''
+    audio_rate: quad_rate
     comment: ''
+    max_dev: 5e3
     maxoutbuf: '0'
     minoutbuf: '0'
-    vlen: '1'
+    quad_rate: quad_rate
+    tau: 75e-6
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [984, 328.0]
+    coordinate: [536, 288.0]
     rotation: 0
     state: enabled
-- name: dc_blocker_xx_0
-  id: dc_blocker_xx
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    length: '32'
-    long_form: 'True'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    type: ff
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [1176, 312.0]
-    rotation: 0
-    state: true
 - name: epy_block_0
   id: epy_block
   parameters:
@@ -259,37 +224,17 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1400, 304.0]
+    coordinate: [912, 296.0]
     rotation: 0
     state: enabled
-- name: fft_filter_xxx_0
-  id: fft_filter_xxx
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    decim: '1'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    nthreads: '1'
-    samp_delay: '0'
-    taps: band_pass_filter_taps
-    type: ccc
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [744, 304.0]
-    rotation: 0
-    state: true
-- name: freq_xlating_fir_filter_xxx_0_0
+- name: freq_xlating_fir_filter_xxx_0
   id: freq_xlating_fir_filter_xxx
   parameters:
     affinity: ''
     alias: ''
-    center_freq: freq_offset
+    center_freq: -freq_offset
     comment: ''
-    decim: '1'
+    decim: int(samp_rate / quad_rate)
     maxoutbuf: '0'
     minoutbuf: '0'
     samp_rate: samp_rate
@@ -299,7 +244,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [288, 288.0]
+    coordinate: [304, 288.0]
     rotation: 0
     state: enabled
 - name: import_0
@@ -315,26 +260,26 @@ blocks:
     coordinate: [720, 24.0]
     rotation: 0
     state: enabled
-- name: rational_resampler_xxx_0_0
+- name: rational_resampler_xxx_0
   id: rational_resampler_xxx
   parameters:
     affinity: ''
     alias: ''
     comment: ''
-    decim: samp_rate
+    decim: quad_rate
     fbw: '0'
-    interp: '48000'
+    interp: audio_rate
     maxoutbuf: '0'
     minoutbuf: '0'
     taps: '[]'
-    type: ccc
+    type: fff
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [536, 296.0]
+    coordinate: [728, 288.0]
     rotation: 0
-    state: true
+    state: enabled
 - name: snippet_0
   id: snippet
   parameters:
@@ -396,12 +341,10 @@ blocks:
     state: enabled
 
 connections:
-- [blocks_complex_to_real_0, '0', dc_blocker_xx_0, '0']
-- [dc_blocker_xx_0, '0', epy_block_0, '0']
-- [fft_filter_xxx_0, '0', blocks_complex_to_real_0, '0']
-- [freq_xlating_fir_filter_xxx_0_0, '0', rational_resampler_xxx_0_0, '0']
-- [rational_resampler_xxx_0_0, '0', fft_filter_xxx_0, '0']
-- [zeromq_sub_source_0, '0', freq_xlating_fir_filter_xxx_0_0, '0']
+- [analog_nbfm_rx_0, '0', rational_resampler_xxx_0, '0']
+- [freq_xlating_fir_filter_xxx_0, '0', analog_nbfm_rx_0, '0']
+- [rational_resampler_xxx_0, '0', epy_block_0, '0']
+- [zeromq_sub_source_0, '0', freq_xlating_fir_filter_xxx_0, '0']
 
 metadata:
   file_format: 1

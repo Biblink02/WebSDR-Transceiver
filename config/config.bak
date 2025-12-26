@@ -1,0 +1,94 @@
+# =====================================================
+# ===                SDR Hardware                   ===
+# =====================================================
+
+# Baseband sample rate used across all workers (Hz)
+#samp_rate: 520833          #Minimum value for the PlutoSDR, the QO-100 NB transponder would only require 250000
+samp_rate: 2000000          #SV!!: Way too large but other values do not work. I think this is a bug in the GNURadio demod script.
+
+# LO frequency for the PlutoSDR (Hz)
+lo_freq: 739675000          #center intermediate frequency of the QO-100 NB transponder with our LNB LO = 9750 MHz
+                            #True center frequency is lo_freq+9750 MHz
+
+# Analog RF bandwidth of the AD936x (Hz)
+rf_bandwidth: 250000        #Overall bandwidth of the QO-100 NB transponder, minimum for PlutoSDR is 200000
+
+# IIO URI of the PlutoSDR
+iio_uri: "ip:192.168.2.1"
+
+# PlutoSDR buffer size
+buffer_size: 32768
+
+
+# =====================================================
+# ===            Graphics Worker (Waterfall)        ===
+# =====================================================
+
+fft_size: 4096       #SV!!: Should be reduced to 2048 to save computational resources
+#calibration: -20
+calibration: -72     #=-20*log10(fft_size)
+skip: 30
+
+
+# =====================================================
+# ===             Audio Worker (Demod)              ===
+# =====================================================
+
+audio_rate: 48000           # Output audio rate (Hz)
+bandwidth: 15000            # Default demod bandwidth (Hz)
+#bandwidth: 3000            #SV!!: should be this value but it does not work (bug in the grc demod file)
+freq_offset: 0              # Default (can be overridden)
+
+
+# =====================================================
+# ===              Backend Validation               ===
+# =====================================================
+
+# Maximum demodulation bandwidth accepted from frontend (Hz)
+MAX_BW_LIMIT: 200000          #SV!!: Should be a max. of 6 kHz but it breaks the GUI behavior
+
+# Max frequency offset = samp_rate/2 is computed internally
+
+
+#=====================================================
+# ===         Global Network / ZMQ / Services       ===
+# =====================================================
+
+SDR_HOST: "sdr-server"
+SDR_IQ_PORT: 5000
+SDR_CONTROL_PORT: 5001
+
+BACKEND_HOST: "backend-controller"
+
+GRAPHICS_UDP_PORT: 9001
+AUDIO_UDP_PORT: 9002
+
+
+# =====================================================
+# ===         Backend Worker Pool Configuration     ===
+# =====================================================
+
+POOL_SIZE: 3
+WORKER_HEADLESS_SERVICE: "audio-workers-headless.default.svc.cluster.local"
+WORKER_CONTROL_PORT: 5001
+
+
+# =====================================================
+# ===              WebSocket Events                 ===
+# =====================================================
+
+WS_GRAPHICS_EVENT: "graphics_data"
+WS_AUDIO_EVENT: "audio_data"
+WS_CORRECTION_EVENT: "correction_applied"
+WS_URL: "http://websdr.fbi.h-da.de"
+
+# =====================================================
+# ===              FRONTEND                 ===
+# =====================================================
+CHANNEL_COUNT: 1
+BUFFER_THRESHOLD: 4
+MAX_QUEUE_SIZE: 50
+#RANGE_DB: 80           #SV!!: previous setting
+RANGE_DB: 0             #SV!!:What does this parameter do? If it is the Rx gain, it should be set to a small value to reduce noise
+GAIN_ATTACK: 0.001
+GAIN_RELEASE: 0.05
