@@ -63,7 +63,7 @@ worker_headless_service: "audio-workers-headless.default.svc.cluster.local"
 # =============================================================================
 # ===                        WEBSOCKET CONFIG                               ===
 # =============================================================================
-ws_url: "http://websdr.fbi.h-da.de"
+ws_url: "https://websdr.fbi.h-da.de"
 
 # Event Protocol
 ws_graphics_event: "graphics_data"
