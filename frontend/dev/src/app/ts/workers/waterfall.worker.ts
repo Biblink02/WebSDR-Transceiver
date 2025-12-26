@@ -1,7 +1,7 @@
 import { AppConfig } from "@/ConfigService";
 
 interface WorkerConfig extends AppConfig {
-    brightness: number;
+    gain: number;
 }
 
 let config: WorkerConfig | null = null;
@@ -117,7 +117,7 @@ function processFFT(data: Float32Array) {
         }
     }
 
-    const effectiveMax = maxDb - (config.brightness || 0);
+    const effectiveMax = maxDb - (config.gain || 0);
     const effectiveMin = effectiveMax - config.range_db;
 
     offscreenCtx.drawImage(

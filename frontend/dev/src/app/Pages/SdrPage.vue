@@ -13,8 +13,8 @@ const { initWorker, toggleAudio } = useSdrWorker()
 const spectrogramRef = ref<InstanceType<typeof SpectrogramComponent> | null>(null)
 
 // Default Settings
-const contrast = ref(50);
-const brightness = ref(0);
+const range = ref(50);
+const gain = ref(-10);
 
 const onGraphicData = (data: Float32Array) => {
     spectrogramRef.value?.setLatestData(data)
@@ -22,7 +22,10 @@ const onGraphicData = (data: Float32Array) => {
 
 onMounted(() => {
     if (store.settings.range_db) {
-        contrast.value = store.settings.range_db;
+        range.value = store.settings.range_db;
+    }
+    if (store.settings.gain_db) {
+        gain.value = store.settings.gain_db;
     }
     initWorker(onGraphicData)
 })
@@ -42,8 +45,8 @@ onMounted(() => {
                     class="w-full h-full block"
                     v-model:model-value="store.tuneFreq"
                     v-model:bandwidth="store.bandwidth"
-                    :contrast="contrast"
-                    :brightness="brightness"
+                    :range="range"
+                    :gain="gain"
                     :palette="store.palette"
                 />
             </div>
@@ -52,8 +55,8 @@ onMounted(() => {
                 <ControlDeck
                     v-model:frequency="store.tuneFreq"
                     v-model:bandwidth="store.bandwidth"
-                    v-model:contrast="contrast"
-                    v-model:brightness="brightness"
+                    v-model:range="range"
+                    v-model:gain="gain"
                     v-model:palette="store.palette"
                 />
             </div>

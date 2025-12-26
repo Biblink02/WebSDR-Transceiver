@@ -9,16 +9,16 @@ import Select from 'primevue/select';
 const props = defineProps<{
     frequency: number;
     bandwidth: number;
-    contrast: number;
-    brightness: number;
+    range: number;
+    gain: number;
     palette: string;
 }>();
 
 const emit = defineEmits([
     'update:frequency',
     'update:bandwidth',
-    'update:contrast',
-    'update:brightness',
+    'update:range',
+    'update:gain',
     'update:palette'
 ]);
 
@@ -54,14 +54,14 @@ const localBw = computed({
     set: (val) => emit('update:bandwidth', val as number)
 });
 
-const localContrast = computed({
-    get: () => props.contrast,
-    set: (val) => emit('update:contrast', val)
+const localRange = computed({
+    get: () => props.range,
+    set: (val) => emit('update:range', val)
 });
 
-const localBrightness = computed({
-    get: () => props.brightness,
-    set: (val) => emit('update:brightness', val)
+const localGain = computed({
+    get: () => props.gain,
+    set: (val) => emit('update:gain', val)
 });
 
 const localPalette = computed({
@@ -117,11 +117,11 @@ const localPalette = computed({
         <div class="flex flex-col gap-2">
             <div class="flex justify-between">
                 <label class="text-xs uppercase tracking-wider text-gray-400 font-bold">Gain</label>
-                <span class="text-xs text-gray-300 font-mono">{{ brightness }} dB</span>
+                <span class="text-xs text-gray-300 font-mono">{{ gain }} dB</span>
             </div>
             <div class="h-12 flex items-center rounded-lg px-3 border border-transparent">
                 <Slider
-                    v-model="localBrightness"
+                    v-model="localGain"
                     :min="-40"
                     :max="40"
                     class="w-full"
@@ -132,11 +132,11 @@ const localPalette = computed({
         <div class="flex flex-col gap-2">
             <div class="flex justify-between">
                 <label class="text-xs uppercase tracking-wider text-gray-400 font-bold">Range</label>
-                <span class="text-xs text-gray-300 font-mono">{{ contrast }} dB</span>
+                <span class="text-xs text-gray-300 font-mono">{{ range }} dB</span>
             </div>
             <div class="h-12 flex items-center rounded-lg px-3 border border-transparent">
                 <Slider
-                    v-model="localContrast"
+                    v-model="localRange"
                     :min="10"
                     :max="100"
                     class="w-full"
