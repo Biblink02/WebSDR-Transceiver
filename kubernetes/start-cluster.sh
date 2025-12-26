@@ -10,31 +10,6 @@ if ! kind get clusters | grep -q "^kind$"; then
     echo "Creating Kind cluster..."
     kind create cluster --config kind-config.yaml
     FRESH_INSTALL=true
-
-    echo "Installing NGINX Ingress Controller..."
-    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/kind/deploy.yaml
-
-    echo "Removing admission webhook (avoids startup deadlock)..."
-    sleep 5
-    kubectl delete -A ValidatingWebhookConfiguration ingress-nginx-admission --ignore-not-found || true
-
-    echo "Waiting for ingress controller pod to appear..."
-    for i in {1..60}; do
-        COUNT=$(kubectl -n ingress-nginx get pods -l app.kubernetes.io/component=controller --no-headers 2>/dev/null | wc -l)
-        if [ "$COUNT" -gt 0 ]; then
-            echo "Ingress controller pod detected."
-            break
-        fi
-        sleep 2
-    done
-
-    echo "Waiting for ingress controller to become ready..."
-    kubectl wait \
-        --namespace ingress-nginx \
-        --for=condition=ready pod \
-        -l app.kubernetes.io/component=controller \
-        --timeout=300s
-
 else
     echo "Kind cluster already exists. Updating mode."
 fi
@@ -55,15 +30,17 @@ kubectl create configmap sdr-config \
     --dry-run=client -o yaml | kubectl apply -f -
 
 echo "[4/4] Applying Kubernetes manifests..."
+
+kubectl apply -f nginx_proxy_manager.yaml
 kubectl apply -f backend-controller.yaml
 kubectl apply -f sdr-server.yaml
 kubectl apply -f audio-workers.yaml
 kubectl apply -f graphics-worker.yaml
 kubectl apply -f frontend.yaml
-kubectl apply -f ingress.yaml
 
 if [ "$FRESH_INSTALL" = false ]; then
     echo "Existing cluster detected: Restarting deployments to apply config changes..."
+    kubectl rollout restart deployment/nginx-proxy-manager
     kubectl rollout restart deployment/backend-controller
     kubectl rollout restart deployment/sdr-server
     kubectl rollout restart deployment/graphics-worker
@@ -74,6 +51,7 @@ else
 fi
 
 echo "Waiting for rollouts to complete..."
+kubectl rollout status deployment/nginx-proxy-manager
 kubectl rollout status deployment/backend-controller
 kubectl rollout status deployment/sdr-server
 kubectl rollout status deployment/graphics-worker
@@ -84,5 +62,6 @@ WS_URL=$(grep "ws_url:" ../config/config.yaml | awk '{print $2}' | tr -d '"')
 
 echo "------------------------------------------------"
 echo "Cluster ready."
+echo "NPM Admin Interface: http://localhost:81"
 echo "Frontend available at: $WS_URL"
 echo "------------------------------------------------"
