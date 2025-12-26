@@ -18,18 +18,30 @@ export function useSpectrogramInteraction(
     emit: Emits,
     containerRef: () => HTMLElement | null
 ) {
+    // Limits logic: Use Config values or fallback to hardcoded
+    const LIMIT_MIN_RF = config.view_limit_min ?? 10_489_500_000
+    const LIMIT_MAX_RF = config.view_limit_max ?? 10_489_900_000;
+
+    // Convert RF limits to IF (Intermediate Frequency)
+    const LIMIT_MIN_IF = LIMIT_MIN_RF - config.lnb_lo_freq;
+    const LIMIT_MAX_IF = LIMIT_MAX_RF - config.lnb_lo_freq;
+    const ALLOWED_SPAN = LIMIT_MAX_IF - LIMIT_MIN_IF;
+
+    // Constants
+    const MIN_BW = config.min_bw_limit || 90;
+    const MAX_BW = config.max_bw_limit;
+
+    // Dynamic MIN_ZOOM: Ensure we can't zoom out further than the allowed window
+    // We add a tiny epsilon to avoid floating point boundary issues
+    const MIN_ZOOM = Math.max(1, config.samp_rate / ALLOWED_SPAN);
+    const MAX_ZOOM = 10;
+    const SELECTOR_HEIGHT = 30;
+
     // State
-    const zoom = ref(1)
+    const zoom = ref(MIN_ZOOM)
     const panHz = ref(0)
     const dragging = ref(false)
     const hoverCursor = ref('default')
-
-    // Constants
-    const MIN_BW = 500
-    const MAX_BW = config.max_bw_limit
-    const MIN_ZOOM = 1
-    const MAX_ZOOM = 10
-    const SELECTOR_HEIGHT = 30;
 
     // Internal Drag State
     let startX = 0
@@ -54,9 +66,24 @@ export function useSpectrogramInteraction(
     }
 
     function clampPan() {
-        const maxOffset = (config.samp_rate - viewSpan.value) / 2
-        if (panHz.value > maxOffset) panHz.value = maxOffset
-        if (panHz.value < -maxOffset) panHz.value = -maxOffset
+        const halfSpan = viewSpan.value / 2;
+
+        const minPan = LIMIT_MIN_IF - config.lo_freq + halfSpan;
+        const maxPan = LIMIT_MAX_IF - config.lo_freq - halfSpan;
+
+        // Use a small epsilon to prevent jitter when minPan is very close to maxPan
+        const EPSILON = 1.0;
+
+        if (minPan > maxPan + EPSILON) {
+            // View is wider than limits: Center it
+            const centerIF = (LIMIT_MIN_IF + LIMIT_MAX_IF) / 2;
+            panHz.value = Math.round(centerIF - config.lo_freq);
+        } else {
+            // Normal clamping
+            if (panHz.value < minPan) panHz.value = Math.round(minPan);
+            else if (panHz.value > maxPan) panHz.value = Math.round(maxPan);
+            else panHz.value = Math.round(panHz.value); // Keep integers
+        }
     }
 
     function getAdaptiveStep(visibleHz: number, widthPx: number): number {
@@ -106,18 +133,17 @@ export function useSpectrogramInteraction(
         startFreq = p.modelValue
         startPan = panHz.value
 
-        // Logic: Ruler vs Waterfall
         if (y <= SELECTOR_HEIGHT) {
             if (Math.abs(x - left) < tol) dragMode = 'RESIZE_L'
             else if (Math.abs(x - right) < tol) dragMode = 'RESIZE_R'
             else dragMode = 'MOVE'
         } else {
-            // Only allow panning if zoomed in
-            if (zoom.value > 1.01) {
+            // Only allow panning if zoomed in significantly
+            if (zoom.value > MIN_ZOOM + 0.05) {
                 dragMode = 'PAN'
                 hoverCursor.value = "grabbing"
             } else {
-                dragging.value = false // Cancel drag start
+                dragging.value = false
             }
         }
     }
@@ -127,10 +153,8 @@ export function useSpectrogramInteraction(
         if (!w) return
 
         if (!dragging.value) {
-            // Hover Logic
             if (y > SELECTOR_HEIGHT) {
-                // Show grab cursor only if zoomed in
-                hoverCursor.value = zoom.value > 1.01 ? "grab" : "default"
+                hoverCursor.value = zoom.value > MIN_ZOOM + 0.05 ? "grab" : "default"
                 return
             }
 
@@ -148,16 +172,14 @@ export function useSpectrogramInteraction(
             return
         }
 
-        // Dragging Logic
         const dx = x - startX
         const hzPerPx = (viewMax.value - viewMin.value) / w
 
         if (dragMode === 'MOVE') {
             let f = startFreq + dx * hzPerPx
             f = Math.round(f)
-            const minHw = config.lo_freq - config.samp_rate / 2
-            const maxHw = config.lo_freq + config.samp_rate / 2
-            f = Math.max(minHw, Math.min(maxHw, f))
+            // Clamp frequency tune dragging
+            f = Math.max(LIMIT_MIN_IF, Math.min(LIMIT_MAX_IF, f))
             emit("update:modelValue", f)
         } else if (dragMode === 'RESIZE_L' || dragMode === 'RESIZE_R') {
             const currentHz = pxToHz(x, w)
@@ -166,7 +188,8 @@ export function useSpectrogramInteraction(
             bw = Math.max(MIN_BW, Math.min(MAX_BW, bw))
             emit("update:bandwidth", bw)
         } else if (dragMode === 'PAN') {
-            panHz.value = startPan - (dx * hzPerPx)
+            // Rounding here prevents jitter during drag
+            panHz.value = Math.round(startPan - (dx * hzPerPx))
             clampPan()
         }
     }
@@ -175,8 +198,7 @@ export function useSpectrogramInteraction(
         dragging.value = false
         dragMode = null
 
-        // Reset cursor based on current position/zoom state
-        if (zoom.value > 1.01 && hoverCursor.value === 'grabbing') {
+        if (zoom.value > MIN_ZOOM + 0.05 && hoverCursor.value === 'grabbing') {
             hoverCursor.value = 'grab'
         } else if (hoverCursor.value === 'grabbing') {
             hoverCursor.value = 'default'
@@ -198,11 +220,13 @@ export function useSpectrogramInteraction(
         zoom.value = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z))
         clampPan()
 
-        // Update cursor immediately on zoom out if we are hovering waterfall
-        if (zoom.value <= 1.01 && hoverCursor.value === 'grab') {
+        if (zoom.value <= MIN_ZOOM + 0.05 && hoverCursor.value === 'grab') {
             hoverCursor.value = 'default'
         }
     }
+
+    // Force clamp on init
+    clampPan();
 
     return {
         zoom,

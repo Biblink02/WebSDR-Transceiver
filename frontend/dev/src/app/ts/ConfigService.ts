@@ -19,6 +19,8 @@ export interface AppConfig {
     gain_db: number
     gain_attack: number
     gain_release: number
+    view_limit_min: number
+    view_limit_max: number
 
     // Audio
     audio_rate: number
