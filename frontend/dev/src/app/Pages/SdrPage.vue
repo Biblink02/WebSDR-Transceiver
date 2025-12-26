@@ -9,10 +9,9 @@ import { useSdrStore } from '@/stores/sdr.store'
 import { useSdrWorker } from '@/composables/useSdrWorker'
 
 const store = useSdrStore()
-const { initWorker, toggleAudio } = useSdrWorker()
+const { initWorker, toggleAudio, toggleConnection } = useSdrWorker()
 const spectrogramRef = ref<InstanceType<typeof SpectrogramComponent> | null>(null)
 
-// Default Settings
 const range = ref(50);
 const gain = ref(-10);
 
@@ -37,7 +36,10 @@ onMounted(() => {
 
         <div class="flex flex-col h-[calc(100vh-6rem)] max-w-7xl mx-auto w-full p-4 gap-4">
 
-            <SdrHeader @toggle-audio="toggleAudio" />
+            <SdrHeader
+                @toggle-audio="toggleAudio"
+                @toggle-connection="toggleConnection"
+            />
 
             <div class="flex-1 min-h-0 relative rounded-lg border border-gray-700 shadow-2xl overflow-hidden bg-black">
                 <SpectrogramComponent
