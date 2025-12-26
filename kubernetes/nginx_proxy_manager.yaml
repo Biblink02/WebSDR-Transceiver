@@ -38,12 +38,10 @@ spec:
       labels:
         app: nginx-proxy-manager
     spec:
-      # Fondamentale per Kind: usa la rete del nodo per intercettare le porte 80/443 mappate da Docker
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       nodeSelector:
-        # Assicura che il pod giri sul nodo dove Kind mappa le porte
         kubernetes.io/hostname: kind-control-plane
-      # Tolleranza necessaria perché il control-plane spesso ha un taint
       tolerations:
         - key: "node-role.kubernetes.io/control-plane"
           operator: "Exists"
