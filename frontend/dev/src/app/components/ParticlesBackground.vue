@@ -20,9 +20,9 @@ let mouseX = 0
 let mouseY = 0
 let isMouseInside = false
 
-// Particles Configuration
-const PARTICLE_COUNT = 260
-const CONNECTION_DISTANCE = 150
+// --- Configuration (Dynamic) ---
+let connectionDistance = 150
+
 const PARTICLE_SPEED = 0.8
 const PARTICLE_SIZE_MIN = 1
 const PARTICLE_SIZE_MAX = 3
@@ -40,7 +40,7 @@ function createParticle(width: number, height: number): Particle {
     return {
         x,
         y,
-        baseX: x,  // Initial position for mouse interaction
+        baseX: x,
         baseY: y,
         vx: (Math.random() - 0.5) * PARTICLE_SPEED,
         vy: (Math.random() - 0.5) * PARTICLE_SPEED,
@@ -55,7 +55,24 @@ function initParticles() {
     const width = container.value.clientWidth
     const height = container.value.clientHeight
 
-    particles = Array(PARTICLE_COUNT).fill(null).map(() => createParticle(width, height))
+    let particleCount = 260;
+
+    if (width < 768) {
+        // Mobile
+        particleCount = 60;
+        connectionDistance = 80;
+    } else if (width < 1280) {
+        // Tablet / Laptop
+        particleCount = 150;
+        connectionDistance = 120;
+    } else {
+        // Desktop / Large screens
+        particleCount = 260;
+        connectionDistance = 150;
+    }
+    // ----------------------------------
+
+    particles = Array(particleCount).fill(null).map(() => createParticle(width, height))
 }
 
 function drawParticle(ctx: CanvasRenderingContext2D, particle: Particle) {
@@ -72,8 +89,8 @@ function drawConnections(ctx: CanvasRenderingContext2D) {
             const dy = particles[i].y - particles[j].y
             const distance = Math.sqrt(dx * dx + dy * dy)
 
-            if (distance < CONNECTION_DISTANCE) {
-                const opacity = (1 - distance / CONNECTION_DISTANCE) * 0.2
+            if (distance < connectionDistance) {
+                const opacity = (1 - distance / connectionDistance) * 0.2
                 ctx.beginPath()
                 ctx.moveTo(particles[i].x, particles[i].y)
                 ctx.lineTo(particles[j].x, particles[j].y)
@@ -158,7 +175,6 @@ function handleMouseMove(event: MouseEvent) {
     mouseY = event.clientY - rect.top
     isMouseInside = true
 }
-
 
 onMounted(() => {
     if (!container.value) return
