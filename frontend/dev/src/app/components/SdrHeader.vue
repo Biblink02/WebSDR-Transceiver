@@ -4,14 +4,27 @@ import Button from 'primevue/button';
 import Slider from 'primevue/slider';
 
 const store = useSdrStore()
-const emit = defineEmits(['toggle-audio'])
+const emit = defineEmits(['toggle-audio', 'toggle-connection'])
 </script>
 
 <template>
     <div
         class="flex flex-wrap justify-between items-center bg-gray-900/90 p-4 rounded-lg backdrop-blur border border-gray-700 shadow-lg shrink-0">
         <div>
-            <h1 class="text-xl font-bold text-white tracking-wide">SDR CONSOLE</h1>
+            <div class="flex items-center gap-3">
+                <h1 class="text-xl font-bold text-white tracking-wide">SDR CONSOLE</h1>
+
+                <Button
+                    :icon="store.isConnected ? 'pi pi-power-off' : 'pi pi-refresh'"
+                    :severity="store.isConnected ? 'success' : 'danger'"
+                    rounded
+                    text
+                    size="small"
+                    :title="store.isConnected ? 'Disconnect' : 'Connect'"
+                    @click="emit('toggle-connection')"
+                />
+            </div>
+
             <div class="flex items-center gap-3 text-xs font-mono mt-1">
                 <span :class="store.isConnected ? 'text-green-400' : 'text-red-500'">
                   {{ store.statusText }}
