@@ -92,6 +92,7 @@ function drawRuler() {
     const hzVisible = viewMax.value - viewMin.value;
     const step = getAdaptiveStep(hzVisible, w);
     const startTick = Math.ceil(viewMin.value / step) * step;
+    const endTick = Math.floor(viewMax.value / step) * step + step;
 
     ctxR.font = "bold 11px monospace";
     ctxR.textAlign = "center";
@@ -100,11 +101,14 @@ function drawRuler() {
     ctxR.lineWidth = 1;
 
     ctxR.beginPath();
-    for (let f = startTick; f < viewMax.value; f += step) {
+    for (let f = startTick; f < endTick; f += step) {
         const x = hzToPx(f, w);
-        ctxR.moveTo(x, h);
-        ctxR.lineTo(x, h - 5);
-        ctxR.fillText(formatFreq(f), x, h - 8);
+
+        if (x >= -50 && x <= w + 50) {
+            ctxR.moveTo(x, h);
+            ctxR.lineTo(x, h - 5);
+            ctxR.fillText(formatFreq(f), x, h - 8);
+        }
     }
     ctxR.stroke();
 
@@ -133,12 +137,6 @@ function drawRuler() {
     ctxR.lineTo(cx + 5, 0);
     ctxR.lineTo(cx, 6);
     ctxR.fill();
-
-    ctxR.beginPath();
-    ctxR.moveTo(0, h);
-    ctxR.lineTo(w, h);
-    ctxR.strokeStyle = "#3f3f46";
-    ctxR.stroke();
 }
 
 function drawOverlay() {
@@ -150,15 +148,21 @@ function drawOverlay() {
 
     const hzVisible = viewMax.value - viewMin.value;
     const step = getAdaptiveStep(hzVisible, w);
+
     const startTick = Math.ceil(viewMin.value / step) * step;
+    const endTick = Math.floor(viewMax.value / step) * step + step;
 
     ctxO.beginPath();
     ctxO.strokeStyle = "rgba(255, 255, 255, 0.1)";
     ctxO.lineWidth = 1;
-    for (let f = startTick; f < viewMax.value; f += step) {
+
+    for (let f = startTick; f < endTick; f += step) {
         const x = hzToPx(f, w);
-        ctxO.moveTo(x, 0);
-        ctxO.lineTo(x, h);
+        // Draw only if inside
+        if (x >= 0 && x <= w) {
+            ctxO.moveTo(x, 0);
+            ctxO.lineTo(x, h);
+        }
     }
     ctxO.stroke();
 
