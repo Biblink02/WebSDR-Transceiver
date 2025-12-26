@@ -15,7 +15,7 @@ export const useSdrStore = defineStore('sdr', () => {
     const tuneFreq = ref(0)
     const bandwidth = ref()
     const volume = ref(50)
-    const palette = ref('classic') // NUOVO STATO
+    const palette = ref('classic')
 
     // --- Actions ---
 

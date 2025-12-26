@@ -7,8 +7,8 @@ import { useSpectrogramInteraction } from "@/composables/useSpectrogramInteracti
 const props = defineProps<{
     modelValue: number;
     bandwidth: number;
-    contrast: number;
-    brightness: number;
+    range: number;
+    gain: number;
     palette: string; // New Prop
 }>();
 
@@ -62,8 +62,8 @@ function updateWorkerConfig() {
         payload: {
             gain_attack: config.gain_attack,
             gain_release: config.gain_release,
-            range_db: props.contrast,
-            brightness: props.brightness
+            range_db: props.range,
+            gain: props.gain
         }
     });
 }
@@ -73,7 +73,7 @@ watch(() => props.palette, (newPalette) => {
     worker.value?.postMessage({ type: 'palette', payload: newPalette });
 });
 
-watch(() => [props.contrast, props.brightness], updateWorkerConfig);
+watch(() => [props.range, props.gain], updateWorkerConfig);
 
 function drawRuler() {
     if (!ctxR || !canvasRuler.value) return;

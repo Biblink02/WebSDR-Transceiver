@@ -16,6 +16,7 @@ export interface AppConfig {
 
     // Visualization
     range_db: number
+    gain_db: number
     gain_attack: number
     gain_release: number
 

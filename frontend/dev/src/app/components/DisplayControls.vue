@@ -1,17 +1,17 @@
 <script lang="ts" setup>
 const props = defineProps<{
-    contrast: number;   // range_db
-    brightness: number; // gain offset
+    range: number;   // range_db
+    gain: number; // gain offset
 }>();
 
-const emit = defineEmits(['update:contrast', 'update:brightness']);
+const emit = defineEmits(['update:range', 'update:gain']);
 
-const onContrastChange = (e: Event) => {
-    emit('update:contrast', parseFloat((e.target as HTMLInputElement).value));
+const onRangeChange = (e: Event) => {
+    emit('update:range', parseFloat((e.target as HTMLInputElement).value));
 };
 
-const onBrightnessChange = (e: Event) => {
-    emit('update:brightness', parseFloat((e.target as HTMLInputElement).value));
+const onGainChange = (e: Event) => {
+    emit('update:gain', parseFloat((e.target as HTMLInputElement).value));
 };
 </script>
 
@@ -20,28 +20,28 @@ const onBrightnessChange = (e: Event) => {
 
         <div class="flex flex-col gap-1 flex-1">
             <div class="flex justify-between">
-                <label class="text-xs uppercase tracking-wider text-gray-400 font-bold">Brightness (Gain)</label>
-                <span class="text-xs text-green-400 font-mono">{{ brightness > 0 ? '+' : ''}}{{ brightness }} dB</span>
+                <label class="text-xs uppercase tracking-wider text-gray-400 font-bold">Gain (Gain)</label>
+                <span class="text-xs text-green-400 font-mono">{{ gain > 0 ? '+' : ''}}{{ gain }} dB</span>
             </div>
             <input
                 type="range"
                 min="-30" max="30" step="1"
-                :value="brightness"
-                @input="onBrightnessChange"
+                :value="gain"
+                @input="onGainChange"
                 class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-green-500"
             />
         </div>
 
         <div class="flex flex-col gap-1 flex-1">
             <div class="flex justify-between">
-                <label class="text-xs uppercase tracking-wider text-gray-400 font-bold">Contrast (Range)</label>
-                <span class="text-xs text-yellow-400 font-mono">{{ contrast }} dB</span>
+                <label class="text-xs uppercase tracking-wider text-gray-400 font-bold">Range (Range)</label>
+                <span class="text-xs text-yellow-400 font-mono">{{ range }} dB</span>
             </div>
             <input
                 type="range"
                 min="10" max="80" step="1"
-                :value="contrast"
-                @input="onContrastChange"
+                :value="range"
+                @input="onRangeChange"
                 class="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-yellow-500"
             />
         </div>
