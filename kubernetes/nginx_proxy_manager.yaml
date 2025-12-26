@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: npm-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: npm-letsencrypt
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-proxy-manager
+  labels:
+    app: nginx-proxy-manager
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nginx-proxy-manager
+  template:
+    metadata:
+      labels:
+        app: nginx-proxy-manager
+    spec:
+      # Fondamentale per Kind: usa la rete del nodo per intercettare le porte 80/443 mappate da Docker
+      hostNetwork: true
+      nodeSelector:
+        # Assicura che il pod giri sul nodo dove Kind mappa le porte
+        kubernetes.io/hostname: kind-control-plane
+      # Tolleranza necessaria perché il control-plane spesso ha un taint
+      tolerations:
+        - key: "node-role.kubernetes.io/control-plane"
+          operator: "Exists"
+          effect: "NoSchedule"
+      containers:
+        - name: npm
+          image: jc21/nginx-proxy-manager:latest
+          ports:
+            - containerPort: 80
+            - containerPort: 81
+            - containerPort: 443
+          env:
+            - name: DB_SQLITE_FILE
+              value: "/data/database.sqlite"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: letsencrypt
+              mountPath: /etc/letsencrypt
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: npm-data
+        - name: letsencrypt
+          persistentVolumeClaim:
+            claimName: npm-letsencrypt
