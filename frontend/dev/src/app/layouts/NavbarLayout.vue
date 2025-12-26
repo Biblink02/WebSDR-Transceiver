@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import {ref} from "vue";
 import Drawer from "primevue/drawer";
-import {items} from "&/router";
+import router, {items} from "&/router";
 import logo from "~/images/logo.ico"
 
 const menuOpen = ref(false);
@@ -14,9 +14,11 @@ const menuOpen = ref(false);
         <div class="w-full mx-auto flex items-center justify-between md:justify-center">
 
             <!-- Logo -->
-            <div class="flex items-center gap-3 md:absolute md:left-4">
-                <img :src="logo" alt="Logo" class="h-16"/>
-            </div>
+            <router-link
+                to="/"
+                class="flex items-center gap-3 md:absolute md:left-4"
+            >                <img :src="logo" alt="Logo" class="h-16"/>
+            </router-link>
 
             <!-- Desktop Menu -->
             <div class="hidden md:flex items-center space-x-6">
