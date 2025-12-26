@@ -4,51 +4,58 @@ import AppLayout from '&/layouts/AppLayout.vue'
 const teamMembers = [
     {
         id: 1,
+        name: "Stefan Valentin",
+        university: "Darmstadt University of Applied Sciences",
+        role: "Team Leader",
+        github: "sv-ors",
+    },
+    {
+        id: 2,
         name: "Alberto",
         university: "University of Padua",
         role: "Computer Engineering Student",
         github: "Biblink02"
     },
     {
-        id: 2,
+        id: 3,
         name: "Alexandre",
         university: "University of Télécom Saint-Étienne",
         role: "Computer Engineering Student",
         github: "TheAnacondA57"
     },
     {
-        id: 3,
+        id: 4,
         name: "Clément",
         university: "University of Télécom Saint-Étienne",
         role: "Computer Engineering Student",
         github: "clfusero"
     },
     {
-        id: 4,
+        id: 5,
         name: "Fatemah",
         university: "University of Padua",
         role: "Computer Engineering Student",
         github: "Pitclair"
     },
     {
-        id: 5,
+        id: 6,
         name: "Lorenzo",
         university: "University of Padua",
         role: "Computer Engineering Student",
         github: "Fireentity"
     },
     {
-        id: 6,
+        id: 7,
         name: "Mihir",
-        university: "Technical University of Darmstadt",
-        role: "Computer Engineering Student",
+        university: "Darmstadt University of Applied Sciences",
+        role: "Computer Science Student",
         github: "M1keP1"
     },
     {
-        id: 7,
+        id: 8,
         name: "Vedant",
-        university: "Technical University of Darmstadt",
-        role: "Computer Engineering Student",
+        university: "Darmstadt University of Applied Sciences",
+        role: "Computer Science Student",
         github: "vedant-224"
     }
 ]

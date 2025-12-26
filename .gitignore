@@ -1,4 +1,6 @@
 .idea
+audio-worker/__pycache__
+kubectl
 backend-controller/static
 frontend/dist
 audio-worker/*.py
