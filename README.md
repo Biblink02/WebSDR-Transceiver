@@ -134,6 +134,7 @@ For SATCOM, we use GNU Radio to build three main flowgraphs: the SDR server that
 
 ### Docker & Kubernetes
 
+![Architecture](./images/architecture.png)
 Docker and Kubernetes handle the multi-client infrastructure. Docker packages each GNU Radio flowgraph as a container—a self-contained unit that includes the flowgraph, all its dependencies, and a runtime environment. This means an audio worker container can run identically whether it's on your laptop, a server in a data center, or anywhere else.
 
 Kubernetes orchestrates these containers. When a user connects to SATCOM, Kubernetes automatically spins up a new audio worker container for them. When they disconnect, Kubernetes terminates the container and frees the resources. It handles scheduling (which server should run this container?), networking (how do containers communicate?), and monitoring (is this container healthy?).
