@@ -481,7 +481,9 @@ The Fast Fourier Transform converts time-domain signals into frequency-domain re
 **Input**: 2048 complex time-domain samples
 **Output**: 2048 complex frequency-domain bins
 
-Each bin represents a small slice of frequency. With a sample rate of 520 kHz and 2048 points, each bin is 520000/2048 ≈ 254 Hz wide. The output is complex (magnitude and phase), but for visualization we only care about magnitude—how strong is the signal at each frequency?
+Each bin represents a small slice of frequency. With a sample rate of 2 MHz and 2048 points, each bin is 2000000/2048 ≈ 977 Hz wide. The output is complex (magnitude and phase), but for visualization we only care about magnitude—how strong is the signal at each frequency?
+
+> **Note**: The graphics worker uses a higher sample rate (2 MHz) than the audio workers (520 kHz) to capture a wider view of the transponder for visualization purposes.
 
 **Why it's useful:**
 
@@ -491,7 +493,12 @@ Instead of showing you numbers flying by (which would be meaningless), FFT lets 
 
 #### Block 1: Input Source
 
-Same as before—we receive I/Q samples covering the full 250 kHz transponder at 520834 Hz.
+The graphics worker receives I/Q samples covering a wider bandwidth than the audio workers. While audio workers use 520834 Hz to focus on the narrowband transponder, the graphics worker uses **2 MHz sample rate** to capture the full transponder view for visualization.
+
+**Configuration parameters:**
+- **Sample Rate**: 2000000 Hz (2 MHz)
+- **Center Frequency**: 739.7 MHz (the IF from the LNB)
+- **Data Type**: Complex float32 (I/Q pairs)
 
 ---
 
@@ -644,34 +651,105 @@ Both workers are GNU Radio flowgraphs packaged as Docker containers:
 
 ### 5.4 Configuration File (config.yaml)
 
-Everything is configured through one YAML file:
+Everything is configured through one YAML file located at `config/config.yaml`. All workers, backend, and frontend read from this file to ensure consistent configuration across the entire system.
+
+> **Important**: The GNU Radio flowgraph files (.grc) contain default values that are **overridden at runtime** by config.yaml. Always edit config.yaml to change system behavior, not the .grc files.
+
+**Complete configuration file:**
 
 ```yaml
-# Hardware settings
+# =============================================================================
+# ===                         GLOBAL SDR SETTINGS                           ===
+# =============================================================================
 samp_rate: 520834
-lo_freq: 739700000
+lo_freq: 739700000          # Local Oscillator
+lnb_lo_freq: 9750000000
+
+# =============================================================================
+# ===                        HARDWARE INTERFACE                             ===
+# =============================================================================
 iio_uri: "ip:192.168.2.1"
 rf_bandwidth: 250000
+buffer_size: 32768
 
-# Graphics worker
+# =============================================================================
+# ===                         GRAPHICS WORKER                               ===
+# =============================================================================
 fft_size: 2048
 calibration: -72
 skip: 30
 
-# Audio worker
+# =============================================================================
+# ===                          AUDIO WORKER                                 ===
+# =============================================================================
 audio_rate: 48000
-bandwidth: 2700
+quad_rate: 50000
+bandwidth: 2700  # Default bandwidth (also used by frontend)
 freq_offset: 0
+is_active: 0
 
-# Network
+# =============================================================================
+# ===                        FRONTEND VALIDATION                            ===
+# =============================================================================
+max_bw_limit: 15000
+min_bw_limit: 90
+channel_count: 1
+buffer_threshold: 4
+max_queue_size: 50
+
+# =============================================================================
+# ===                        VISUALIZATION (UI)                             ===
+# =============================================================================
+range_db: 40
+gain_db: -10
+gain_attack: 0.001
+gain_release: 0.05
+view_limit_min: 10489500000
+view_limit_max: 10489900000
+
+# =============================================================================
+# ===                       NETWORK ARCHITECTURE                            ===
+# =============================================================================
 sdr_host: "sdr-server"
 sdr_iq_port: 5000
+sdr_control_port: 5001
+
 backend_host: "backend-controller"
 graphics_udp_port: 9001
 audio_udp_port: 9002
+
+worker_control_port: 5001
+pool_size: 3
+worker_headless_service: "audio-workers-headless.default.svc.cluster.local"
+
+# =============================================================================
+# ===                        WEBSOCKET CONFIG                               ===
+# =============================================================================
+ws_url: "https://websdr.fbi.h-da.de"
+
+# Event Protocol
+ws_graphics_event: "graphics_data"
+ws_audio_event: "audio_data"
+ws_server_full_event: "server_full"
+ws_worker_assigned_event: "worker_assigned"
+ws_worker_released_event: "worker_released"
+ws_correction_event: "correction_applied"
+ws_connect_event: "connect"
+ws_disconnect_event: "disconnect"
+ws_request_worker_event: "request_audio_worker"
+ws_dismiss_worker_event: "dismiss_audio_worker"
+ws_tune_event: "tune"
 ```
 
-All workers read from this same file, ensuring consistent configuration across the system.
+**Key Configuration Parameters:**
+
+- **iio_uri**: PlutoSDR IP address - **must be updated** for your hardware
+- **ws_url**: Production WebSocket URL - update for deployment
+- **pool_size**: Number of audio worker replicas (default: 3)
+- **samp_rate**: Audio worker sample rate (520834 Hz)
+- **bandwidth**: Default SSB bandwidth (2700 Hz)
+- **calibration**: Waterfall display calibration offset (-72 dB)
+- **skip**: FFT decimation factor (keeps 1 out of every 30 FFTs)
 
 ### 5.5 How a Client Session Works
 
@@ -705,15 +783,361 @@ Throughout all of this, other users are doing the same thing completely independ
 
 ## 6. Getting Started
 
-*[This section will contain setup and installation instructions]*
+This section guides you through setting up and running SATCOM on your own system.
 
-*To be added:*
-- Prerequisites (hardware requirements, software dependencies)
-- Installation steps for GNU Radio, Docker, Kubernetes
-- Configuration guide (editing config.yaml for your setup)
-- Hardware setup (dish pointing, LNB configuration, PlutoSDR connection)
-- Running the system (starting workers, accessing the web interface)
-- Troubleshooting common issues
+### 6.1 Prerequisites
+
+**Hardware Requirements:**
+- Parabolic dish antenna (60-120 cm diameter)
+- LNB with external reference input (e.g., hamparts.shop 10 GHz LNB EXT OSC MK3)
+- Bias-T box for LNB power and reference injection
+- PlutoSDR (ADALM-PLUTO)
+- GPS-DO (GPS Disciplined Oscillator) with 10 MHz output
+- Linux host computer (4+ cores, 16+ GB RAM recommended)
+- Coaxial cables (RG6 or better)
+
+**Software Requirements:**
+- **Docker** (for containerization)
+- **Kind** (Kubernetes in Docker - for local cluster)
+- **kubectl** (Kubernetes command-line tool)
+- **GNU Radio 3.10+** (required locally for compiling .grc files with `grcc`)
+- **Git** (for cloning the repository)
+
+**Operating System:**
+- Linux (Ubuntu 20.04+ recommended)
+- Other distributions work but may require dependency adjustments
+
+---
+
+### 6.2 Installation
+
+#### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/Biblink02/WebSDR-Transceiver.git
+cd WebSDR-Transceiver
+```
+
+#### Step 2: Install Dependencies
+
+**Install Docker:**
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install docker.io docker-compose
+sudo usermod -aG docker $USER
+# Log out and back in for group changes to take effect
+```
+
+**Install Kind:**
+```bash
+curl -Lo ./kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64
+chmod +x ./kind
+sudo mv ./kind /usr/local/bin/kind
+```
+
+**Install kubectl:**
+```bash
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+```
+
+**Install GNU Radio:**
+```bash
+# Ubuntu/Debian
+sudo apt install gnuradio gnuradio-dev
+
+# Verify installation
+gnuradio-config-info --version  # Should show 3.10.x or higher
+```
+
+---
+
+### 6.3 Hardware Setup
+
+#### Dish Pointing
+
+1. **Calculate pointing angles** for Es'hail-2 (25.9°E) from your location:
+   - Use online calculators: [dishpointer.com](https://www.dishpointer.com/)
+   - Enter your coordinates and satellite position
+   - Note azimuth and elevation angles
+
+2. **Mount and point the dish**:
+   - Install dish on stable mount
+   - Point to calculated azimuth (compass direction)
+   - Set elevation angle
+   - Fine-tune while monitoring signal strength
+
+3. **Install LNB**:
+   - Mount LNB at dish focal point
+   - Rotate for **horizontal linear polarization**
+   - Connect to Bias-T box via coaxial cable
+
+#### GPS-DO Setup
+
+1. **Position GPS antenna** with clear sky view
+2. **Connect GPS-DO** to power and allow 15-20 minutes warm-up
+3. **Verify lock**: Most units have LED indicators showing GPS lock status
+4. **Connect 10 MHz output** to Bias-T box reference input
+
+#### PlutoSDR Connection
+
+1. **Connect PlutoSDR** to Bias-T box IF output via coaxial cable
+2. **Connect PlutoSDR** to host computer via USB
+3. **Configure PlutoSDR network**:
+   ```bash
+   # PlutoSDR default IP is 192.168.2.1
+   # Test connection:
+   ping 192.168.2.1
+   ```
+
+4. **(Optional) Modify PlutoSDR** for external reference:
+   - Follow Analog Devices documentation for TCXO replacement
+   - This improves frequency stability significantly
+
+---
+
+### 6.4 Configuration
+
+#### Edit config.yaml
+
+Before running the system, you **must** update `config/config.yaml` with your hardware settings:
+
+```bash
+cd config
+nano config.yaml  # or use your preferred editor
+```
+
+**Critical settings to update:**
+
+```yaml
+# Update PlutoSDR IP address
+iio_uri: "ip:192.168.2.1"  # Change if you modified PlutoSDR network
+
+# For production deployment, update WebSocket URL
+ws_url: "https://websdr.fbi.h-da.de"  # Change to your domain
+
+# Adjust pool size based on your server capacity
+pool_size: 3  # Number of simultaneous audio workers
+```
+
+**Optional tuning parameters:**
+- `calibration`: Adjust waterfall display levels (-72 dB default)
+- `bandwidth`: Default SSB bandwidth (2700 Hz)
+- `skip`: FFT update rate (30 = ~8-9 updates/sec)
+
+---
+
+### 6.5 Deployment
+
+#### Full Deployment (First Run or Code Changes)
+
+If you are running for the first time or have modified source code (Python, Vue.js, or GRC files):
+
+```bash
+./deploy.sh
+```
+
+This script will:
+1. Compile all GNU Radio flowgraphs (.grc → .py)
+2. Build Docker images for all components
+3. Create Kind cluster and deploy Kubernetes manifests
+4. Start all services
+
+**Expected output:**
+```
+[1/3] Compiling GRC files locally...
+Compiling sdr-server/sdr_server.grc...
+Compiling audio-worker/audio_worker.grc...
+Compiling graphics-worker/graphics_worker.grc...
+
+[2/3] Building Docker images...
+[Building frontend, backend, workers...]
+
+[3/3] Starting / updating cluster...
+Deployment complete.
+```
+
+#### Fast Configuration Reload (Config Changes Only)
+
+If you **only** modified `config/config.yaml` and want to apply changes without rebuilding:
+
+```bash
+./reload.sh
+```
+
+This updates the Kubernetes ConfigMap and restarts pods with new configuration.
+
+---
+
+### 6.6 Accessing the Web Interface
+
+Once deployment completes:
+
+1. **Open your browser** and navigate to:
+   ```
+   http://localhost
+   ```
+
+2. **You should see**:
+   - Waterfall display showing transponder activity
+   - Frequency controls
+   - Audio playback controls
+
+3. **To listen**:
+   - Click on a signal in the waterfall
+   - Click "Listen" or "Request Audio Worker"
+   - Audio should start playing after worker initialization (~2-3 seconds)
+
+---
+
+### 6.7 Verifying System Status
+
+#### Check Kubernetes Pods
+
+```bash
+kubectl get pods
+```
+
+**Expected output:**
+```
+NAME                                  READY   STATUS    RESTARTS   AGE
+audio-worker-0                        1/1     Running   0          2m
+audio-worker-1                        1/1     Running   0          2m
+audio-worker-2                        1/1     Running   0          2m
+backend-controller-xxxxxxxxxx-xxxxx   1/1     Running   0          2m
+frontend-xxxxxxxxxx-xxxxx             1/1     Running   0          2m
+graphics-worker-xxxxxxxxxx-xxxxx      1/1     Running   0          2m
+sdr-server-xxxxxxxxxx-xxxxx           1/1     Running   0          2m
+```
+
+All pods should show `Running` status.
+
+#### Check Logs
+
+```bash
+# Backend controller logs
+kubectl logs -f deployment/backend-controller
+
+# Graphics worker logs
+kubectl logs -f deployment/graphics-worker
+
+# SDR server logs
+kubectl logs -f deployment/sdr-server
+
+# Specific audio worker logs
+kubectl logs -f audio-worker-0
+```
+
+---
+
+### 6.8 Troubleshooting
+
+#### No Waterfall Display
+
+**Possible causes:**
+- Graphics worker not running
+- WebSocket connection failed
+- PlutoSDR not accessible
+
+**Solutions:**
+```bash
+# Check graphics worker status
+kubectl logs deployment/graphics-worker
+
+# Verify PlutoSDR connection
+ping 192.168.2.1
+
+# Check backend WebSocket
+kubectl logs deployment/backend-controller | grep -i websocket
+```
+
+#### No Audio
+
+**Possible causes:**
+- Audio worker failed to start
+- No signal at selected frequency
+- UDP routing issue
+
+**Solutions:**
+```bash
+# Check audio worker assignment
+kubectl logs deployment/backend-controller | grep -i "worker assigned"
+
+# Check specific audio worker logs
+kubectl logs audio-worker-0
+
+# Verify signal exists (check waterfall for activity)
+```
+
+#### PlutoSDR Connection Failed
+
+**Possible causes:**
+- Wrong IP address in config.yaml
+- USB connection issue
+- PlutoSDR not powered
+
+**Solutions:**
+```bash
+# Verify PlutoSDR is detected
+lsusb | grep -i pluto
+
+# Check network connectivity
+ping 192.168.2.1
+
+# Update config.yaml with correct iio_uri
+nano config/config.yaml
+./reload.sh
+```
+
+#### Weak or No Satellite Signal
+
+**Possible causes:**
+- Dish misalignment
+- LNB not powered
+- Wrong polarization
+- Obstruction in line of sight
+
+**Solutions:**
+1. Verify GPS-DO is locked (check LED indicators)
+2. Re-check dish pointing angles
+3. Rotate LNB for horizontal polarization
+4. Use satellite finder tool for initial alignment
+5. Check for obstructions (trees, buildings)
+
+#### Pods Not Starting
+
+**Possible causes:**
+- Docker images not built
+- Insufficient resources
+- Kind cluster issue
+
+**Solutions:**
+```bash
+# Rebuild everything
+./deploy.sh
+
+# Check cluster status
+kubectl cluster-info
+kubectl get nodes
+
+# Delete and recreate cluster
+kind delete cluster
+./deploy.sh
+```
+
+---
+
+### 6.9 Stopping the System
+
+```bash
+# Stop all pods but keep cluster
+kubectl delete -f kubernetes/
+
+# Delete entire Kind cluster
+kind delete cluster
+```
 
 ---
 
