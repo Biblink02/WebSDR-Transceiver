@@ -68,6 +68,8 @@ SATCOM is a **receive-only ground station** designed to provide multi-client acc
 
 ![SysArch](./images/SysArch_Satcomv1.png)
 
+> **Diagram credit**: Mihir Kumar Patel.
+
 ### Reception System (SATCOM Core)
 
 The SATCOM reception system is the heart of the project, handling all downlink signals from the QO-100 narrowband transponder:
