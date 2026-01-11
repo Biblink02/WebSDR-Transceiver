@@ -24,6 +24,9 @@ SATCOM (Satellite Communication System) is a student project that builds a web-a
 
 Es'hail-2, positioned at 25.9°E in geostationary orbit, made history in 2018 as the first amateur radio satellite in GEO. Unlike the low Earth orbit satellites that zip overhead for just 10-15 minutes, Es'hail-2 stays fixed in the sky, providing continuous 24/7 access to anyone who can see that point in the sky. For students and radio enthusiasts in Europe, Africa, the Middle East, and parts of Asia and South America, this means a permanently available platform for learning about satellite communications without needing to track moving satellites or wait for brief overhead passes.
 
+
+![coverage](./images/earthcoverage.png)
+
 ### Project Goals
 
 This project started with a simple question: how do you let multiple people experience satellite communications without each needing their own dish, receiver, and expensive equipment? The answer involved combining several technologies—software-defined radio, GNU Radio signal processing, containerized microservices, and web technologies—into a system where anyone with a web browser can tune into satellite signals in real-time.
@@ -43,6 +46,8 @@ The narrowband transponder's 250 kHz bandwidth is also pedagogically ideal. It's
 The geostationary orbit is perhaps the biggest advantage for education. LEO satellites race across the sky, visible for minutes before vanishing below the horizon. Tracking them requires computer-controlled antenna rotators, Doppler shift correction, and constant adjustment. Es'hail-2 just sits there. Point your dish at 25.9°E, and it works—today, tomorrow, next month. This reliability means students can experiment at their own pace, come back to the system anytime, and focus on learning signal processing rather than fighting with orbital mechanics.
 
 Finally, there's an active community. At almost any hour, you'll find people using the transponder—running voice contacts, experimenting with digital modes, or just calling CQ and hoping for a response. This makes SATCOM a window into the amateur radio community, showing students that this technology isn't just theoretical. Real people are having real conversations through space, and now you can listen in and understand exactly how it works.
+
+![narrowband](./images/narrowband.png)
 
 ### Technical Approach
 
@@ -146,6 +151,8 @@ We won't dive deep into Docker and Kubernetes in this documentation—they're to
 
 ## 3. Hardware Components
 
+![hardware](./images/hardware.png)
+
 The SATCOM system relies on several key hardware components working together to capture, downconvert, and process satellite signals. This section introduces each component and explains its role in the signal chain. Think of it like a relay race: the satellite sends radio waves across 36,000 kilometers of space, the dish catches these incredibly weak signals, the LNB amplifies and translates them to a frequency our computer can handle, the PlutoSDR digitizes everything, and finally the host computer processes and distributes the signals to multiple users simultaneously.
 
 ---
@@ -154,17 +161,22 @@ The SATCOM system relies on several key hardware components working together to 
 
 #### Parabolic Dish Antenna
 
+![dish](./images/dish2.png)
+
+
+
 The dish antenna is your first point of contact with signals from space. It's essentially a standard satellite TV dish—the same type you might see mounted on rooftops across Europe for watching television. For our purposes, a dish between 60 and 120 centimeters in diameter works perfectly for receiving the QO-100 satellite's amateur radio signals.
 
 The dish works by collecting electromagnetic waves from a very specific direction in the sky and focusing them onto a single point where the LNB sits. Because the Es'hail-2 satellite is in geostationary orbit at 25.9 degrees East, once you've pointed your dish correctly, it stays pointed—the satellite appears to hover at the same spot in the sky 24 hours a day. For locations in Germany and most of Europe, this means your dish will be aimed southeast, looking at an elevation angle somewhere between 25 and 35 degrees above the horizon depending on your exact latitude.
 
 One important detail: the QO-100 narrowband transponder uses linear horizontal polarization. This means you'll need to rotate the LNB to the correct orientation (usually marked on the mounting bracket) to maximize signal reception.
 
-**Photo**: *[To be added]*
-
 ---
 
 #### LNB (Low-Noise Block Downconverter) + Bias-T Box
+
+![lnb](./images/lnb.png)
+
 
 This is where things get interesting. The LNB is the device that sits at the focal point of your dish—the small box that actually "catches" the focused radio waves. But these signals coming from 36,000 kilometers away are extraordinarily weak and arrive at a frequency of 10.489 GHz, which is far too high for most receivers to handle directly.
 
@@ -174,7 +186,7 @@ For the SATCOM project, we're using a modified LNB system that includes a Bias-T
 
 The key innovation here is that everything travels on one coaxial cable: DC power going up to the LNB, the 25 MHz reference signal going up to lock the LNB's frequency, and the 739 MHz intermediate frequency coming back down to your receiver.
 
-**Photo**: *[To be added]*
+
 
 **Manual/Documentation**: 
 - [hamparts.shop - 10 GHz LNB EXT OSC MK3 Manual](https://hamparts.shop/blog/10ghz-lnb-with-ext-osc-manual.html)
@@ -186,6 +198,8 @@ The key innovation here is that everything travels on one coaxial cable: DC powe
 
 #### PlutoSDR (ADALM-PLUTO)
 
+![pluto-sdr](./images/s-l400.jpg)
+
 Now that we have our signal at a manageable frequency, we need to digitize it—convert those analog radio waves into digital data that a computer can process. That's where the PlutoSDR comes in. This small USB device, made by Analog Devices, is essentially a complete radio transceiver on a stick. For our purposes, we're only using the receiver side.
 
 The PlutoSDR connects to your Bias-T box via a coaxial cable and receives the 739 MHz intermediate frequency signal. Inside, it samples this signal several million times per second, creating a stream of digital numbers that represent the radio signal. These numbers flow into your computer over USB, where GNU Radio can work with them.
@@ -194,7 +208,7 @@ One of the beautiful things about software-defined radio is flexibility. Instead
 
 The PlutoSDR can be modified to accept that external 10 MHz reference signal from our GPS-DO. This external reference dramatically improves frequency stability compared to the PlutoSDR's built-in crystal oscillator, which is essential for listening to SSB signals that occupy only 2.7 kHz of bandwidth.
 
-**Photo**: *[To be added]*
+
 
 **Manual/Documentation**: 
 - [Analog Devices ADALM-PLUTO User Guide](https://wiki.analog.com/university/tools/pluto)
@@ -204,6 +218,8 @@ The PlutoSDR can be modified to accept that external 10 MHz reference signal fro
 
 #### GPS-DO (GPS Disciplined Oscillator)
 
+![gps-do](./images/s-l1600.jpg)
+
 This might be the most underappreciated piece of the puzzle, but it's absolutely critical for serious satellite reception. The GPS-DO is a precision frequency reference that uses GPS satellites to generate an ultra-stable 10 MHz signal. Let's understand why this matters so much.
 
 Radio receivers need to know exactly what frequency they're tuned to. If your receiver's internal clock drifts even slightly, signals will appear to move around in frequency, making them difficult or impossible to decode. The problem multiplies as frequencies get higher. The PlutoSDR's internal crystal oscillator might drift by 25 parts per million due to temperature changes. That doesn't sound like much, but when you multiply it by 10 GHz (the satellite frequency), that 25 PPM becomes a whopping 250 kHz error. An SSB voice signal is only 2.7 kHz wide—your entire signal would be completely off-frequency!
@@ -212,7 +228,7 @@ The GPS-DO solves this by listening to multiple GPS satellites, which carry atom
 
 The GPS-DO needs its own antenna with a clear view of the sky. Most units provide a 10 MHz output via a BNC or SMA connector, and after a warm-up period of 10-15 minutes, they settle into rock-solid frequency accuracy. The Bias-T box takes this 10 MHz signal, multiplies it to 25 MHz, filters it carefully through crystal filters to ensure purity, and sends it up to the LNB to lock its local oscillator.
 
-**Photo**: *[To be added]*
+
 
 **Manual/Documentation**: *(Specific to GPS-DO model selected - examples: Leo Bodnar, Trimble, DF9NP)*
 
@@ -228,7 +244,6 @@ The choice of Linux (Ubuntu is recommended) comes down to tooling support. GNU R
 
 Processing real-time radio signals is computationally intensive, especially when serving multiple clients. Each client connection adds overhead: individual audio demodulation, waterfall generation, and network streaming. A modern multi-core processor ensures smooth operation even with a dozen simultaneous users.
 
-**Photo**: *[To be added - typical Linux server or desktop computer]*
 
 **Software Documentation**: 
 - [GNU Radio Documentation](https://wiki.gnuradio.org/)
@@ -253,7 +268,7 @@ There's a continuous beacon at 10489.800 MHz (the upper edge of the transponder)
 
 For SATCOM's purposes, we only listen—we're building a receive-only monitoring station. The 2.4 GHz uplink requires specialized transmitting equipment, high-gain antennas, and proper amateur radio licensing to operate legally. But listening is free for anyone with the right equipment.
 
-**Photo/Diagram**: *[To be added - satellite illustration or transponder diagram]*
+![satellite](./images/satellite.png)
 
 **Documentation**: 
 - [AMSAT-DL QO-100 Information & Bandplan](https://amsat-dl.org/en/p4-a-nb-transponder-bandplan-and-operating-guidelines/)
@@ -328,9 +343,7 @@ Now that we understand how the signal travels from satellite to digital samples,
 
 Here's the flowgraph structure used in the audio worker:
 
-```
-Add Flowgraph here
-```
+![gps-do](./images/flowgraph.png)
 
 **Note about ZMQ blocks**: The flowgraph uses ZMQ (ZeroMQ) source and sink blocks to support SATCOM's multi-client architecture. If you want to run this flowgraph directly in GNU Radio on your own computer, simply replace the ZMQ SUB Source with a PlutoSDR Source block and replace the UDP Audio Sender with an Audio Sink block. Everything in between stays exactly the same—the signal processing is identical whether you're running standalone or as part of the multi-client system.
 
@@ -341,6 +354,8 @@ Now let's walk through each block and understand what it does.
 #### Block 1: Input Source (ZMQ SUB / PlutoSDR Source)
 
 The flowgraph starts by receiving I/Q samples. In SATCOM's architecture, this comes from a ZMQ subscription to the SDR server. For standalone use, you'd configure a PlutoSDR Source directly:
+
+![part1](./images/part1.png) ![gps-do](./images/part1.1.png)
 
 **Configuration parameters:**
 - **Sample Rate**: 520834 Hz (approximately 520 kHz)
@@ -360,6 +375,8 @@ This block does two jobs at once: it shifts our desired frequency to baseband (0
 Imagine the transponder is centered at 739.7 MHz, but you want to listen to a station transmitting at 739.750 MHz. That's an offset of +50 kHz from center. The Frequency Xlating FIR Filter multiplies the input signal by a complex exponential that shifts everything by -50 kHz. Your target signal, previously at +50 kHz in the spectrum, is now at 0 Hz (baseband). Everything else shifts too, but we don't care about those signals.
 
 The "FIR" part refers to the Finite Impulse Response filter built into this block. As it shifts frequencies, it also applies a low-pass filter to prevent aliasing and to start selecting our desired bandwidth. The filter taps are designed as a low-pass with cutoff at `bandwidth/2`.
+
+![part2](./images/part2.png) ![part2.2](./images/part2.2.png)
 
 **Configuration parameters:**
 - **Center Frequency Offset**: Variable (e.g., 50000 Hz) — this is what changes when you tune
@@ -381,6 +398,8 @@ Now we need to reduce the sample rate from 520 kHz down to something more manage
 
 It resamples from 520834 Hz to 48000 Hz, which is a ratio of approximately 48000/520834 ≈ 0.0921. GNU Radio implements this efficiently using polyphase filtering—essentially, it computes only the output samples we need rather than naively upsampling and then downsampling.
 
+![part3](./images/part3.png) ![part3.3](./images/part3.3.png)
+
 **Configuration parameters:**
 - **Interpolation**: 48000
 - **Decimation**: 520834
@@ -399,6 +418,9 @@ Even though we're at baseband and have decimated, we still need to carefully sel
 **What it does:**
 
 This is an FFT-based filter (faster than direct FIR for long filters) that passes frequencies from 300 Hz to 3500 Hz. Why 300 Hz as the low cutoff? Because voice doesn't contain much energy below that, and cutting it out removes rumble, hum, and any DC offset that might remain. The 3500 Hz upper limit captures all the voice frequencies without including excessive high-frequency noise.
+![part5](./images/part5.png) ![part5.5](./images/part5.5.png)
+
+![part4](./images/part4.png)      ![part4.4](./images/part4.4.png)
 
 **Configuration parameters:**
 - **Type**: Complex-to-Complex (ccc)
@@ -417,6 +439,8 @@ The Hamming window shapes the filter's frequency response to minimize ripples in
 #### Block 5: Complex to Real (SSB Demodulation)
 
 This is where the actual demodulation happens. SSB signals are essentially audio that's been frequency-shifted up to RF. To recover the audio, we need to shift it back down.
+
+![part6](./images/part6.png) 
 
 **What it does:**
 
@@ -440,6 +464,8 @@ Audio shouldn't have a DC component (a constant offset), but sometimes one creep
 
 It's essentially a high-pass filter with a very low cutoff (a few Hz), implemented as a simple recursive filter. This removes any constant bias in the audio while passing all the voice frequencies unchanged.
 
+![part7](./images/part7.png) ![part7.7](./images/part7.7.png)
+
 **Configuration parameters:**
 - **Length**: 32 (how many samples to average)
 - **Long Form**: True (uses better algorithm)
@@ -451,6 +477,8 @@ It's essentially a high-pass filter with a very low cutoff (a few Hz), implement
 #### Block 7: Output Sink (UDP Sender / Audio Sink)
 
 The final stage sends the audio somewhere useful.
+
+![part7](./images/part7.png) ![part7.7](./images/part7.7.png)
 
 **For SATCOM's multi-client architecture**: The UDP Audio Sender block packages the float32 PCM samples and sends them via UDP to the backend controller, prefixed with the pod name so the backend knows which client to route them to.
 
@@ -466,7 +494,7 @@ While the audio flowgraph extracts one specific frequency, the graphics flowgrap
 
 #### The Complete Graphics Processing Chain
 
-**Add Diagram flowgraph here**
+![graphic](./images/graphicworker.png)
 
 Again, for standalone use, replace ZMQ SUB Source with PlutoSDR Source and UDP Vector Sender with a GUI sink like QT GUI Waterfall or QT GUI Frequency Sink.
 
@@ -497,6 +525,8 @@ Instead of showing you numbers flying by (which would be meaningless), FFT lets 
 
 The graphics worker receives I/Q samples covering a wider bandwidth than the audio workers. While audio workers use 520834 Hz to focus on the narrowband transponder, the graphics worker uses **2 MHz sample rate** to capture the full transponder view for visualization.
 
+![part9](./images/part9.png) ![part9.9](./images/part9.9.png)
+
 **Configuration parameters:**
 - **Sample Rate**: 2000000 Hz (2 MHz)
 - **Center Frequency**: 739.7 MHz (the IF from the LNB)
@@ -507,6 +537,8 @@ The graphics worker receives I/Q samples covering a wider bandwidth than the aud
 #### Block 2: Stream to Vector
 
 FFT operates on vectors (blocks of samples), not streams. This block collects 2048 consecutive samples and packages them as a single vector.
+
+![part10](./images/part10.png) ![part9.9](./images/part10.10.png)
 
 **Configuration:**
 - **Vector Size**: 2048 (the FFT size)
@@ -522,6 +554,8 @@ This is where the magic happens.
 **What it does:**
 
 Performs the Fast Fourier Transform on each 2048-sample vector. The output is another 2048-point vector, but now in the frequency domain instead of time domain.
+
+![part11](./images/part11.png) ![part11.11](./images/part11.11.png)
 
 **Configuration parameters:**
 - **FFT Size**: 2048
@@ -541,6 +575,8 @@ Without a window, the FFT assumes your input signal repeats infinitely. Disconti
 
 For visualization, we don't need phase information—only power.
 
+![part12](./images/part12.png)
+
 **What it does:**
 
 For each complex number z = a + jb in the FFT output, this computes |z|² = a² + b². This is the power (squared magnitude) of the signal at that frequency bin.
@@ -551,6 +587,8 @@ For each complex number z = a + jb in the FFT output, this computes |z|² = a² 
 
 #### Block 5: Vector to Stream
 
+![part13](./images/part13.png)
+
 Convert the vector back to a stream so we can decimate (skip some FFTs).
 
 ---
@@ -558,6 +596,8 @@ Convert the vector back to a stream so we can decimate (skip some FFTs).
 #### Block 6: Keep M in N
 
 Computing FFT 130 times per second (520000/2048 ≈ 254 FFTs/sec) generates too much data. We don't need that many waterfall lines.
+
+![part14](./images/part14.png) ![part14](./images/part14.1.png)
 
 **What it does:**
 
@@ -570,6 +610,7 @@ So we keep 1 FFT and throw away the next 29. This reduces our update rate to abo
 ---
 
 #### Block 7: Stream to Vector (again)
+![part15](./images/part15.png) ![part15](./images/part15.1.png)
 
 Package the decimated stream back into vectors for the dB conversion.
 
@@ -578,6 +619,8 @@ Package the decimated stream back into vectors for the dB conversion.
 #### Block 8: NLog10
 
 Convert linear power values to logarithmic (dB) scale for better visualization.
+
+![part16](./images/part16.png) ![part16](./images/part16.1.png)
 
 **What it does:**
 
@@ -588,6 +631,8 @@ Computes `10 × log10(power) + calibration` for each bin. The calibration offset
 ---
 
 #### Block 9: Output Sink
+
+![part17](./images/part17.png) ![part17](./images/part17.1.png)
 
 For SATCOM: UDP Vector Sender transmits each FFT vector to the backend controller, which broadcasts to all WebSocket clients for rendering.
 
@@ -1248,6 +1293,7 @@ This project was built collaboratively by students learning about satellite comm
 
 *Contributors:*
 - Mihir Kumar Patel
+- vedant vedant
 
 ---
 
