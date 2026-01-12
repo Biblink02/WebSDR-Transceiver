@@ -13,7 +13,7 @@
 7. [Getting Started](#6-getting-started)
 8. [Technical Specifications](#technical-approach)
 9. [Future Enhancements](#7-future-enhancements)
----
+___
 
 ## Project Overview
 
@@ -1249,61 +1249,10 @@ These enhancements represent different levels of complexity and learning opportu
 
 ## 8. Contributors
 
-This project was built collaboratively by students learning about satellite communications, software-defined radio, and distributed systems. Each team member contributed to different aspects of the system.
+| Name                                                                 | university    |
+|----------------------------------------------------------------------|---------------|
+| [Mihir Kumar Patel](https://www.linkedin.com/in/m1hr-pat/)             Hochschule Darmstadt | 
+| [Vedant Vedant](https://www.linkedin.com/in/vedant-vedant-842964249) | Hochschule Darmstadt | 
+| Jimi Röntynen                                                        | Oulu university , finnland |
+| Topias Tanskanen                                                    | Oulu university , finnland|
 
-### Hardware & RF Design
-**Responsible for**: Parabolic dish setup, LNB configuration, GPS-DO integration, RF signal chain optimization
-
-*Contributors:*
-- *[Name to be added]*
-- *[Name to be added]*
-
----
-
-### GNU Radio Signal Processing
-**Responsible for**: Audio demodulation flowgraph, graphics worker flowgraph, Rapid Prototyping
-
-*Contributors:*
-- Mihir Kumar Patel
-- Vedant
-
----
-
-### Backend Architecture & Microservices
-**Responsible for**: Docker containerization, Kubernetes orchestration, worker management, ZMQ/UDP communication
-
-*Contributors:*
-- *[Name to be added]*
-- *[Name to be added]*
-
----
-
-### Frontend & Web Interface
-**Responsible for**: WebSocket client, waterfall visualization, audio playback, user controls
-
-*Contributors:*
-- *[Name to be added]*
-- *[Name to be added]*
-
----
-
- 
-### Project Coordination
-**Responsible for**: Overall project management
-
-*Project Lead:*
-- Stefan Valentin
-  
-*More about us and project:*
-
-- [PSE project](./Presentation_P005.pdf)
-
----
-
-**Special Thanks:**
-- AMSAT-DL for QO-100 documentation and operating guidelines
-- GNU Radio community for tutorials and support
-
----
-
-*This documentation was last updated: January 2025*
