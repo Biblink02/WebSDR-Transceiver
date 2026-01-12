@@ -1287,26 +1287,16 @@ This project was built collaboratively by students learning about satellite comm
 
 ---
 
-### Documentation & Testing
-**Responsible for**: System documentation, user guides
-
-*Contributors:*
-- Mihir Kumar Patel
-- vedant vedant
-- Jimi Röntynen
-- Topias Tanskanen
-  
-*More about us and project:*
-
-- [PSE project](./Presentation_P005.pdf)
-
----
-
+ 
 ### Project Coordination
 **Responsible for**: Overall project management
 
 *Project Lead:*
 - Stefan Valentin
+  
+*More about us and project:*
+
+- [PSE project](./Presentation_P005.pdf)
 
 ---
 
