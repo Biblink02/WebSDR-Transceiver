@@ -44,7 +44,7 @@ The narrowband transponder's 250 kHz bandwidth is also pedagogically ideal. It's
 
 The geostationary orbit is perhaps the biggest advantage for education. LEO satellites race across the sky, visible for minutes before vanishing below the horizon. Tracking them requires computer-controlled antenna rotators, Doppler shift correction, and constant adjustment. Es'hail-2 just sits there. Point your dish at 25.9°E, and it works—today, tomorrow, next month. This reliability means students can experiment at their own pace, come back to the system anytime, and focus on learning signal processing rather than fighting with orbital mechanics.
 
-Finally, there's an active community. At almost any hour, you'll find people using the transponder—running voice contacts, experimenting with digital modes, or just calling CQ and hoping for a response. This makes SATCOM a window into the amateur radio community, showing students that this technology isn't just theoretical. Real people are having real conversations through space, and now you can listen in and understand exactly how it works.
+Finally, there's an active community. At almost any hour, you'll find people using the transponder—running voice contacts, experimenting with digital modes. This makes SATCOM a window into the amateur radio community, showing students that this technology isn't just theoretical. Real people are having real conversations through space, and now you can listen in and understand exactly how it works.
 
 ![narrowband](./images/narrowband.png)
 
@@ -164,9 +164,9 @@ The SATCOM system relies on several key hardware components working together to 
 
 
 
-The dish antenna is your first point of contact with signals from space. It's essentially a standard satellite TV dish—the same type you might see mounted on rooftops across Europe for watching television. For our purposes, a dish between 60 and 120 centimeters in diameter works perfectly for receiving the QO-100 satellite's amateur radio signals.
+The dish antenna is the first point of contact with signals from space. It's essentially a standard satellite TV dish—the same type you might see mounted on rooftops across Europe for watching television.A dish between 60 and 120 centimeters in diameter works perfectly for receiving the QO-100 satellite's amateur radio signals.
 
-The dish works by collecting electromagnetic waves from a very specific direction in the sky and focusing them onto a single point where the LNB sits. Because the Es'hail-2 satellite is in geostationary orbit at 25.9 degrees East, once you've pointed your dish correctly, it stays pointed—the satellite appears to hover at the same spot in the sky 24 hours a day. For locations in Germany and most of Europe, this means your dish will be aimed southeast, looking at an elevation angle somewhere between 25 and 35 degrees above the horizon depending on your exact latitude.
+The dish works by collecting electromagnetic waves from a very specific direction in the sky and focusing them onto a single point where the LNB sits. Because the Es'hail-2 satellite is in geostationary orbit at 25.9 degrees East, once you've pointed your dish correctly, it stays pointed—the satellite appears to hover at the same spot in the sky 24 hours a day.
 
 One important detail: the QO-100 narrowband transponder uses linear horizontal polarization. This means you'll need to rotate the LNB to the correct orientation (usually marked on the mounting bracket) to maximize signal reception.
 
@@ -177,11 +177,11 @@ One important detail: the QO-100 narrowband transponder uses linear horizontal p
 ![lnb](./images/lnb.png)
 
 
-This is where things get interesting. The LNB is the device that sits at the focal point of your dish—the small box that actually "catches" the focused radio waves. But these signals coming from 36,000 kilometers away are extraordinarily weak and arrive at a frequency of 10.489 GHz, which is far too high for most receivers to handle directly.
+This is where things get interesting. The LNB is the device that sits at the focal point of the dish—the small box that actually "catches" the focused radio waves. But these signals coming from 36,000 kilometers away are extraordinarily weak and arrive at a frequency of 10.489 GHz, which is far too high for most receivers to handle directly.
 
 The LNB performs two critical jobs. First, it amplifies these whisper-quiet signals while adding as little noise as possible—think of it as turning up the volume on a very faint recording without adding hiss. Second, it translates the frequency down from 10.489 GHz to something more manageable: around 739 MHz. This translation happens by mixing the incoming signal with an internal oscillator running at 9.75 GHz. The mathematical result (10.489 - 9.750 = 0.739 GHz) gives us our intermediate frequency or "IF" that will travel down the coaxial cable.
 
-For the SATCOM project, we're using a modified LNB system that includes a Bias-T box. This special box serves multiple purposes. It sends DC power up the coaxial cable to the LNB (so you only need one cable, not separate power wires). It can inject a very precise 25 MHz reference signal that locks the LNB's internal oscillator to either a built-in temperature-compensated crystal or—much better—to an external GPS-disciplined oscillator. The box also includes a variable attenuator, which lets you dial down the signal strength if it's overwhelming your receiver, and various protection circuits that prevent damage from power surges or accidentally transmitted signals.
+For the SATCOM project, we're using a LNB system that includes a Bias-T box. This special box serves multiple purposes. It sends DC power up the coaxial cable to the LNB (so we only need one cable, not separate power wires). It can inject a very precise 25 MHz reference signal that locks the LNB's internal oscillator to either a built-in temperature-compensated crystal or—much better—to an external GPS-disciplined oscillator.
 
 The key innovation here is that everything travels on one coaxial cable: DC power going up to the LNB, the 25 MHz reference signal going up to lock the LNB's frequency, and the 739 MHz intermediate frequency coming back down to your receiver.
 
@@ -219,13 +219,13 @@ The PlutoSDR can be modified to accept that external 10 MHz reference signal fro
 
 ![gps-do](./images/s-l1600.jpg)
 
-This might be the most underappreciated piece of the puzzle, but it's absolutely critical for serious satellite reception. The GPS-DO is a precision frequency reference that uses GPS satellites to generate an ultra-stable 10 MHz signal. Let's understand why this matters so much.
+This might be the most underappreciated piece of the puzzle, but it's absolutely critical for serious satellite reception. The GPS-DO is a precision frequency reference that uses GPS satellites to generate an ultra-stable 10 MHz signal.
 
 Radio receivers need to know exactly what frequency they're tuned to. If your receiver's internal clock drifts even slightly, signals will appear to move around in frequency, making them difficult or impossible to decode. The problem multiplies as frequencies get higher. The PlutoSDR's internal crystal oscillator might drift by 25 parts per million due to temperature changes. That doesn't sound like much, but when you multiply it by 10 GHz (the satellite frequency), that 25 PPM becomes a whopping 250 kHz error. An SSB voice signal is only 2.7 kHz wide—your entire signal would be completely off-frequency!
 
 The GPS-DO solves this by listening to multiple GPS satellites, which carry atomic-clock-referenced timing signals. It uses this timing to discipline (lock) its internal oscillator to within better than 0.01 PPM accuracy. That same 25 PPM error is now reduced to just 100 Hz at 10 GHz—small enough that software can easily correct for it, and stable enough that SSB signals stay put.
 
-The GPS-DO needs its own antenna with a clear view of the sky. Most units provide a 10 MHz output via a BNC or SMA connector, and after a warm-up period of 10-15 minutes, they settle into rock-solid frequency accuracy. The Bias-T box takes this 10 MHz signal, multiplies it to 25 MHz, filters it carefully through crystal filters to ensure purity, and sends it up to the LNB to lock its local oscillator.
+The GPS-DO needs its own antenna with a clear view of the sky. After a warm-up period of 10-15 minutes, they settle into rock-solid frequency accuracy. The Bias-T box takes this 10 MHz signal, multiplies it to 25 MHz, filters it carefully through crystal filters to ensure purity, and sends it up to the LNB to lock its local oscillator.
 
 
 
@@ -239,7 +239,7 @@ The brain of the operation is a Linux computer running GNU Radio and the multi-c
 
 This computer has several responsibilities. First, it runs GNU Radio flowgraphs that process the raw I/Q data streaming in from the PlutoSDR. These flowgraphs perform frequency translation, filtering, demodulation (SSB, CW, digital modes), and audio processing. Second, it hosts the Docker containers that implement the multi-client architecture, allowing many users to connect simultaneously and each tune to different parts of the transponder. Third, it serves the web interface that users access through their browsers.
 
-The choice of Linux (Ubuntu is recommended) comes down to tooling support. GNU Radio works best on Linux, with the most complete driver support and the richest ecosystem of signal processing blocks. Docker and Kubernetes also feel most at home in Linux environments. While you could theoretically run SATCOM on Windows or macOS, you'd be fighting uphill battles with driver compatibility and performance.
+The choice of Linux comes down to tooling support. GNU Radio works best on Linux, with the most complete driver support and the richest ecosystem of signal processing blocks. Docker and Kubernetes also feel most at home in Linux environments. While you could theoretically run SATCOM on Windows or macOS, you'd be fighting uphill battles with driver compatibility and performance.
 
 Processing real-time radio signals is computationally intensive, especially when serving multiple clients. Each client connection adds overhead: individual audio demodulation, waterfall generation, and network streaming. A modern multi-core processor ensures smooth operation even with a dozen simultaneous users.
 
@@ -253,7 +253,7 @@ Processing real-time radio signals is computationally intensive, especially when
 
 ### 3.3 The Mission: Es'hail-2 (QO-100) Satellite
 
-While not hardware you own or control, understanding the Es'hail-2 satellite is essential for comprehending how SATCOM works.
+While not hardware we own or control, understanding the Es'hail-2 satellite is essential for comprehending how SATCOM works.
 
 Es'hail-2, also known by its amateur radio designation QO-100, was launched in November 2018 by SpaceX. It was a commercial satellite built for Es'hailSat of Qatar, but it carried a special payload built by AMSAT-DL specifically for amateur radio use. This made history as the first amateur radio transponder in geostationary orbit, meaning it's the first amateur satellite that doesn't rise and set like the old LEO satellites—it's always there, always accessible, hovering at the same point in the sky.
 
@@ -265,7 +265,6 @@ The transponder operates in linear mode, meaning frequencies aren't inverted—a
 
 There's a continuous beacon at 10489.800 MHz (the upper edge of the transponder) that transmits CW and PSK telemetry. This beacon serves multiple purposes: it's a frequency reference for calibration, a signal quality indicator, and a target for initial antenna alignment when setting up your station.
 
-For SATCOM's purposes, we only listen—we're building a receive-only monitoring station. The 2.4 GHz uplink requires specialized transmitting equipment, high-gain antennas, and proper amateur radio licensing to operate legally. But listening is free for anyone with the right equipment.
 
 ![satellite](./images/satellite.png)
 
@@ -290,7 +289,7 @@ When a radio amateur transmits on 2.4 GHz to QO-100, the satellite receives it, 
 
 **Stage 1: Parabolic Dish Collection (10.489 GHz)**
 
-Your parabolic dish acts like a big funnel for radio waves. Its curved reflector collects energy from a large area and focuses it all onto the LNB at the focal point. A typical 80cm dish has a gain of about 35 dBi at 10 GHz, which means it concentrates the incoming signal power by roughly 3000 times. Even with this concentration, the signal is still incredibly weak.
+The parabolic dish acts like a big funnel for radio waves. Its curved reflector collects energy from a large area and focuses it all onto the LNB at the focal point. A typical 80cm dish has a gain of about 35 dBi at 10 GHz, which means it concentrates the incoming signal power by roughly 3000 times. Even with this concentration, the signal is still incredibly weak.
 
 **Stage 2: LNB Downconversion (10.489 GHz → 739 MHz)**
 
@@ -316,7 +315,7 @@ This is where the magic of software-defined radio shines. The same hardware (Plu
 
 **Stage 5: Audio Output (Digital Audio → Speakers)**
 
-The final stage takes the demodulated audio samples from GNU Radio. In SATCOM's multi-client architecture, each audio worker performs the complete demodulation chain and outputs raw PCM audio samples (float32 format at 48 kHz). These samples are sent via UDP directly to the backend controller, which then streams them through WebSocket connections to each client's web browser. The browser receives the PCM audio data and plays it through the user's speakers or headphones. There's no intermediate encoding to MP3 or Opus—the audio stays as uncompressed PCM throughout the pipeline, ensuring minimal latency and maximum quality.
+The final stage takes the demodulated audio samples from GNU Radio. In SATCOM's multi-client architecture, each audio worker performs the complete demodulation chain and outputs raw PCM audio samples (float32 format at 48 kHz). These samples are sent via UDP directly to the backend controller, which then streams them through WebSocket connections to each client's web browser. The browser receives the PCM audio data and plays it through the user's speakers or headphones.
 
 #### Frequency Summary Table
 
@@ -657,7 +656,7 @@ Everything else—the filters, FFT, demodulation—works identically. The multi-
 
 ## 5. SATCOM's Multi-Client Architecture
 
-The flowgraphs we just examined work perfectly for a single user running GNU Radio on their own computer. But SATCOM's goal is to let many people simultaneously access the same ground station through a web browser. How do we make that happen?
+SATCOM's goal is to let many people simultaneously access the same ground station through a web browser. How do we make that happen?
 
 ### 5.1 The Multi-Client Challenge
 
@@ -1195,33 +1194,23 @@ SATCOM is a learning project, and there are many exciting directions it could gr
 
 Currently, SATCOM focuses on SSB voice reception, which is the most common mode on the QO-100 narrowband transponder. However, the transponder also carries various digital modes like PSK31, FT8, RTTY, and even experimental modes like FreeDV. 
 
-Adding demodulators for these modes would involve creating new GNU Radio flowgraphs with different demodulation chains. For PSK31, you'd need a phase-shift keying demodulator and a decoder to convert the symbols into text. For FT8, you'd integrate with existing decoding libraries that can extract callsigns and grid squares from the waterfall. This would give users a more complete view of transponder activity beyond just voice contacts.
+Adding demodulators for these modes would involve creating new GNU Radio flowgraphs with different demodulation chains. This would give users a more complete view of transponder activity beyond just voice contacts.
 
 ### Wideband Transponder Support
 
 The Es'hail-2 satellite has a second transponder—the wideband transponder—that carries DVB-S and DVB-S2 digital television signals across an 8 MHz bandwidth. This transponder is used for amateur television (DATV), video streaming, and high-speed data experiments.
 
-Supporting the wideband transponder would be a significant extension. The receive chain would be similar (dish, LNB, downconversion), but instead of 250 kHz, you'd need to capture 8 MHz of spectrum. The PlutoSDR can handle this bandwidth, but the processing would be more demanding. Instead of SSB demodulation, you'd need DVB-S2 decoding, which typically requires specialized libraries or hardware decoders. The result would be the ability to receive and display amateur television transmissions—watching live video from other continents via satellite.
+Supporting the wideband transponder would be a significant extension. The receive chain would be similar (dish, LNB, downconversion), but instead of 250 kHz, you'd need to capture 8 MHz of spectrum. The PlutoSDR can handle this bandwidth, but the processing would be more demanding.The result would be the ability to receive and display amateur television transmissions—watching live video from other continents via satellite.
 
 ### Implementing the Transmit Chain
 
-SATCOM is currently receive-only, but the ultimate amateur radio satellite experience includes both listening and transmitting. Adding a transmit capability would involve several major components:
-
-**Hardware**: A 2.4 GHz transmit chain with sufficient power (typically 5-20 watts) and a high-gain antenna (helix or dish with feed). The PlutoSDR can generate TX signals, but you'd need a power amplifier to boost them to usable levels. A separate TX-capable SDR like the LimeSDR or a dedicated 2.4 GHz transceiver would also work.
-
-**Software**: GNU Radio flowgraphs for generating SSB modulation, frequency translation to 2.4 GHz, and interfacing with the TX hardware. You'd also need automatic gain control to prevent over-driving the transponder, which can cause interference to other users.
-
-**Licensing**: Transmitting on amateur radio satellites requires an amateur radio license. This would limit who could use the TX features, but it's a great motivation for students to get licensed.
-
-**Coordination**: The QO-100 transponder has operating guidelines to prevent interference. A TX-enabled SATCOM would need to integrate these rules—monitoring for existing signals before transmitting, limiting power levels, and perhaps requiring manual approval from an operator before allowing users to transmit.
-
-This would transform SATCOM from a monitoring system into a full satellite communication platform where students could not only listen but actually make contacts through space.
+SATCOM is currently receive-only through the web interface, but the ultimate amateur radio satellite experience includes both listening and transmitting. 
 
 ### Web-Based Waterfall Recording and Playback
 
 Adding the ability to record waterfall and audio sessions would create valuable learning resources. Students could capture interesting propagation events, record QSOs (contacts) for later analysis, or build a library of different signal types and modulations.
 
-Implementation would involve adding a recording backend that saves FFT data and audio streams to disk, along with timestamps and tuning information. A playback interface would let users scrub through recorded sessions, tune to different frequencies in the recording, and replay audio. This would be particularly useful for classroom demonstrations where an instructor could prepare specific examples ahead of time.
+Implementation would involve adding a recording backend that saves FFT data and audio streams to disk, along with timestamps and tuning information. A playback interface would let users scrub through recorded sessions, tune to different frequencies in the recording, and replay audio.
 
 ### Signal Analysis and Identification Tools
 
@@ -1241,18 +1230,16 @@ While SATCOM focuses on QO-100, the architecture could be adapted to support oth
 
 This would require antenna tracking for LEO satellites (automatic rotators following orbital predictions), Doppler shift correction (since LEO satellites are moving relative to the ground), and scheduling (determining when satellites are overhead and accessible). It's a much more complex undertaking but would dramatically expand the educational possibilities.
 
----
-
-These enhancements represent different levels of complexity and learning opportunities. Some (like supporting additional digital modes) are relatively straightforward extensions of existing flowgraphs. Others (like implementing transmit or supporting LEO satellites) are major projects in their own right. Each would teach different aspects of satellite communication, SDR, and distributed systems—making SATCOM an even richer educational platform.
-
----
 
 ## 8. Contributors
 
-| Name                                                                 | university    |
-|----------------------------------------------------------------------|---------------|
-| [Mihir Kumar Patel](https://www.linkedin.com/in/m1hr-pat/)            | Hochschule Darmstadt | 
-| [Vedant Vedant](https://www.linkedin.com/in/vedant-vedant-842964249) | Hochschule Darmstadt | 
-| Jimi Röntynen                                                        | Oulu university , finnland |
-| Topias Tanskanen                                                    | Oulu university , finnland|
-
+| Name                                                                 | University / Role    |
+|----------------------------------------------------------------------|----------------------|
+| Stefan Valentin                                                      | Darmstadt University of Applied Sciences - Team Leader |
+| [Mihir Kumar Patel](https://www.linkedin.com/in/m1hr-pat/)          | Darmstadt University of Applied Sciences |
+| [Vedant Vedant](https://www.linkedin.com/in/vedant-vedant-842964249) | Darmstadt University of Applied Sciences |
+| Alberto                                                              | University of Padua |
+| Fatemah                                                              | University of Padua |
+| Lorenzo                                                              | University of Padua |
+| Jimi Röntynen                                                        | Oulu University, Finland |
+| Topias Tanskanen                                                     | Oulu University, Finland |
