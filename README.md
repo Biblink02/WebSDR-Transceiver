@@ -1293,6 +1293,12 @@ This project was built collaboratively by students learning about satellite comm
 *Contributors:*
 - Mihir Kumar Patel
 - vedant vedant
+- Jimi Röntynen
+- Topias Tanskanen
+  
+*More about us and project:*
+
+- [PSE project](./Presentation_P005.pdf)
 
 ---
 
