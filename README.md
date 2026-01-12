@@ -6,7 +6,7 @@
 ## Table of Contents
 1. [Project Overview](#project-overview)
 2. [System Architecture](#system-architecture)
-3. [Hardware Components](#hardware-components)
+3. [Hardware Components](#3-hardware-components)
 4. [Software Stack](#software-stack)
 5. [Signal Processing](#signal-processing)
 6. [Multi-Client Infrastructure](#multi-client-infrastructure)
