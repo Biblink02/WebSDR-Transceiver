@@ -1251,7 +1251,7 @@ These enhancements represent different levels of complexity and learning opportu
 
 | Name                                                                 | university    |
 |----------------------------------------------------------------------|---------------|
-| [Mihir Kumar Patel](https://www.linkedin.com/in/m1hr-pat/)             Hochschule Darmstadt | 
+| [Mihir Kumar Patel](https://www.linkedin.com/in/m1hr-pat/)            | Hochschule Darmstadt | 
 | [Vedant Vedant](https://www.linkedin.com/in/vedant-vedant-842964249) | Hochschule Darmstadt | 
 | Jimi Röntynen                                                        | Oulu university , finnland |
 | Topias Tanskanen                                                    | Oulu university , finnland|
