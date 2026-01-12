@@ -6,13 +6,13 @@
 ## Table of Contents
 1. [Project Overview](#project-overview)
 2. [System Architecture](#system-architecture)
-3. [Hardware Components](#3-hardware-components)
-4. [Software Stack](#25-software-stack)
-5. [Signal Processing](#4-signal-processing-chain)
-6. [Multi-Client Infrastructure](#multi-client-architecture)
+3. [Software Stack](#25-software-stack)
+4. [Hardware Components](#3-hardware-components)
+5. [Signal Processing Chain](#4-signal-processing-chain)
+6. [Multi-Client Architecture](#5-satcoms-multi-client-architecture)
 7. [Getting Started](#6-getting-started)
-8. [Technical Specifications](#technical-approach)
-9. [Future Enhancements](#7-future-enhancements)
+8. [Future Enhancements](#7-future-enhancements)
+9. [Contributors](#8-contributors)
 ___
 
 ## Project Overview
