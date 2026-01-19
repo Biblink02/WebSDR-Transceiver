@@ -1,0 +1,107 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sdr-watchdog
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: sdr-watchdog
+  namespace: default
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets"]
+    verbs: ["get", "list", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: sdr-watchdog
+  namespace: default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: sdr-watchdog
+subjects:
+  - kind: ServiceAccount
+    name: sdr-watchdog
+    namespace: default
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sdr-watchdog-script
+  namespace: default
+data:
+  watchdog.sh: |
+    #!/bin/sh
+    set -u
+
+    NS="default"
+    SDR_LABEL="app=sdr-server"
+    
+    echo "Starting SDR Watchdog..."
+    
+    LAST_COUNT=""
+    while [ -z "$LAST_COUNT" ]; do
+      LAST_COUNT=$(kubectl -n "$NS" get pod -l "$SDR_LABEL" -o jsonpath='{.items[0].status.containerStatuses[0].restartCount}' 2>/dev/null)
+      sleep 5
+    done
+    
+    echo "Watchdog armed. Initial restart count: $LAST_COUNT"
+
+    while true; do
+      sleep 10
+      
+      CURRENT_COUNT=$(kubectl -n "$NS" get pod -l "$SDR_LABEL" -o jsonpath='{.items[0].status.containerStatuses[0].restartCount}' 2>/dev/null)
+      
+      if [ -z "$CURRENT_COUNT" ]; then
+         continue
+      fi
+
+      if [ "$CURRENT_COUNT" != "$LAST_COUNT" ]; then
+        echo "SDR Server restart detected ($LAST_COUNT -> $CURRENT_COUNT). Resyncing cluster..."
+        
+        kubectl -n "$NS" rollout restart deployment/backend-controller
+        kubectl -n "$NS" rollout restart deployment/graphics-worker
+        kubectl -n "$NS" rollout restart deployment/frontend-nginx
+        kubectl -n "$NS" rollout restart statefulset/audio-worker
+        
+        echo "Cluster resync triggered."
+        
+        LAST_COUNT=$CURRENT_COUNT
+        sleep 30
+      fi
+    done
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sdr-watchdog
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sdr-watchdog
+  template:
+    metadata:
+      labels:
+        app: sdr-watchdog
+    spec:
+      serviceAccountName: sdr-watchdog
+      containers:
+      - name: watchdog
+        image: bitnami/kubectl:latest
+        command: ["/bin/sh", "-c", "cp /script/watchdog.sh /tmp/wd.sh && chmod +x /tmp/wd.sh && /tmp/wd.sh"]
+        volumeMounts:
+        - name: script-volume
+          mountPath: /script
+      volumes:
+      - name: script-volume
+        configMap:
+          name: sdr-watchdog-script
