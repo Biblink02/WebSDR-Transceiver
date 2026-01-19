@@ -37,6 +37,7 @@ kubectl apply -f sdr-server.yaml
 kubectl apply -f audio-workers.yaml
 kubectl apply -f graphics-worker.yaml
 kubectl apply -f frontend.yaml
+kubectl apply -f k8s-watchdog.yaml
 
 if [ "$FRESH_INSTALL" = false ]; then
     echo "Existing cluster detected: Restarting deployments to apply config changes..."
@@ -46,6 +47,7 @@ if [ "$FRESH_INSTALL" = false ]; then
     kubectl rollout restart deployment/graphics-worker
     kubectl rollout restart deployment/frontend-nginx
     kubectl rollout restart statefulset/audio-worker
+    kubectl rollout restart deployment/sdr-watchdog
 else
     echo "Fresh cluster detected: Skipping rollout restart."
 fi
