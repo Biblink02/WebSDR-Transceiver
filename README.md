@@ -227,10 +227,6 @@ The GPS-DO solves this by listening to multiple GPS satellites, which carry atom
 
 The GPS-DO needs its own antenna with a clear view of the sky. After a warm-up period of 10-15 minutes, they settle into rock-solid frequency accuracy. The Bias-T box takes this 10 MHz signal, multiplies it to 25 MHz, filters it carefully through crystal filters to ensure purity, and sends it up to the LNB to lock its local oscillator.
 
-
-
-**Manual/Documentation**: *(Specific to GPS-DO model selected - examples: Leo Bodnar, Trimble, DF9NP)*
-
 ---
 
 #### Host Computer
