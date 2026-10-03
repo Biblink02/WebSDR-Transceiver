@@ -70,19 +70,20 @@ call `_initialize()` exactly once before the receiver functions.
 
 | Export | Behavior |
 | --- | --- |
-| dsp_new(rate, 48000, fft_size, calibration) | Returns nonzero receiver ID or 0 for invalid configuration/capacity. FFT size must be a power of two from 256 to 8,192. |
+| dsp_new(rate, 48000, fft_size, calibration) | Returns nonzero receiver ID or 0 for invalid configuration/capacity. FFT size must be a power of two from 256 to 32,768. |
 | dsp_free(id) | Releases all library handles and buffers. |
 | dsp_input(id) | Byte address of the writable signed-I/Q input buffer, capacity 65,536 complex samples. |
 | dsp_audio(id) | Byte address of float32 PCM produced by the last process call. |
 | dsp_spectrum(id) | Byte address of fft_size float32 dB values. |
 | dsp_fft_ready(id) | Reports whether the last process call produced an FFT. |
+| dsp_set_fft(id, size) | Returns 1 on success. Rebuilds only FFT/window/history buffers; retains oscillator, filter, resampler and demodulator state. Spectrum pointers must be obtained again after resizing. |
 | dsp_tune(id, offset_hz, bandwidth_hz, sideband) | Returns 1 on success. Sideband is +1 USB or -1 LSB; bandwidth is 90–15,000 Hz. Resets audio state. |
 | dsp_reset(id) | Clears oscillator/filter/resampler/FFT history after discontinuity. |
 | dsp_process(id, count, listen, fft) | Processes 1–65,536 samples. Returns PCM count or -1 for invalid ID/count. Flags select demodulation and an FFT snapshot. |
 
 Output buffers belong to the instance and must be copied before subsequent calls
 or destruction. Only those copies are transferred to the UI, preserving WASM
-memory. Each worker owns one receiver. There are at most four simultaneous
+memory. Each worker owns one receiver. There are at most two simultaneous
 instances per module. Retuning can allocate library filter/modem objects; the
 real-time process function does not allocate new buffers.
 

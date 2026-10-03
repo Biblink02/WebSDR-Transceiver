@@ -34,7 +34,7 @@ test('compiled WASM validates its ABI, runs FFT and recovers after reset', async
 
 test('compiled WASM produces accurate 48 kHz PCM with bounded memory and real-time throughput', async () => {
     const dsp = await load()
-    const id=dsp.dsp_new(520834,48000,2048,0)
+    const id=dsp.dsp_new(520834,48000,32768,0)
     const bytes=dsp.memory.buffer.byteLength
     let samples=0, input=0
     const started=performance.now()
@@ -60,3 +60,47 @@ test('compiled WASM produces accurate 48 kHz PCM with bounded memory and real-ti
     }
     expect(dsp.memory.buffer.byteLength).toBe(bytes)
 }, 30000)
+
+test('FFT resolution changes preserve PCM and fit the fixed WASM heap', async () => {
+    const dsp = await load()
+    const a = dsp.dsp_new(520834, 48000, 32768, 0)
+    const b = dsp.dsp_new(520834, 48000, 32768, 0)
+    expect(a).toBeGreaterThan(0); expect(b).toBeGreaterThan(0)
+    expect(dsp.dsp_new(520834, 48000, 32768, 0)).toBe(0)
+    expect(dsp.dsp_set_fft(a, 1234)).toBe(0)
+    expect(dsp.dsp_set_fft(99, 4096)).toBe(0)
+    const bytes = dsp.memory.buffer.byteLength
+    let position = 0
+    for (let iteration = 0; iteration < 40; iteration++) {
+        const size = [256, 4096, 8192, 32768][iteration % 4]
+        expect(dsp.dsp_set_fft(a, size)).toBe(1)
+        writeTone(dsp, a, 520834, position, 8192, 1000)
+        writeTone(dsp, b, 520834, position, 8192, 1000)
+        const countA = dsp.dsp_process(a, 8192, 1, 1)
+        const countB = dsp.dsp_process(b, 8192, 1, 1)
+        expect(countA).toBe(countB)
+        const audioA = new Float32Array(dsp.memory.buffer, dsp.dsp_audio(a), countA)
+        const audioB = new Float32Array(dsp.memory.buffer, dsp.dsp_audio(b), countB)
+        expect(audioA.every((value, index) => value === audioB[index])).toBe(true)
+        position += 8192
+    }
+    expect(dsp.memory.buffer.byteLength).toBe(bytes)
+    dsp.dsp_free(a); dsp.dsp_free(b)
+})
+
+test('resized FFTs retain tone position and Hann normalization at every resolution', async () => {
+    const dsp = await load()
+    const id = dsp.dsp_new(500000, 48000, 256, -72)
+    for (const size of [256, 512, 1024, 2048, 4096, 8192, 16384, 32768]) {
+        expect(dsp.dsp_set_fft(id, size)).toBe(1)
+        for (let position = 0; position < Math.max(8192, size); position += 8192) {
+            writeTone(dsp, id, 500000, position, 8192, 125000)
+            dsp.dsp_process(id, 8192, 0, 1)
+        }
+        expect(dsp.dsp_fft_ready(id)).toBe(1)
+        const spectrum = new Float32Array(dsp.memory.buffer, dsp.dsp_spectrum(id), size)
+        expect(spectrum.indexOf(Math.max(...spectrum))).toBe(size * 3 / 4)
+        expect(Math.abs(spectrum[size * 3 / 4] + 76.01)).toBeLessThan(0.1)
+    }
+    dsp.dsp_free(id)
+})

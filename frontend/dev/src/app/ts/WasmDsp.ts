@@ -7,6 +7,7 @@ export interface DspExports extends WebAssembly.Exports {
     dsp_audio(handle: number): number
     dsp_spectrum(handle: number): number
     dsp_fft_ready(handle: number): number
+    dsp_set_fft(handle: number, size: number): number
     dsp_reset(handle: number): void
     dsp_tune(handle: number, offset: number, bw: number, side: number): number
     dsp_process(handle: number, count: number, listen: number, fft: number): number

@@ -77,6 +77,22 @@ public:
         fft_pos_ = 0; fft_count_ = 0; fft_ready_ = false;
     }
 
+    bool set_fft(std::uint32_t size) {
+        if (size < 256 || size > 32768 || (size & (size-1)) != 0) return false;
+        if (size == fft_size_) return true;
+        // Destroy the plan before reallocating its buffers. Audio objects retain state.
+        fft_.reset();
+        fft_size_ = size;
+        spectrum_.assign(size, 0);
+        fft_ring_.assign(size, Complex{});
+        fft_in_.resize(size); fft_out_.resize(size); window_.resize(size);
+        for (std::uint32_t i=0; i<size; ++i) window_[i] = liquid_hann(i, size);
+        window_sum_ = std::accumulate(window_.begin(), window_.end(), 0.0F);
+        fft_.reset(fft_create_plan(size, fft_in_.data(), fft_out_.data(), LIQUID_FFT_FORWARD, 0));
+        fft_pos_ = 0; fft_count_ = 0; fft_ready_ = false;
+        return static_cast<bool>(fft_);
+    }
+
     std::int32_t process(std::uint32_t count, bool listen, bool fft) {
         if (count == 0 || count > max_chunk) return -1;
         fft_ready_ = false;
@@ -131,7 +147,7 @@ private:
 };
 
 // IDs, rather than exposed object pointers, reject invalid ABI handles.
-std::array<std::unique_ptr<Receiver>, 4> receivers;
+std::array<std::unique_ptr<Receiver>, 2> receivers;
 Receiver* get(std::uint32_t id) {
     return id > 0 && id <= receivers.size() ? receivers[id-1].get() : nullptr;
 }
@@ -140,7 +156,7 @@ Receiver* get(std::uint32_t id) {
 extern "C" {
 DSP_EXPORT std::uint32_t dsp_new(std::uint32_t rate, std::uint32_t audio_rate,
                                 std::uint32_t fft, float calibration) {
-    if (rate < 48000 || rate > 4000000 || audio_rate != 48000 || fft < 256 || fft > 8192
+    if (rate < 48000 || rate > 4000000 || audio_rate != 48000 || fft < 256 || fft > 32768
         || (fft & (fft-1)) != 0 || !std::isfinite(calibration)) return 0;
     for (std::uint32_t i=0; i<receivers.size(); ++i) {
         if (!receivers[i]) {
@@ -155,6 +171,9 @@ DSP_EXPORT std::int8_t* dsp_input(std::uint32_t id) { auto* r=get(id); return r 
 DSP_EXPORT float* dsp_audio(std::uint32_t id) { auto* r=get(id); return r ? r->audio() : nullptr; }
 DSP_EXPORT float* dsp_spectrum(std::uint32_t id) { auto* r=get(id); return r ? r->spectrum() : nullptr; }
 DSP_EXPORT std::uint32_t dsp_fft_ready(std::uint32_t id) { auto* r=get(id); return r && r->fft_ready(); }
+DSP_EXPORT std::uint32_t dsp_set_fft(std::uint32_t id, std::uint32_t size) {
+    auto* r=get(id); return r && r->set_fft(size);
+}
 DSP_EXPORT void dsp_reset(std::uint32_t id) { if (auto* r=get(id)) r->reset(); }
 DSP_EXPORT std::uint32_t dsp_tune(std::uint32_t id, double offset, double bandwidth, std::int32_t side) {
     auto* r=get(id); return r && r->tune(offset, bandwidth, side);
