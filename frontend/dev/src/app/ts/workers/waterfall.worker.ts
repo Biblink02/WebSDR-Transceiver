@@ -49,6 +49,8 @@ let hwMinFreq = 0;
 let hwMaxFreq = 0;
 let viewMinFreq = 0;
 let viewMaxFreq = 0;
+let framePending = false;
+let frameDirty = false;
 
 function initColorMap(paletteName: string = "classic") {
     const stops = PALETTES[paletteName] || PALETTES["classic"];
@@ -151,6 +153,7 @@ function processFFT(data: Float32Array) {
 
 function sendFrame() {
     if (!offscreenCanvas) return;
+    if (framePending) { frameDirty = true; return; }
 
     const totalHwSpan = hwMaxFreq - hwMinFreq;
     if (totalHwSpan <= 0) return;
@@ -165,11 +168,13 @@ function sendFrame() {
     if (sx + sw > bufferWidth) sw = bufferWidth - sx;
     if (sw <= 0) return;
 
+    framePending = true;
+    frameDirty = false;
     createImageBitmap(offscreenCanvas, sx, 0, sw, bufferHeight)
         .then(bitmap => {
-            self.postMessage({ type: "frame", bitmap }, [bitmap]);
+            self.postMessage({ type: "frame", bitmap }, { transfer: [bitmap] });
         })
-        .catch(err => console.error("Bitmap error", err));
+        .catch(err => { framePending = false; console.error("Bitmap error", err); });
 }
 
 self.onmessage = e => {
@@ -203,8 +208,19 @@ self.onmessage = e => {
             sendFrame();
             break;
 
+        case "hardware":
+            hwMinFreq = payload.hwMinFreq;
+            hwMaxFreq = payload.hwMaxFreq;
+            break;
+
         case "fft":
             processFFT(payload);
+            self.postMessage({ type: 'fftConsumed' });
+            break;
+
+        case "ackFrame":
+            framePending = false;
+            if (frameDirty) sendFrame();
             break;
     }
 };

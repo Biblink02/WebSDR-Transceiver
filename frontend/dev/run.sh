@@ -1,9 +1,9 @@
 #!/bin/sh
+set -eu
+cd "$(dirname "$0")"
 
 if [ ! -f .env ]; then
   cp .env.example .env
 fi
 
-docker compose down --remove-orphans
-docker compose up
-docker compose down
+exec docker compose -p websdr-frontend-dev up --build

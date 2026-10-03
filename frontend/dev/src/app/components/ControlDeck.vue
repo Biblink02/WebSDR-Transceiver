@@ -33,8 +33,8 @@ const paletteOptions = [
 ];
 
 // Calculate limits in RF domain for the input field
-const minFreqRF = calculateDisplayFrequency(config.lo_freq - (config.samp_rate / 2));
-const maxFreqRF = calculateDisplayFrequency(config.lo_freq + (config.samp_rate / 2));
+const minFreqRF = computed(() => calculateDisplayFrequency(config.lo_freq - config.samp_rate / 2));
+const maxFreqRF = computed(() => calculateDisplayFrequency(config.lo_freq + config.samp_rate / 2));
 
 // Label for display
 const rfFreqMHz = computed(() => (calculateDisplayFrequency(props.frequency) / 1e6).toFixed(4));
@@ -75,10 +75,11 @@ const localPalette = computed({
 
         <div class="flex flex-col gap-2 border-r border-gray-700 pr-6">
             <div class="flex justify-between items-end">
-                <label class="text-xs uppercase tracking-widest text-blue-400 font-bold">Frequency</label>
+                <label for="receiver-frequency" class="text-xs uppercase tracking-widest text-blue-400 font-bold">Frequency</label>
                 <span class="text-xs font-mono text-gray-400">{{ rfFreqMHz }} MHz</span>
             </div>
             <InputNumber
+                inputId="receiver-frequency"
                 v-model="localFreq"
                 :min="minFreqRF"
                 :max="maxFreqRF"
@@ -90,8 +91,14 @@ const localPalette = computed({
         </div>
 
         <div class="flex flex-col gap-2 border-r border-gray-700 pr-6">
-            <label class="text-xs uppercase tracking-widest text-blue-400 font-bold">Bandwidth</label>
+            <label for="receiver-bandwidth" class="text-xs uppercase tracking-widest text-blue-400 font-bold">Bandwidth</label>
+            <select v-model="store.sideband"
+                    aria-label="Sideband" class="bg-gray-800 rounded px-2 py-1 text-sm">
+                <option :value="1">USB</option>
+                <option :value="-1">LSB</option>
+            </select>
             <InputNumber
+                inputId="receiver-bandwidth"
                 v-model="localBw"
                 :min="config.min_bw_limit"
                 :max="config.max_bw_limit"
@@ -105,6 +112,7 @@ const localPalette = computed({
         <div class="flex flex-col gap-2">
             <label class="text-xs uppercase tracking-wider text-purple-400 font-bold">Palette</label>
             <Select
+                aria-label="Palette"
                 v-model="localPalette"
                 :options="paletteOptions"
                 optionLabel="label"

@@ -1,0 +1,11 @@
+.git
+**/node_modules
+**/node_modules.pre-webassembly
+**/__pycache__
+**/.pytest_cache
+.venv
+**/dist
+**/*.pre-webassembly
+dsp-wasm/build*
+frontend/dev/src/public/dsp.wasm
+frontend/dev/src/public/config.yaml

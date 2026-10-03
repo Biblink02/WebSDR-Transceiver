@@ -26,6 +26,8 @@ let ctxW: CanvasRenderingContext2D | null = null;
 let ctxO: CanvasRenderingContext2D | null = null;
 let ctxR: CanvasRenderingContext2D | null = null;
 const worker = ref<Worker | null>(null);
+let fftPending = false;
+let latestFft: Float32Array | null = null;
 
 const {
     zoom,
@@ -112,7 +114,7 @@ function drawRuler() {
     }
     ctxR.stroke();
 
-    const left = hzToPx(props.modelValue - props.bandwidth/2, w);
+    const left = hzToPx(store.passband.low, w);
     const bwPx = (props.bandwidth / hzVisible) * w;
     const right = left + bwPx;
 
@@ -166,7 +168,7 @@ function drawOverlay() {
     }
     ctxO.stroke();
 
-    const left = hzToPx(props.modelValue - props.bandwidth/2, w);
+    const left = hzToPx(store.passband.low, w);
     const bwPx = (props.bandwidth / hzVisible) * w;
     const right = left + bwPx;
 
@@ -188,7 +190,7 @@ function drawOverlay() {
 }
 
 watch(
-    () => [props.modelValue, props.bandwidth, zoom.value, panHz.value],
+    () => [props.modelValue, props.bandwidth, store.sideband, zoom.value, panHz.value],
     () => {
         updateWorkerView();
         requestAnimationFrame(() => {
@@ -201,11 +203,20 @@ watch(
 
 function setLatestData(data: Float32Array) {
     if (worker.value) {
+        if (fftPending) { latestFft = data; return; }
+        fftPending = true;
         worker.value.postMessage({ type: 'fft', payload: data }, [data.buffer]);
     }
 }
+watch(() => [config.samp_rate, config.lo_freq], () => {
+    worker.value?.postMessage({ type: 'hardware', payload: {
+        hwMinFreq: config.lo_freq - config.samp_rate / 2,
+        hwMaxFreq: config.lo_freq + config.samp_rate / 2,
+    } })
+})
 defineExpose({ setLatestData });
 
+let observer: ResizeObserver | null = null;
 onMounted(() => {
     if (!containerRef.value || !canvasWaterfall.value || !canvasOverlay.value || !canvasRuler.value) return;
 
@@ -246,13 +257,23 @@ onMounted(() => {
     });
 
     worker.value.onmessage = (e) => {
+        if (e.data.type === 'fftConsumed') {
+            fftPending = false;
+            if (latestFft) {
+                const data = latestFft;
+                latestFft = null;
+                setLatestData(data);
+            }
+            return;
+        }
         if (e.data.type === 'frame' && ctxW && canvasWaterfall.value) {
             ctxW.drawImage(e.data.bitmap, 0, 0, canvasWaterfall.value.width, canvasWaterfall.value.height);
             e.data.bitmap.close();
+            worker.value?.postMessage({ type: 'ackFrame' });
         }
     };
 
-    const observer = new ResizeObserver(() => {
+    observer = new ResizeObserver(() => {
         if (!containerRef.value) return;
 
         // FIX 3: Apply same safety checks to ResizeObserver
@@ -274,6 +295,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    latestFft = null;
+    observer?.disconnect();
     worker.value?.terminate();
 });
 </script>

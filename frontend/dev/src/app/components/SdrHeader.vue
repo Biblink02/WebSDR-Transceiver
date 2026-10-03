@@ -21,6 +21,7 @@ const emit = defineEmits(['toggle-audio', 'toggle-connection'])
                     text
                     size="small"
                     :title="store.isConnected ? 'Disconnect' : 'Connect'"
+                    :aria-label="store.isConnected ? 'Disconnect' : 'Connect'"
                     @click="emit('toggle-connection')"
                 />
             </div>
@@ -29,12 +30,10 @@ const emit = defineEmits(['toggle-audio', 'toggle-connection'])
                 <span :class="store.isConnected ? 'text-green-400' : 'text-red-500'">
                   {{ store.statusText }}
                 </span>
-                <span v-if="store.workerStatus === 'LISTENING'" class="text-blue-400 animate-pulse">
-                  ● AUDIO ACTIVE ({{ store.assignedWorkerId }})
+                <span v-if="store.isListening" class="text-blue-400 animate-pulse">
+                  ● AUDIO ACTIVE
                 </span>
-                <span v-if="store.workerStatus === 'FULL'" class="text-yellow-500">
-                  ⚠ SYSTEM BUSY
-                </span>
+
             </div>
         </div>
 
@@ -46,6 +45,7 @@ const emit = defineEmits(['toggle-audio', 'toggle-connection'])
                    @click="store.volume=50"></i>
                 <div class="w-24 flex items-center">
                     <Slider
+                        aria-label="Volume"
                         v-model="store.volume"
                         :min="0"
                         :max="100"
@@ -55,10 +55,10 @@ const emit = defineEmits(['toggle-audio', 'toggle-connection'])
             </div>
 
             <Button
-                :label="store.workerStatus === 'LISTENING' ? 'STOP AUDIO' : 'START AUDIO'"
-                :icon="store.workerStatus === 'LISTENING' ? 'pi pi-stop' : 'pi pi-play'"
-                :severity="store.workerStatus === 'LISTENING' ? 'danger' : 'info'"
-                :disabled="!store.isConnected || store.workerStatus === 'FULL'"
+                :label="store.isListening ? 'STOP AUDIO' : 'START AUDIO'"
+                :icon="store.isListening ? 'pi pi-stop' : 'pi pi-play'"
+                :severity="store.isListening ? 'danger' : 'info'"
+                :disabled="!store.isConnected"
                 class="!rounded-lg !font-bold"
                 raised
                 @click="emit('toggle-audio')"

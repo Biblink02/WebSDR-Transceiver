@@ -1,45 +1,45 @@
 {
-    "compilerOptions": {
-        "target": "ESNext",
-        "module": "esnext",
-        "moduleResolution": "node",
-        "strict": true,
-        "jsx": "preserve",
-        "sourceMap": true,
-        "resolveJsonModule": true,
-        "esModuleInterop": true,
-        "allowJs": true,
-        "lib": [
-            "esnext",
-            "dom"
-        ],
-        "types": ["vite/client"],
-        "typeRoots": [
-            "node_modules/@types",
-            "./app/ts/types"
-        ],
-        "paths": {
-            "&/*": [
-                "./app/*"
-            ],
-            "@/*": [
-                "./app/ts/*"
-            ],
-            "~/*": [
-                "./resources/*"
-            ]
-        },
-        "outDir": "public/build/assets",
-        "skipLibCheck": true
-    },
-    "include": [
-        "./app/ts/**/*.ts",
-        "./app/**/*.d.ts",
-        "./app/**/*.vue",
-        "./vite.config.ts"
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "jsx": "preserve",
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "allowJs": true,
+    "lib": [
+      "esnext",
+      "dom"
     ],
-    "exclude": [
-        "./node_modules",
-        "./public"
-    ]
+    "types": [
+      "vite/client",
+      "node"
+    ],
+    "paths": {
+      "&/*": [
+        "./app/*"
+      ],
+      "@/*": [
+        "./app/ts/*"
+      ],
+      "~/*": [
+        "./resources/*"
+      ]
+    },
+    "outDir": "public/build/assets",
+    "skipLibCheck": true
+  },
+  "include": [
+    "./app/ts/**/*.ts",
+    "./app/**/*.d.ts",
+    "./app/**/*.vue",
+    "./vite.config.ts"
+  ],
+  "exclude": [
+    "./node_modules",
+    "./public",
+    "**/*.test.ts"
+  ]
 }

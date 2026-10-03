@@ -1,30 +1,16 @@
 services:
   frontend:
-    image: "node:20"
-    working_dir: "/var/www/docker"
+    build:
+      context: ../..
+      dockerfile: frontend/Dockerfile
+      target: ui
+    working_dir: /app
     volumes:
-      - "./src:/var/www/docker"
-      #
-      # Mount the central config directly into the container's public folder
-      # This enables fetch('/config.yaml') to work without manual copying
-      - "../../config/config.yaml:/var/www/docker/public/config.yaml:ro"
+      - ./src/app:/app/app
+      - ./src/resources:/app/resources
+      - ../../config/config.yaml:/app/public/config.yaml:ro
     ports:
-      - "3100:3100" # vite hot reload
+      - "${VITE_PORT:-3100}:${VITE_PORT:-3100}"
     environment:
-      - VITE_PORT=3100
-    command: >
-      bash -c "npm install
-      && npm run dev"
-    networks:
-      default:
-        ipv4_address: "${CONTAINER_SERVICE_FRONTEND_IP_ADDRESS}"
-        aliases:
-          - "${CONTAINER_NAME}-nodejs.local"
-
-networks:
-  default:
-    name: "vpc_${CONTAINER_NAME}"
-    driver: "bridge"
-    ipam:
-      config:
-        - subnet: "${CONTAINER_NETWORK_SUBNET}"
+      VITE_PORT: "${VITE_PORT:-3100}"
+    command: bun run dev

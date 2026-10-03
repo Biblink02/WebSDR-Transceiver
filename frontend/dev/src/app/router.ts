@@ -10,7 +10,6 @@ const routes = [
     {path: '/sdr', component: SdrPage, label: 'SDR'},
     {path: '/about-us', component: AboutUs, label: 'About us'},
     {path: '/resources', component: Resources, label: 'Resources'},
-    //{ path: '/satellite-tracker', component: SatelliteTracker, label: 'Satellite Tracker' }
 ]
 export const items = routes.map(r => ({
     label: r.label,

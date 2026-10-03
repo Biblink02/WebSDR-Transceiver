@@ -20,8 +20,6 @@ export default [
             globals: {
                 // Allow browser global functions
                 ...globals.browser,
-                // Make Ziggy's `route` available globally
-                route: 'readonly',
             },
 
             parserOptions: {
@@ -35,8 +33,7 @@ export default [
         },
     },
     {
-        // disable single-word component names for Inertia and Nuxt Pages
-        files: ['resources/ts/vue/Pages/**/*.vue'],
+        files: ['app/Pages/**/*.vue'],
         rules: {
             'vue/multi-word-component-names': 'off',
         },
@@ -48,10 +45,10 @@ export default [
                 ...globals.node,
             },
         },
-        files: ['vite.config.js', 'prettier.config.cjs', 'eslint.config.js'],
+        files: ['vite.config.ts', 'prettier.config.mjs', 'eslint.config.mjs'],
     },
     {
         // global ignores
-        ignores: ['vendor/', 'node_modules/'],
+        ignores: ['node_modules/', 'dist/', 'public/', '**/*.pre-webassembly/', 'app/components.d.ts'],
     },
 ]

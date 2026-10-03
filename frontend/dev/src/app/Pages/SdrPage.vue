@@ -6,10 +6,10 @@ import ControlDeck from '&/components/ControlDeck.vue'
 import SdrHeader from '&/components/SdrHeader.vue'
 
 import { useSdrStore } from '@/stores/sdr.store'
-import { useSdrWorker } from '@/composables/useSdrWorker'
+import { useReceiver } from '@/composables/useReceiver'
 
 const store = useSdrStore()
-const { initWorker, toggleAudio, toggleConnection } = useSdrWorker()
+const { initWorker, toggleAudio, toggleConnection } = useReceiver()
 const spectrogramRef = ref<InstanceType<typeof SpectrogramComponent> | null>(null)
 
 const range = ref(50);

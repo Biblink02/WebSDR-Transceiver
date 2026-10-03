@@ -1,4 +1,5 @@
-import {computed, ref} from 'vue'
+import {computed, ref, watch} from 'vue'
+import { useSdrStore } from '@/stores/sdr.store'
 import {AppConfig} from '@/ConfigService'
 import {calculateDisplayFrequency} from "@/Utils";
 
@@ -18,6 +19,7 @@ export function useSpectrogramInteraction(
     emit: Emits,
     containerRef: () => HTMLElement | null
 ) {
+    const store = useSdrStore()
     // Limits logic: Use Config values or fallback to hardcoded
     const LIMIT_MIN_RF = config.view_limit_min ?? 10_489_500_000
     const LIMIT_MAX_RF = config.view_limit_max ?? 10_489_900_000;
@@ -31,14 +33,14 @@ export function useSpectrogramInteraction(
     const MIN_BW = config.min_bw_limit || 90;
     const MAX_BW = config.max_bw_limit;
 
-    // Dynamic MIN_ZOOM: Ensure we can't zoom out further than the allowed window
+    // Dynamic minZoom.value: Ensure we can't zoom out further than the allowed window
     // We add a tiny epsilon to avoid floating point boundary issues
-    const MIN_ZOOM = Math.max(1, config.samp_rate / ALLOWED_SPAN);
+    const minZoom = computed(() => Math.max(1, config.samp_rate / ALLOWED_SPAN));
     const MAX_ZOOM = 10;
     const SELECTOR_HEIGHT = 30;
 
     // State
-    const zoom = ref(MIN_ZOOM)
+    const zoom = ref(minZoom.value)
     const panHz = ref(0)
     const dragging = ref(false)
     const hoverCursor = ref('default')
@@ -124,8 +126,8 @@ export function useSpectrogramInteraction(
         const cx = hzToPx(p.modelValue, w)
         const hzVisible = viewMax.value - viewMin.value
         const bwPx = (p.bandwidth / hzVisible) * w
-        const left = cx - bwPx / 2
-        const right = cx + bwPx / 2
+        const left = hzToPx(store.passband.low, w)
+        const right = hzToPx(store.passband.high, w)
         const tol = 10
 
         dragging.value = true
@@ -139,7 +141,7 @@ export function useSpectrogramInteraction(
             else dragMode = 'MOVE'
         } else {
             // Only allow panning if zoomed in significantly
-            if (zoom.value > MIN_ZOOM + 0.05) {
+            if (zoom.value > minZoom.value + 0.05) {
                 dragMode = 'PAN'
                 hoverCursor.value = "grabbing"
             } else {
@@ -154,7 +156,7 @@ export function useSpectrogramInteraction(
 
         if (!dragging.value) {
             if (y > SELECTOR_HEIGHT) {
-                hoverCursor.value = zoom.value > MIN_ZOOM + 0.05 ? "grab" : "default"
+                hoverCursor.value = zoom.value > minZoom.value + 0.05 ? "grab" : "default"
                 return
             }
 
@@ -162,8 +164,8 @@ export function useSpectrogramInteraction(
             const cx = hzToPx(p.modelValue, w)
             const hzVisible = viewMax.value - viewMin.value
             const bwPx = (p.bandwidth / hzVisible) * w
-            const left = cx - bwPx / 2
-            const right = cx + bwPx / 2
+            const left = hzToPx(store.passband.low, w)
+            const right = hzToPx(store.passband.high, w)
             const tol = 10
 
             if (Math.abs(x - left) < tol || Math.abs(x - right) < tol) hoverCursor.value = "ew-resize"
@@ -184,7 +186,7 @@ export function useSpectrogramInteraction(
         } else if (dragMode === 'RESIZE_L' || dragMode === 'RESIZE_R') {
             const currentHz = pxToHz(x, w)
             const p = props()
-            let bw = Math.round(Math.abs(currentHz - p.modelValue) * 2)
+            let bw = Math.round(Math.abs(currentHz - p.modelValue))
             bw = Math.max(MIN_BW, Math.min(MAX_BW, bw))
             emit("update:bandwidth", bw)
         } else if (dragMode === 'PAN') {
@@ -198,7 +200,7 @@ export function useSpectrogramInteraction(
         dragging.value = false
         dragMode = null
 
-        if (zoom.value > MIN_ZOOM + 0.05 && hoverCursor.value === 'grabbing') {
+        if (zoom.value > minZoom.value + 0.05 && hoverCursor.value === 'grabbing') {
             hoverCursor.value = 'grab'
         } else if (hoverCursor.value === 'grabbing') {
             hoverCursor.value = 'default'
@@ -217,13 +219,18 @@ export function useSpectrogramInteraction(
         }
         const factor = e.deltaY > 0 ? 0.9 : 1.1
         let z = zoom.value * factor
-        zoom.value = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, z))
+        zoom.value = Math.max(minZoom.value, Math.min(MAX_ZOOM, z))
         clampPan()
 
-        if (zoom.value <= MIN_ZOOM + 0.05 && hoverCursor.value === 'grab') {
+        if (zoom.value <= minZoom.value + 0.05 && hoverCursor.value === 'grab') {
             hoverCursor.value = 'default'
         }
     }
+
+    watch(() => [config.samp_rate, config.lo_freq], () => {
+        zoom.value = Math.max(minZoom.value, zoom.value)
+        clampPan()
+    })
 
     // Force clamp on init
     clampPan();
