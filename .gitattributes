@@ -1,0 +1,2 @@
+# Preserve upstream license formatting verbatim.
+frontend/dev/src/public/licenses/*.txt whitespace=-blank-at-eof
