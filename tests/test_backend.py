@@ -21,12 +21,13 @@ def free_port():
 
 
 @asynccontextmanager
-async def backend(port,iq_port,tmp_path):
+async def backend(port,iq_port,tmp_path,processes=None):
     env={**os.environ,'CONFIG_PATH':str(ROOT/'config/config.yaml'),'PORT':str(port),
          'SDR_HOST':'127.0.0.1','SDR_IQ_PORT':str(iq_port),
          'PYTHONPATH':os.pathsep.join(str(ROOT/p) for p in ['shared','backend-controller'])}
     log=(tmp_path/f'backend-{port}.log').open('w')
     process=subprocess.Popen([sys.executable,str(ROOT/'backend-controller/backend_controller.py')],env=env,stdout=log,stderr=log)
+    if processes is not None: processes.append(process)
     try:
         async with httpx.AsyncClient() as client:
             for _ in range(100):
@@ -53,9 +54,11 @@ async def test_real_websocket_fanout_replica_independence_and_source_reconnect(t
     try:
         async with backend(p1,iq_port,tmp_path) as first, backend(p2,iq_port,tmp_path) as second:
             async with httpx.AsyncClient() as http:
-                assert (await http.get(first+'/ready')).status_code==503
+                assert (await http.get(first+'/ready')).json()=={'status':'idle'}
             async with connect(first.replace('http','ws')+'/iq') as a, connect(first.replace('http','ws')+'/iq') as b, connect(second.replace('http','ws')+'/iq') as c:
                 await asyncio.sleep(.25)
+                async with httpx.AsyncClient() as http:
+                    assert (await http.get(first+'/ready')).status_code==503
                 packet=make_header(FrameInfo(0,520834,739700000,256,123))+bytes(512)
                 await publisher.send(packet)
                 results=await asyncio.gather(*(asyncio.wait_for(ws.recv(),2) for ws in (a,b,c)))

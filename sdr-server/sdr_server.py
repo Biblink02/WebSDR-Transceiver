@@ -11,6 +11,7 @@ from gnuradio.filter import firdes
 from gnuradio.fft import window
 from iq_publisher import Packetizer, Publisher
 from stream_health import StreamHealth
+from capture_control import CaptureController, PlutoPower
 
 
 def decimation_for(source_rate, target_rate):
@@ -39,7 +40,7 @@ class IqSink(gr.sync_block):
 
 
 class ReceiverSource(gr.top_block):
-    def __init__(self, cfg):
+    def __init__(self, cfg, publisher):
         super().__init__('WebSDR I/Q source', catch_exceptions=True)
         rate = int(cfg['samp_rate'])
         factor = decimation_for(rate, int(cfg.get('iq_target_rate', 500000)))
@@ -71,40 +72,52 @@ class ReceiverSource(gr.top_block):
         del context
         factor = decimation_for(rate, int(cfg.get('iq_target_rate', 500000)))
         output_rate = rate//factor
-        self.health = StreamHealth(float(cfg.get('sdr_stall_seconds', 2)))
-        self.publisher = Publisher(f'tcp://0.0.0.0:{int(cfg.get("sdr_iq_port", 5000))}',
-            Packetizer(output_rate, center, int(cfg.get('iq_frame_samples', 8192)),
-                       float(cfg.get('iq_scale', 1))), self.health)
+        self.publisher = publisher
+        self.publisher.configure(Packetizer(output_rate, center, int(cfg.get('iq_frame_samples', 8192)),
+                                             float(cfg.get('iq_scale', 1))))
         self.sink = IqSink(self.publisher)
         if factor > 1:
             self.decimator = gr_filter.fir_filter_ccf(factor, antialias_taps(rate, factor))
             self.connect(self.source, self.decimator, self.sink)
         else:
             self.connect(self.source, self.sink)
-        self.health.serve(int(cfg.get('sdr_health_port', 8081)))
         logging.info('Publishing %s samples/s, decimation %s, %.3f Mbit/s payload per listener',
                      output_rate, factor, output_rate*16/1e6)
 
     def close(self):
         self.stop()
         self.wait()
-        self.health.close()
-        self.publisher.close()
+        self.disconnect_all()
+        # Release native IIO handles and buffers before requesting ENSM sleep.
+        self.source = None
+        self.sink = None
+        self.decimator = None
 
 
 def main():
     logging.basicConfig(level=logging.INFO)
     with Path(os.getenv('CONFIG_PATH', '/app/config.yaml')).open() as config_file:
         cfg = yaml.safe_load(config_file)
-    flowgraph = ReceiverSource(cfg)
+    if not isinstance(cfg, dict):
+        raise ValueError('Configuration must be a YAML mapping')
+    health = StreamHealth(float(cfg.get('sdr_stall_seconds', 2)))
+    publisher = Publisher(f'tcp://0.0.0.0:{int(cfg.get("sdr_iq_port", 5000))}', health)
+    controller = CaptureController(lambda: ReceiverSource(cfg, publisher),
+        PlutoPower(str(cfg['iio_uri'])), publisher, health,
+        float(cfg.get('sdr_idle_seconds', 10)))
+    health.serve(int(cfg.get('sdr_health_port', 8081)))
     stopped = threading.Event()
     for signum in (signal.SIGINT, signal.SIGTERM):
         signal.signal(signum, lambda *_: stopped.set())
     try:
-        flowgraph.start()
-        stopped.wait()
+        while not stopped.is_set():
+            publisher.service()
+            controller.tick()
+            stopped.wait(0.005 if controller.capture is not None else 0.2)
     finally:
-        flowgraph.close()
+        controller.close()
+        health.close()
+        publisher.close()
 
 
 if __name__ == '__main__':

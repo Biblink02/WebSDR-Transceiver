@@ -38,6 +38,9 @@ async def health():
 
 @app.get('/ready')
 async def ready():
+    if not app.state.iq.clients and not app.state.subscriber.done():
+        # Idle replicas must accept the first viewer so they can wake the source.
+        return {'status': 'idle'}
     age = app.state.iq.diagnostics()['packet_age_seconds']
     if age is None or age > IQ_STALL_SECONDS or app.state.subscriber.done():
         return JSONResponse({'status': 'waiting for I/Q'}, status_code=503)

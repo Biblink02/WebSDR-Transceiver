@@ -1,6 +1,7 @@
 """Bounded packetization and source-side signed 8-bit I/Q quantization."""
 import math
 import secrets
+from queue import Empty, Full, Queue
 from collections import Counter
 import numpy as np
 import zmq
@@ -43,24 +44,68 @@ class Packetizer:
 
 
 class Publisher:
-    def __init__(self, address, packetizer, health):
-        self.packetizer, self.health = packetizer, health
+    """One socket owner; the GNU Radio scheduler only enqueues bounded frames."""
+    def __init__(self, address, health):
+        self.packetizer, self.health = None, health
+        self.pending = Queue(maxsize=4)
+        self.subscribers = 0
+        self.counters = Counter(published=0, dropped=0)
         self.context = zmq.Context()
-        self.socket = self.context.socket(zmq.PUB)
+        self.socket = self.context.socket(zmq.XPUB)
+        self.socket.setsockopt(zmq.XPUB_VERBOSER, 1)
         self.socket.setsockopt(zmq.SNDHWM, 4)
+        self.socket.setsockopt(zmq.RCVHWM, 64)
         self.socket.setsockopt(zmq.LINGER, 0)
+        self.socket.setsockopt(zmq.HEARTBEAT_IVL, 1000)
+        self.socket.setsockopt(zmq.HEARTBEAT_TIMEOUT, 5000)
+        self.socket.setsockopt(zmq.HEARTBEAT_TTL, 5000)
         self.socket.bind(address)
+
+    def configure(self, packetizer):
+        self.discard_pending()
+        self.packetizer = packetizer
+
+    def discard_pending(self):
+        while True:
+            try:
+                self.pending.get_nowait()
+            except Empty:
+                return
 
     def push(self, samples):
         if len(samples):
             self.health.source_progress()
         for frame in self.packetizer.push(samples):
             try:
+                self.pending.put_nowait(frame)
+            except Full:
+                try:
+                    self.pending.get_nowait()
+                except Empty:
+                    pass
+                self.counters['dropped'] += 1
+                self.pending.put_nowait(frame)
+
+    def service(self):
+        # Called by the control thread, never by the GNU Radio scheduler.
+        while self.socket.poll(0, zmq.POLLIN):
+            event = self.socket.recv(flags=zmq.NOBLOCK)
+            if event == b'\x01':
+                self.subscribers += 1
+            elif event == b'\x00':
+                self.subscribers = max(0, self.subscribers-1)
+        for _ in range(4):
+            try:
+                frame = self.pending.get_nowait()
+            except Empty:
+                break
+            try:
                 self.socket.send(frame, flags=zmq.NOBLOCK)
                 self.health.published()
-                self.packetizer.counters['published'] += 1
+                self.counters['published'] += 1
             except zmq.Again:
-                self.packetizer.counters['dropped'] += 1
+                self.counters['dropped'] += 1
+        return self.subscribers
 
     def close(self):
         self.socket.close(linger=0)

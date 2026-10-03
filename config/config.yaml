@@ -58,3 +58,4 @@ iq_stall_seconds: 3
 iq_scale: 1.0
 sdr_health_port: 8081
 sdr_stall_seconds: 2.0
+sdr_idle_seconds: 10.0

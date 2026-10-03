@@ -1,52 +1,59 @@
-"""Deterministic multi-tone source for local receiver tests, without SDR hardware."""
+"""Demand-driven deterministic I/Q source; uses the production capture lifecycle."""
 import argparse
-import asyncio
 import signal
+import threading
+import time
 from pathlib import Path
 import numpy as np
-import zmq.asyncio
-from iq_publisher import Packetizer
+from iq_publisher import Packetizer, Publisher
 from stream_health import StreamHealth
+from capture_control import CaptureController
 
 
-async def run(address, rate=520834, center=739700000, frame_samples=8192,
-              health_port=None, stall_file=None):
-    context = zmq.asyncio.Context()
-    socket = context.socket(zmq.PUB)
-    socket.setsockopt(zmq.LINGER, 0)
-    socket.setsockopt(zmq.SNDHWM, 4)
-    socket.bind(address)
-    packetizer = Packetizer(rate, center, frame_samples)
-    health = StreamHealth()
-    if health_port is not None:
-        health.serve(health_port)
-    position = 0
-    loop = asyncio.get_running_loop()
-    deadline = loop.time()
-    task = asyncio.current_task()
-    for signum in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(signum, task.cancel)
-    try:
-        while True:
-            if stall_file is not None and stall_file.exists():
-                await asyncio.sleep(0.05)
-                deadline = loop.time()
+class SyntheticPower:
+    state = 'simulated-sleep'
+
+    def sleep(self):
+        self.state = 'simulated-sleep'
+
+    def wake(self):
+        self.state = 'simulated-awake'
+
+
+class SyntheticCapture:
+    def __init__(self, publisher, rate, center, frame_samples=8192, stall_file=None):
+        self.publisher, self.rate, self.frame_samples = publisher, rate, frame_samples
+        self.stall_file = stall_file
+        self.stopped = threading.Event()
+        publisher.configure(Packetizer(rate, center, frame_samples))
+        self.thread = threading.Thread(target=self.run, name='synthetic-capture', daemon=True)
+
+    def start(self):
+        self.thread.start()
+
+    def run(self):
+        position = 0
+        deadline = time.monotonic()
+        while not self.stopped.is_set():
+            if self.stall_file is not None and self.stall_file.exists():
+                self.stopped.wait(.05)
+                deadline = time.monotonic()
                 continue
-            time = np.arange(position, position+frame_samples)/rate
-            samples = (0.30*np.exp(2j*np.pi*1000*time) +
-                       0.20*np.exp(2j*np.pi*31000*time) +
-                       0.15*np.exp(-2j*np.pi*21000*time)).astype(np.complex64)
-            health.source_progress()
-            for frame in packetizer.push(samples):
-                await socket.send(frame, flags=zmq.DONTWAIT)
-                health.published()
-            position += frame_samples
-            deadline += frame_samples/rate
-            await asyncio.sleep(max(0, deadline-asyncio.get_running_loop().time()))
-    finally:
-        health.close()
-        socket.close(linger=0)
-        context.term()
+            sample_time = np.arange(position, position+self.frame_samples)/self.rate
+            samples = (0.30*np.exp(2j*np.pi*1000*sample_time) +
+                       0.20*np.exp(2j*np.pi*31000*sample_time) +
+                       0.15*np.exp(-2j*np.pi*21000*sample_time)).astype(np.complex64)
+            self.publisher.push(samples)
+            position += self.frame_samples
+            deadline += self.frame_samples/self.rate
+            self.stopped.wait(max(0, deadline-time.monotonic()))
+
+    def close(self):
+        self.stopped.set()
+        if self.thread.is_alive():
+            self.thread.join(timeout=2)
+        if self.thread.is_alive():
+            raise RuntimeError('Synthetic capture did not stop')
 
 
 def main():
@@ -55,14 +62,28 @@ def main():
     parser.add_argument('--rate', type=int, default=520834)
     parser.add_argument('--center', type=float, default=739700000)
     parser.add_argument('--health-port', type=int)
-    parser.add_argument('--stall-file', type=Path,
-                        help='Pause capture/publication while this test file exists')
+    parser.add_argument('--idle-seconds', type=float, default=10)
+    parser.add_argument('--stall-file', type=Path)
     args = parser.parse_args()
+    health = StreamHealth()
+    publisher = Publisher(args.address, health)
+    controller = CaptureController(lambda: SyntheticCapture(publisher, args.rate, args.center,
+                                     stall_file=args.stall_file), SyntheticPower(), publisher,
+                                     health, args.idle_seconds)
+    if args.health_port is not None:
+        health.serve(args.health_port)
+    stopped = threading.Event()
+    for signum in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(signum, lambda *_: stopped.set())
     try:
-        asyncio.run(run(args.address, args.rate, args.center,
-                        health_port=args.health_port, stall_file=args.stall_file))
-    except (KeyboardInterrupt, asyncio.CancelledError):
-        pass
+        while not stopped.is_set():
+            publisher.service()
+            controller.tick()
+            stopped.wait(.005 if controller.capture is not None else .1)
+    finally:
+        controller.close()
+        health.close()
+        publisher.close()
 
 
 if __name__ == '__main__':
