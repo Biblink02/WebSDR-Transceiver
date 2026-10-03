@@ -10,8 +10,8 @@ import PrimeVue from 'primevue/config'
 import LocaleEn from 'primelocale/en.json'
 import Aura from '@primevue/themes/aura'
 import { createHead } from '@unhead/vue/client'
-import { loadConfig } from "@/ConfigService"
-import { useSdrStore } from "@/stores/sdr.store"
+import { loadConfig } from "&/config"
+import { useSdrStore } from "&/features/sdr/store"
 import ToastService from 'primevue/toastservice'
 
 const initApp = async () => {

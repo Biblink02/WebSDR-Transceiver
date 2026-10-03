@@ -1,13 +1,12 @@
 import {createRouter, createWebHistory} from 'vue-router'
 import HomePage from "./Pages/HomePage.vue";
-import SdrPage from "./Pages/SdrPage.vue";
 import AboutUs from "./Pages/AboutUs.vue";
 import Resources from "./Pages/Resources.vue";
 
 
 const routes = [
     {path: '/', component: HomePage, label: 'Our project'},
-    {path: '/sdr', component: SdrPage, label: 'SDR'},
+    {path: '/sdr', component: () => import('./Pages/SdrPage.vue'), label: 'SDR'},
     {path: '/about-us', component: AboutUs, label: 'About us'},
     {path: '/resources', component: Resources, label: 'Resources'},
 ]

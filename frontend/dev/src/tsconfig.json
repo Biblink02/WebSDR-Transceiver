@@ -21,9 +21,6 @@
       "&/*": [
         "./app/*"
       ],
-      "@/*": [
-        "./app/ts/*"
-      ],
       "~/*": [
         "./resources/*"
       ]
@@ -32,7 +29,8 @@
     "skipLibCheck": true
   },
   "include": [
-    "./app/ts/**/*.ts",
+    "./app/**/*.ts",
+    "./scripts/**/*.ts",
     "./app/**/*.d.ts",
     "./app/**/*.vue",
     "./vite.config.ts"

@@ -1,5 +1,5 @@
 import { test, expect } from 'bun:test'
-import { instantiateDsp } from '../frontend/dev/src/app/ts/WasmDsp'
+import { instantiateDsp } from '../frontend/dev/src/app/features/sdr/engine/WasmDsp'
 import { performance } from 'node:perf_hooks'
 
 const wasmPath = new URL('../frontend/dev/src/public/dsp.wasm', import.meta.url)

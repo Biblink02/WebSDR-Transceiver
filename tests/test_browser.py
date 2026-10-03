@@ -54,10 +54,14 @@ async def test_production_browser_receiver_audio_local_tune_and_source_recovery(
                 page.on('websocket',lambda ws:ws.on('framesent',lambda frame:sent.append(frame)))
                 await page.add_init_script(AUDIO_MONITOR)
                 await page.goto(f'http://127.0.0.1:{web_port}/sdr')
-                await page.get_by_role('button',name='START AUDIO').wait_for()
+                try:
+                    await page.get_by_role('button',name='START AUDIO').wait_for(timeout=10000)
+                except Exception:
+                    await page.screenshot(path='/tmp/websdr-browser-failure.png', full_page=True)
+                    raise AssertionError({'errors': errors, 'body': await page.locator('body').inner_text()})
                 await page.wait_for_function("document.querySelector('button') && document.body.innerText.includes('CONNECTED')")
                 await page.wait_for_function('''() => {
-                    const canvas=document.querySelectorAll('canvas')[1];if(!canvas)return false;
+                    const canvas=document.querySelector('.waterfall-area canvas');if(!canvas)return false;
                     const data=canvas.getContext('2d').getImageData(0,0,canvas.width,Math.min(60,canvas.height)).data;
                     for(let i=0;i<data.length;i+=4)if(data[i]+data[i+1]+data[i+2]>10)return true;return false;
                 }''')
@@ -70,9 +74,11 @@ async def test_production_browser_receiver_audio_local_tune_and_source_recovery(
                 await page.locator('[aria-label="Sideband"]').select_option('-1')
                 await page.locator('#receiver-frequency').fill('10489680000')
                 await page.locator('#receiver-frequency').press('Tab')
-                ruler='document.querySelectorAll("canvas")[0].toDataURL()'
+                ruler='document.querySelector("canvas.ruler").toDataURL()'
+                await page.locator('.waterfall-area').scroll_into_view_if_needed()
+                await page.screenshot(path='/tmp/websdr-console-desktop.png', full_page=True)
                 before=await page.evaluate(ruler)
-                waterfall=await page.locator('canvas').nth(1).bounding_box()
+                waterfall=await page.locator('.waterfall-area canvas').first.bounding_box()
                 x=waterfall['x']+waterfall['width']/2
                 y=waterfall['y']+waterfall['height']/2
                 await page.mouse.move(x,y)
@@ -81,8 +87,7 @@ async def test_production_browser_receiver_audio_local_tune_and_source_recovery(
                 before=await page.evaluate(ruler)
                 await page.mouse.down();await page.mouse.move(x+30,y);await page.mouse.up()
                 await page.wait_for_function(f'{ruler} !== '+repr(before))
-                await page.get_by_role('combobox',name='Palette').click()
-                await page.get_by_role('option',name='Inferno',exact=True).click()
+                await page.get_by_role('combobox',name='Palette').select_option('inferno')
                 await page.get_by_role('slider',name='Volume').press('Home')
                 await page.wait_for_function('window.__audio.gains.includes(0)')
                 assert sent==[], 'Browser sent remote tuning/control frames'

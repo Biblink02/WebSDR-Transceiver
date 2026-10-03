@@ -2,6 +2,7 @@
 import argparse
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlsplit
 import yaml
 
 parser=argparse.ArgumentParser();parser.add_argument('--port',type=int,required=True)
@@ -12,11 +13,12 @@ payload=yaml.safe_dump(config).encode()
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self,*a,**kw):super().__init__(*a,directory=str(root/'frontend/dev/src/dist'),**kw)
     def do_GET(self):
-        if self.path=='/config.yaml':
+        request_path = urlsplit(self.path).path
+        if request_path=='/config.yaml':
             self.send_response(200);self.send_header('Content-Type','application/yaml')
             self.send_header('Content-Length',str(len(payload)));self.end_headers();self.wfile.write(payload)
         else:
-            if self.path in ['/sdr','/about-us','/resources']:self.path='/index.html'
+            if request_path in ['/sdr','/about-us','/resources']:self.path='/index.html'
             super().do_GET()
     def log_message(self,*a):pass
 ThreadingHTTPServer(('127.0.0.1',args.port),Handler).serve_forever()

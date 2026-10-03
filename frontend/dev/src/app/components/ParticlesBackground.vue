@@ -153,7 +153,7 @@ function animate() {
 
     updateParticles(width, height)
     drawConnections(ctx)
-    particles.forEach(particle => drawParticle(ctx, particle))
+    for (const particle of particles) drawParticle(ctx, particle)
 
     animationFrameId = requestAnimationFrame(animate)
 }

@@ -13,4 +13,7 @@ services:
       - "${VITE_PORT:-3100}:${VITE_PORT:-3100}"
     environment:
       VITE_PORT: "${VITE_PORT:-3100}"
+      SDR_BACKEND_URL: "${SDR_BACKEND_URL:-http://host.docker.internal:8080}"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     command: bun run dev
