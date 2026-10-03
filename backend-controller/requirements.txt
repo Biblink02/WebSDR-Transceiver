@@ -1,5 +1,4 @@
-fastapi
-uvicorn[standard]
-python-socketio
-pyzmq
-pyyaml
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+pyzmq==27.2.0
+PyYAML==6.0.3

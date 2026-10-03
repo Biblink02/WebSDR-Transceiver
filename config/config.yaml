@@ -12,29 +12,22 @@ rf_bandwidth: 250000
 buffer_size: 32768
 
 # =============================================================================
-# ===                         GRAPHICS WORKER                               ===
+# ===                         BROWSER WATERFALL                               ===
 # =============================================================================
 fft_size: 2048
 calibration: -72
-skip: 30
 
 # =============================================================================
-# ===                          AUDIO WORKER                                 ===
+# ===                         BROWSER DSP                                   ===
 # =============================================================================
 audio_rate: 48000
-quad_rate: 50000
-bandwidth: 2700  #also for frontend default
-freq_offset: 0
-is_active: 0
+bandwidth: 2700
 
 # =============================================================================
 # ===                        FRONTEND VALIDATION                            ===
 # =============================================================================
 max_bw_limit: 15000
 min_bw_limit: 90
-channel_count: 1
-buffer_threshold: 4
-max_queue_size: 50
 
 # =============================================================================
 # ===                        VISUALIZATION (UI)                             ===
@@ -50,30 +43,18 @@ view_limit_max: 10489900000
 # =============================================================================
 sdr_host: "sdr-server"
 sdr_iq_port: 5000
-sdr_control_port: 5001
-
-backend_host: "backend-controller"
-graphics_udp_port: 9001
-audio_udp_port: 9002
-
-worker_control_port: 5001
-pool_size: 3
-worker_headless_service: "audio-workers-headless.default.svc.cluster.local"
 
 # =============================================================================
-# ===                        WEBSOCKET CONFIG                               ===
+# ===                        STREAM URL                               ===
 # =============================================================================
 ws_url: "https://websdr.fbi.h-da.de"
 
-# Event Protocol
-ws_graphics_event: "graphics_data"
-ws_audio_event: "audio_data"
-ws_server_full_event: "server_full"
-ws_worker_assigned_event: "worker_assigned"
-ws_worker_released_event: "worker_released"
-ws_correction_event: "correction_applied"
-ws_connect_event: "connect"
-ws_disconnect_event: "disconnect"
-ws_request_worker_event: "request_audio_worker"
-ws_dismiss_worker_event: "dismiss_audio_worker"
-ws_tune_event: "tune"
+# Packed signed I/Q, filtered and quantized once at the source.
+iq_target_rate: 500000
+iq_frame_samples: 8192
+iq_client_queue_size: 4
+iq_send_timeout: 2
+iq_stall_seconds: 3
+iq_scale: 1.0
+sdr_health_port: 8081
+sdr_stall_seconds: 2.0
