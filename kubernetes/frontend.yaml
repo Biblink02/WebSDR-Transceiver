@@ -7,10 +7,9 @@ spec:
   selector:
     app: frontend-nginx
   ports:
-    - port: 80
-      targetPort: 80
-      protocol: TCP
-
+  - port: 80
+    targetPort: 80
+    protocol: TCP
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -27,19 +26,29 @@ spec:
         app: frontend-nginx
     spec:
       containers:
-        - name: frontend-nginx
-          image: websdr-transceiver/frontend-nginx:latest
-          imagePullPolicy: IfNotPresent
-          ports:
-            - containerPort: 80
-          volumeMounts:
-            - name: sdr-config-volume
-              mountPath: /usr/share/nginx/html/config.yaml
-              subPath: config.yaml
-      volumes:
+      - name: frontend-nginx
+        image: websdr-transceiver/frontend-nginx:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        volumeMounts:
         - name: sdr-config-volume
-          configMap:
-            name: sdr-config
-            items:
-              - key: config.yaml
-                path: config.yaml
+          mountPath: /usr/share/nginx/html/config.yaml
+          subPath: config.yaml
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          periodSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          periodSeconds: 10
+      volumes:
+      - name: sdr-config-volume
+        configMap:
+          name: sdr-config
+          items:
+          - key: config.yaml
+            path: config.yaml

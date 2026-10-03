@@ -7,17 +7,9 @@ spec:
   selector:
     app: backend-controller
   ports:
-    - name: http
-      port: 80
-      targetPort: 80
-    - name: graphics-in
-      port: 9001
-      targetPort: 9001
-      protocol: UDP
-    - name: audio-in
-      port: 9002
-      targetPort: 9002
-      protocol: UDP
+  - name: http
+    port: 80
+    targetPort: 8080
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -34,25 +26,38 @@ spec:
         app: backend-controller
     spec:
       containers:
-        - name: backend-controller-container
-          image: websdr-transceiver/backend-controller:latest
-          imagePullPolicy: IfNotPresent
-          ports:
-            - name: http
-              containerPort: 80
-            - name: graphics
-              containerPort: 9001
-            - name: audio
-              containerPort: 9002
-              protocol: UDP
-          volumeMounts:
-            - name: sdr-config-volume
-              mountPath: /app/config.yaml
-              subPath: config.yaml
-      volumes:
+      - name: backend-controller-container
+        image: websdr-transceiver/backend-controller:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+        volumeMounts:
         - name: sdr-config-volume
-          configMap:
-            name: sdr-config
-            items:
-              - key: config.yaml
-                path: config.yaml
+          mountPath: /app/config.yaml
+          subPath: config.yaml
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: http
+          periodSeconds: 3
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          periodSeconds: 10
+          failureThreshold: 3
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 65532
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: sdr-config-volume
+        configMap:
+          name: sdr-config
+          items:
+          - key: config.yaml
+            path: config.yaml
