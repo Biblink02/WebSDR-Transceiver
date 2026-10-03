@@ -14,7 +14,7 @@ flowchart LR
 ```
 
 The deployment consists of an SDR source, stateless backend replicas, and a Vue
-frontend served by nginx. There is no Redis, Socket.IO, audio-worker pool, server
+frontend served directly by Caddy. There is no Redis, Socket.IO, audio-worker pool, server
 FFT worker, or compatibility mode. Outbound bandwidth and browser CPU determine
 listener capacity: the configured 520,834 complex samples/s costs about 8.33
 Mbit/s per listener before overhead.
@@ -34,17 +34,26 @@ bash deploy.sh
 ```
 
 This updates the Kind cluster, removes obsolete worker/watchdog/Redis workloads,
-and rolls out the receiver. It does not delete persistent proxy/certificate data.
+and rolls out the receiver, replacing Proxy Manager and the separate nginx frontend.
+Existing proxy/certificate volumes are preserved; Caddy uses its own `caddy-data` PVC.
 The source's health probes restart only its pod after data-flow failure; backend
 ZeroMQ subscriptions and browser streams reconnect. `bash reload.sh` reapplies
 configuration and restarts receiver deployments without rebuilding images.
 `CLUSTER_NAME` selects another Kind cluster; production defaults to `kind`.
 
-The existing nginx Proxy Manager exposes HTTP/HTTPS and its admin UI at
-`http://localhost:81`. Point the public receiver host to `frontend-nginx:80` and
-enable WebSocket support. `/iq` is proxied through the frontend to the backend.
-The `ws_url` config can be an HTTP(S) base URL, a WS(S) base URL, or `/` for the
-current origin. The browser derives `/iq` and automatically uses wss for HTTPS.
+Caddy serves the app and proxies `/iq` directly to the backend. Its versioned
+[Caddyfile](config/Caddyfile) contains the station's public hostname. It obtains
+and renews HTTPS certificates automatically; DNS must point to the station and
+TCP ports 80/443 must reach it. Certificate data persists in `caddy-data`.
+There is no admin website or login. `ws_url: /` uses the same origin and secure
+WebSockets when the page uses HTTPS. See [Caddy operations](docs/caddy.md).
+
+The SDR console provides signal search, independent automatic frequency/BW and
+display gain/range, selectable FFTs through 32,768 points, ten palettes, spectrum
+trace, freeze/fullscreen, bookmarks and shared links. FFT/audio stay local to each
+browser. Idle capture releases the GNU Radio graph and requests Pluto sleep after
+the last viewer leaves. See [console controls](docs/receiver-console.md) and
+[capture lifecycle](docs/capture-lifecycle.md).
 
 ## Local development
 
@@ -65,9 +74,9 @@ Compose build includes WASM and mounts application files and central config.
 `bash frontend/build-frontend.sh` exports a complete production build to
 `frontend/dist` without installing dependencies into host directories.
 
-For a hardware-free receiver, use three terminals. Set the local frontend's
-`public/config.yaml` `ws_url` to `http://localhost:8080`; keep the central hardware
-configuration unchanged.
+For a hardware-free receiver, use three terminals. The Vite development server
+proxies same-origin `/iq` to `http://127.0.0.1:8080`; `SDR_BACKEND_URL` overrides
+the target. Keep the central hardware configuration unchanged.
 
 ```bash
 python3 -m venv .venv
@@ -104,10 +113,11 @@ acceptance checks on the production station when the device is available.
 | iq_client_queue_size, iq_send_timeout | Bounded per-client queue (1–64 frames) and WebSocket send deadline in seconds. |
 | iq_stall_seconds | Backend readiness timeout for upstream data. Backend liveness remains independent of source stalls. |
 | sdr_health_port, sdr_stall_seconds | Source health HTTP port and monotonic source/publication stall timeout. |
+| sdr_idle_seconds | Grace after the last subscribed backend disconnects, then stop/release capture and request Pluto sleep (default 10 s, range 0–300). |
 | ws_url | Public receiver base URL; `/` selects same origin. |
 | audio_rate, bandwidth, min_bw_limit, max_bw_limit | Audio output rate (48,000), initial selected audio passband and UI limits (90–15,000 Hz). |
-| fft_size, calibration | Power-of-two FFT size (256–8,192) and additive dB calibration. |
-| range_db, gain_db, gain_attack, gain_release | Waterfall dynamic range, display gain, and automatic range adaptation. |
+| fft_size, calibration | Initial power-of-two FFT size (256–32,768) and additive dB calibration. Clients can select resolution independently. |
+| range_db, gain_db | Initial waterfall dynamic range and display gain; automatic local controls adapt them to the received spectrum. |
 | view_limit_min, view_limit_max | Visible RF limits in Hz. |
 
 Backend environment settings override YAML using upper-case names; `PORT` is the
@@ -117,8 +127,10 @@ configuration and restart deployments to apply them.
 
 `GET /stream-info` exposes actual upstream metadata, connected-client count,
 malformed/dropped/discontinuous frame counters and last-packet age. `/health`
-checks backend subscriber operation; `/ready` requires live I/Q. Source `/health`,
-`/ready`, and `/startup` require current capture and publication progress.
+checks backend subscriber operation; `/ready` accepts healthy idle replicas and
+requires live I/Q while viewers are present. Source `/health`, `/ready`, and
+`/startup` accept idle and bounded warm-up, then require actual capture/publication
+progress during streaming. Source health reports demand, capture and power state.
 
 To investigate a libiio capture stall, inspect the source's logs and restart count:
 
@@ -128,9 +140,10 @@ kubectl --context "kind-${CLUSTER_NAME:-kind}" get pods -l app=sdr-server
 kubectl --context "kind-${CLUSTER_NAME:-kind}" port-forward service/sdr-server 18081:8081
 ```
 
-In another terminal, `curl http://localhost:18081/health` shows source/publication
-ages. Ages over two seconds fail health; backend `/stream-info` shows upstream
-age and discontinuities. The probes restart the source and subscribers reconnect.
+In another terminal, `curl http://localhost:18081/health` shows capture mode and
+source/publication ages. During streaming, ages over two seconds fail health;
+idle capture is healthy and wake-up has a bounded grace. Backend `/stream-info`
+shows upstream age and discontinuities. The probes restart the source and subscribers reconnect.
 This isolates recovery; the underlying libiio/RF issue still requires target
 hardware logs and a reception test.
 
@@ -151,7 +164,7 @@ bun run typecheck
 ```bash
 PYTHONPATH=shared:backend-controller:sdr-server .venv/bin/pytest -q tests
 PYTHONPATH=shared:sdr-server /usr/bin/python3 tests/source_flowgraph_check.py
-bash -n deploy.sh reload.sh frontend/build-frontend.sh kubernetes/start-cluster.sh scripts/build-wasm.sh
+bash -n deploy.sh reload.sh frontend/build-frontend.sh kubernetes/start-cluster.sh scripts/build-wasm.sh scripts/reload-caddy.sh
 PYTHON_BIN=.venv/bin/python bash tests/check-kubernetes.sh
 ```
 
@@ -161,8 +174,9 @@ frontend against synthetic I/Q, checks waterfall pixels, native audio/volume,
 local retuning, source recovery, disconnect cleanup and WASM-load errors. Tests
 launch isolated localhost services and leave the existing station unchanged.
 The Kubernetes check builds the production containers and uses a temporary Kind
-cluster with a separate kubeconfig and synthetic I/Q. It tests nginx delivery and
-a source-only liveness restart, then removes the test cluster.
+cluster with a separate kubeconfig and synthetic I/Q. It tests Caddy HTTPS/WSS
+using a trusted local CA, idle/wake and a source-only liveness restart, then removes
+the test cluster. It makes no public ACME requests and does not deploy production.
 
 See [TODO.md](TODO.md) for audited status and acceptance evidence and
 [the wire protocol and DSP ABI](docs/iq-protocol.md) for implementation details.

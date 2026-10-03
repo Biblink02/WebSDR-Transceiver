@@ -1,5 +1,27 @@
 # WebSDR browser DSP implementation plan
 
+## SDR console and demand-driven capture follow-up
+
+- [x] Redesign the SDR page with responsive tuning, signal-search, visualization
+  and playback panels; organize feature code into smaller components/modules.
+- [x] Detect persistent signal regions from averaged spectra, rank candidates,
+  and support local auto frequency/BW, auto display gain/range and Auto all.
+- [x] Add spectrum trace/markers, more palettes, selectable FFT resolution,
+  display smoothing/freeze/FPS profiles, and useful local receiver tools.
+- [x] Keep FFT/DSP per browser; verify larger FFTs in compiled WASM without audio
+  interruption and bound processing, memory and rendering transfers.
+- [x] Subscribe upstream only while a backend has actual WebSocket viewers.
+- [x] Use ZeroMQ XPUB demand across replicas to stop/release GNU Radio capture
+  and request Pluto sleep after an idle grace; wake on the first viewer.
+- [x] Keep idle health/readiness successful and active stall recovery isolated;
+  handle warm-up, disconnects, replica crashes and source restart.
+- [x] Verify detection/auto controls, browser interactions, capture idle/wake and
+  multi-replica recovery with synthetic I/Q; document hardware-only limits.
+- [x] Record evidence and create atomic commits using the existing format.
+- [x] Replace Proxy Manager and the separate nginx frontend with one Caddy
+  frontend, versioned configuration, persistent TLS storage and isolated HTTPS/WSS
+  checks; keep production activation separate from local verification.
+
 Audited on 2026-10-03. All work is in English on `feat/webassembly`. Checkboxes
 mean verified completion; code presence alone does not prove runtime behavior.
 
@@ -21,7 +43,8 @@ GRC runtime code with one maintained Python flowgraph; no GRC compilation step
 or generated embedded-Python modules should be needed for deployment.
 
 The existing user configuration contains `samp_rate: 520834`, `lo_freq: 739700000`,
-and a public HTTPS URL; preserve these values. Convert noninteger ratios to
+and a public HTTPS hostname; preserve these values. The hostname now lives in
+`config/Caddyfile`, and `ws_url: /` follows the page's origin. Convert noninteger ratios to
 48 kHz accurately. A 500 ksps signed 8-bit I/Q stream costs approximately 8 Mbit/s
 per listener before overhead; scaling remains bounded by network and client CPU.
 
@@ -85,7 +108,7 @@ per listener before overhead; scaling remains bounded by network and client CPU.
   for slow clients without delaying others. Expose drops/malformed/client counts.
 - [x] Detect upstream discontinuities, reconnect after source restart, discard stale
   queues, and shut down sockets/tasks/clients without leaking resources.
-- [x] Proxy ws/wss upgrades through nginx and serve WASM as application/wasm.
+- [x] Proxy ws/wss upgrades through Caddy and serve WASM as application/wasm.
 - [x] Test real two-client WebSocket delivery, two independent backend replicas,
   slow-client isolation, malformed packets, subscriber cleanup, and source restart.
 
@@ -128,11 +151,11 @@ per listener before overhead; scaling remains bounded by network and client CPU.
 
 - [x] Build WASM before Vite; pin Bun/Emscripten and include generated assets through
   a reproducible Docker build. No root-owned host dependency installs are needed.
-- [x] Simplify deployment to SDR/backend/frontend and existing public proxy; remove
+- [x] Simplify deployment to SDR/backend/Caddy frontend; remove
   obsolete workloads during an explicitly requested deployment.
 - [x] Add meaningful backend/C++/compiled-WASM/browser checks and frozen lockfiles.
 - [x] Pass frontend typecheck/production build, Python checks, shell syntax, and
-  Kubernetes/nginx validation; fix resulting implementation failures.
+  Kubernetes/Caddy validation; fix resulting implementation failures.
 - [x] Verify container builds and an isolated Kubernetes rollout with synthetic I/Q,
   healthy probes and recovery after source restart without cascading restarts.
 - [x] Document architecture, all config, protocol, ABI, DSP/tuning convention,
@@ -149,41 +172,67 @@ Verified on 2026-10-03 on `feat/webassembly`:
 - Bun 1.4.2: clean `bun install --frozen-lockfile` succeeded with an unchanged
   lockfile. Final Docker build also installed the cleaned dependency set with
   `--frozen-lockfile`. No npm/npx/yarn/pnpm commands or package-manager lockfiles
-  remain. `npm-data`/`npm-letsencrypt` name Nginx Proxy Manager persistent volumes.
-- `bun run typecheck`, `bun run build` and `bun run test`: passed; protocol suite
-  has three tests and 13 assertions. Vite reports a remaining >500 kB JS chunk
-  advisory; it does not fail the build.
+  remain. Old Proxy Manager volume data is preserved but no longer referenced.
+- `bun run typecheck`, `bun run build` and `bun run test`: passed. Seven protocol,
+  signal-analysis, rendering-buffer and palette tests contain 75 assertions.
+  The Vue/Volar compiler runner checks templates under Bun; an intentional
+  template type error was verified to fail it. The SDR route is lazy-loaded;
+  the final Vite build has no >500 kB JS chunk advisory.
 - Native C++ `ctest`: passed, including wanted/opposite/out-of-band/alias rejection,
   USB/LSB retuning, positive/negative FFT placement and normalization, silence and
   full-scale input, exact chunk invariance, 48 kHz output from 520,834 Hz and
   boundary rates, and repeated construction/reset/destruction.
-- `bun run test:wasm`: two tests, 495 assertions passed. The latest host run
-  processed 1,562,502 I/Q samples in 0.257 s (11.66 times real time), produced
-  144,000 PCM samples and kept linear memory fixed at 16 MiB. This measures WASM
-  in Bun on this host, not browser/device/network capacity.
-- Python/backend/browser suite: 10 tests passed. Real ZeroMQ/WebSocket tests
+- `bun run test:wasm`: four tests, 653 assertions passed. The 32K FFT host run
+  processed 1,562,502 I/Q samples in 0.796 s (3.77 times real time under concurrent
+  test/build load), produced 144,000 PCM samples and kept linear memory fixed at
+  16 MiB. Repeated resolution changes preserve PCM exactly; every FFT size from
+  256 through 32,768 preserves tone placement and Hann normalization. Two maximum
+  receivers fit the heap; a third is rejected. This measures WASM in Bun on this
+  host, not browser/device/network capacity.
+- Python/backend/browser suite: 17 tests passed. Real ZeroMQ/WebSocket tests
   verify independent backend replicas, multiple listeners, malformed input,
   bounded slow-client queues, epoch recovery and subscriber cleanup.
+- Demand lifecycle tests verify first/last viewer handling, grace cancellation,
+  healthy idle state, bounded warm-up, source stalls, fresh epochs on wake and
+  abrupt backend-process death. One surviving subscriber keeps capture active;
+  zero subscribers stop sample publication. Device power is simulated/mocked.
 - Production frontend in Chromium: waterfall pixels, RF/IF tuning, USB/LSB,
   zoom/pan/palettes, native audio and GainNode volume, source restart, manual
   disconnect/reconnect, delayed audio-resume cancellation and resource cleanup,
   and missing-WASM errors passed. No tuning/control frames left the browser.
+  The new console also passed strongest-signal selection, automatic controls,
+  32K FFT during continuous audio, freeze/fullscreen, manual gain/range overrides,
+  bookmarks/share reload, preference persistence and mobile widths 390/450/768.
+  Injected visibility events kept audio reception active while hidden and stopped
+  idle reception when audio was off, then woke capture on return. The latest two
+  browser checks passed in 25.16 s; the strengthened waterfall contrast check
+  passed separately in 11.42 s and requires signal pixels to differ from the floor.
 - GNU Radio vector-flowgraph check: 2 MHz → 500 kHz filtered decimation passed;
   wanted-tone RMS 1.000000 and alias RMS 0.00000013; four valid packed frames.
 - All three production container builds passed; GNU Radio/IIO source-image
-  imports, nginx configuration, Compose configuration, Python compilation,
+  imports, Caddy configuration, Compose configuration, Python compilation,
   shell syntax and `git diff --check` passed. Liquid-dsp compiled natively and
   through pinned Emscripten 4.0.15 in the frontend image.
 - Dedicated Kind cluster `websdr-wasm-check`: production manifests rolled out
-  with synthetic I/Q and two backend replicas. nginx WebSocket delivery and
-  `application/wasm` passed. A deliberate capture/publication stall triggered
-  exactly one source-container restart; both listeners resumed with a new epoch.
-  Backend and frontend restart counts remained zero. The temporary cluster was
-  deleted; the original `kind-kind` kubeconfig context was unchanged.
+  with synthetic I/Q and two backend replicas. Caddy HTTP-to-HTTPS redirect,
+  certificate validation against its actual local root CA, SPA share-link routes,
+  WASM MIME/configuration/license serving and two WSS listeners for more than
+  65 seconds passed. A deliberate capture/publication stall triggered exactly one
+  source-container restart; both listeners resumed with a new epoch. Backend and
+  frontend restart counts remained zero during source recovery. Idle publication
+  stopped after the final viewer and a new viewer woke a fresh stream. Caddyfile
+  validation/reload through stdin passed; an explicit frontend pod replacement
+  preserved the original CA and resumed trusted HTTPS/WSS. The temporary cluster
+  was deleted; the original `kind-kind` kubeconfig context was unchanged.
+- Atomic Conventional Commits separate capture lifecycle, C++ FFT resizing,
+  modular console/automation, waterfall verification, Caddy deployment and
+  documentation. No production deployment was performed; no legacy mode remains.
 
 Hardware acceptance remains open: the user confirmed that the Pluto is available
 only on the production station. A read-only TCP connection from this workspace
 to the configured IIO endpoint `192.168.2.1:30431` timed out. No RF reception, hardware
 readback, actual libiio failure/recovery or public TLS edge was tested. The
-existing station was not deployed to or modified. Synthetic tests prove the
-software recovery mechanism, not the hardware fault's root cause.
+existing station was not deployed to or modified. Actual AD9361 sleep/wake and
+power consumption, hardware buffer release and reception after waking remain
+hardware acceptance checks. Synthetic tests prove the software recovery mechanism,
+not the hardware fault's root cause.
