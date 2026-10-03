@@ -44,108 +44,145 @@ per listener before overhead; scaling remains bounded by network and client CPU.
 
 - [x] Create `feat/webassembly` before modifying project files.
 - [x] Inspect original TODO and expand it before implementing changes.
-- [ ] Delete Redis code/dependencies/manifests, server audio/graphics directories,
+- [x] Delete Redis code/dependencies/manifests, server audio/graphics directories,
   Socket.IO handlers/events/dependencies, allocation state, control sockets,
   legacy UDP listeners, stale worker UI, duplicate players, and unused JS DSP.
-- [ ] Delete Rust prototype and replace it with library-backed C++.
-- [ ] Remove legacy settings/manifests/deployment branches and update documentation;
+- [x] Delete Rust prototype and replace it with library-backed C++.
+- [x] Remove legacy settings/manifests/deployment branches and update documentation;
   no dormant compatibility path may remain.
-- [ ] Fix invalid YAML indentation while preserving user hardware/URL edits.
-- [ ] Validate loaded configuration and support explicit CONFIG_PATH for local runs.
-- [ ] Replace all npm commands and package-lock files with Bun and bun.lock.
+- [x] Fix invalid YAML indentation while preserving user hardware/URL edits.
+- [x] Validate loaded configuration and support explicit CONFIG_PATH for local runs.
+- [x] Replace all npm commands and package-lock files with Bun and bun.lock.
 
 ## 2. Hardware source, packed protocol, and health
 
-- [ ] Add a maintained Python GNU Radio flowgraph using the current IIO API.
-- [ ] Configure Pluto sample rate, center, RF bandwidth, buffer and gain from YAML.
-- [ ] Filter before hardware-rate integer decimation using GNU Radio FIR components;
+- [x] Add a maintained Python GNU Radio flowgraph using the current IIO API.
+- [ ] Validate configured Pluto rate, center, RF bandwidth, capture buffer and AGC
+  operation on real hardware; the maintained flowgraph implements these settings.
+- [x] Filter before hardware-rate integer decimation using GNU Radio FIR components;
   choose an integral resulting rate and advertise the actual stream rate.
-- [ ] Quantize once at the source: normalized float32 → clipped interleaved signed
+- [x] Quantize once at the source: normalized float32 → clipped interleaved signed
   8-bit I/Q. Avoid per-listener conversion work.
-- [ ] Specify/validate a 32-byte little-endian header: magic/version/format/size,
+- [x] Specify/validate a 32-byte little-endian header: magic/version/format/size,
   sequence, actual rate, center frequency, sample count, and source epoch.
-- [ ] Preserve bounded packetization history across scheduler buffers; count source
+- [x] Preserve bounded packetization history across scheduler buffers; count source
   samples/malformed values/saturated samples/published/dropped frames.
-- [ ] Use bounded nonblocking ZeroMQ publication. Health must track actual source
+- [x] Use bounded nonblocking ZeroMQ publication. Health must track actual source
   progress and publication using monotonic time, failing after a two-second stall.
-- [ ] Add startup/readiness/liveness HTTP probes; default recovery restarts SDR only.
-- [ ] Remove the cascading watchdog and document how to diagnose the reported libiio
+- [x] Add startup/readiness/liveness HTTP probes; default recovery restarts SDR only.
+- [x] Remove the cascading watchdog and document how to diagnose the reported libiio
   issue with source health and isolated restart/reconnect evidence.
-- [ ] Test quantization/clipping/header metadata, arbitrary source chunk boundaries,
+- [x] Test quantization/clipping/header metadata, arbitrary source chunk boundaries,
   filtered rate conversion, malformed inputs, healthy/stalled/resumed health.
 
 ## 3. Stateless distributor
 
-- [ ] Consume packed frames directly with one ZeroMQ SUB socket per replica;
+- [x] Consume packed frames directly with one ZeroMQ SUB socket per replica;
   perform no audio/FFT DSP or worker allocation in the backend.
-- [ ] Validate frame size/version/rate/center/count/epoch and bound upstream messages.
-- [ ] Serve binary `/iq`, `/health`, `/ready`, and `/stream-info` endpoints.
-- [ ] Bound per-client queues and WebSocket send times; drop oldest queued frames
+- [x] Validate frame size/version/rate/center/count/epoch and bound upstream messages.
+- [x] Serve binary `/iq`, `/health`, `/ready`, and `/stream-info` endpoints.
+- [x] Bound per-client queues and WebSocket send times; drop oldest queued frames
   for slow clients without delaying others. Expose drops/malformed/client counts.
-- [ ] Detect upstream discontinuities, reconnect after source restart, discard stale
+- [x] Detect upstream discontinuities, reconnect after source restart, discard stale
   queues, and shut down sockets/tasks/clients without leaking resources.
-- [ ] Proxy ws/wss upgrades through nginx and serve WASM as application/wasm.
-- [ ] Test real two-client WebSocket delivery, two independent backend replicas,
+- [x] Proxy ws/wss upgrades through nginx and serve WASM as application/wasm.
+- [x] Test real two-client WebSocket delivery, two independent backend replicas,
   slow-client isolation, malformed packets, subscriber cleanup, and source restart.
 
 ## 4. C++ WebAssembly receiver using liquid-dsp
 
-- [ ] Pin liquid-dsp with FetchContent URL/checksum and preserve license attribution.
-- [ ] Prove library compiles for both native C++ tests and Emscripten before integration.
-- [ ] Wrap DSP handles with RAII, validate all boundary values, preallocate buffers,
+- [x] Pin liquid-dsp with FetchContent URL/checksum and preserve license attribution.
+- [x] Prove library compiles for both native C++ tests and Emscripten before integration.
+- [x] Wrap DSP handles with RAII, validate all boundary values, preallocate buffers,
   and expose a small documented ABI with bounded WASM memory.
-- [ ] Use library NCO frequency translation, antialias rate conversion, bandwidth
+- [x] Use library NCO frequency translation, antialias rate conversion, bandwidth
   filtering, and USB/LSB demodulation; preserve state across chunks.
-- [ ] Produce accurate 48 kHz audio from 520,834 Hz and other supported source rates.
-- [ ] Use library FFT and Hann window, FFT shift, normalized log-magnitude and
+- [x] Produce accurate 48 kHz audio from 520,834 Hz and other supported source rates.
+- [x] Use library FFT and Hann window, FFT shift, normalized log-magnitude and
   calibration; feed existing automatic-range/palette renderer.
-- [ ] Reset state on tuning/stream epoch/sequence gaps and free resources on stop.
-- [ ] Test tone placement/normalization, USB/LSB rejection, unwanted channels and
+- [x] Reset state on tuning/stream epoch/sequence gaps and free resources on stop.
+- [x] Test tone placement/normalization, USB/LSB rejection, unwanted channels and
   aliases, silence, saturation, invalid values, retuning, packet invariance,
   output-rate accuracy, and bounded memory across repeated construction/reset.
-- [ ] Execute compiled WASM tests with Bun and benchmark sustained configured-rate
+- [x] Execute compiled WASM tests with Bun and benchmark sustained configured-rate
   processing; report measured throughput rather than assuming sufficient speed.
 
 ## 5. Browser integration and playback
 
-- [ ] DSP worker owns raw WebSocket and C++ WASM instance; no DSP runs on Vue thread.
-- [ ] Validate binary headers, stream epochs and sequences; reconnect with capped
+- [x] DSP worker owns raw WebSocket and C++ WASM instance; no DSP runs on Vue thread.
+- [x] Validate binary headers, stream epochs and sequences; reconnect with capped
   backoff and recover from malformed input and unavailable WASM.
-- [ ] Transfer FFT/audio buffers with bounded outstanding messages; render at 30 FPS.
-- [ ] Replace server-worker request/status flows with local listen state and local
+- [x] Transfer FFT/audio buffers with bounded outstanding messages; render at 30 FPS.
+- [x] Replace server-worker request/status flows with local listen state and local
   tune/BW/USB/LSB messages; send no remote tuning commands.
-- [ ] Preserve controls, RF/IF conversion, zoom/pan/palettes, connection state, volume,
+- [x] Preserve controls, RF/IF conversion, zoom/pan/palettes, connection state, volume,
   and show the selected sideband's actual passband in the waterfall overlay.
-- [ ] Native AudioBufferSource → GainNode → destination with smooth volume changes;
+- [x] Native AudioBufferSource → GainNode → destination with smooth volume changes;
   bound scheduling latency, recover underruns, and stop/disconnect on cleanup.
-- [ ] Handle asynchronous audio start/stop races and user-gesture resume errors.
-- [ ] Reset playback queues on discontinuity; resume audio after transient reconnect.
-- [ ] Add synthetic multi-tone I/Q source and browser integration tests covering
+- [x] Handle asynchronous audio start/stop races and user-gesture resume errors.
+- [x] Reset playback queues on discontinuity; resume audio after transient reconnect.
+- [x] Add synthetic multi-tone I/Q source and browser integration tests covering
   rendered FFT, local retuning, USB/LSB, audio lifecycle/volume, reconnect and cleanup.
 
 ## 6. Builds, deployment, documentation, and acceptance
 
-- [ ] Build WASM before Vite; pin Bun/Emscripten and include generated assets through
+- [x] Build WASM before Vite; pin Bun/Emscripten and include generated assets through
   a reproducible Docker build. No root-owned host dependency installs are needed.
-- [ ] Simplify deployment to SDR/backend/frontend and existing public proxy; remove
+- [x] Simplify deployment to SDR/backend/frontend and existing public proxy; remove
   obsolete workloads during an explicitly requested deployment.
-- [ ] Add meaningful backend/C++/compiled-WASM/browser checks and frozen lockfiles.
-- [ ] Pass frontend typecheck/production build, Python checks, shell syntax, and
+- [x] Add meaningful backend/C++/compiled-WASM/browser checks and frozen lockfiles.
+- [x] Pass frontend typecheck/production build, Python checks, shell syntax, and
   Kubernetes/nginx validation; fix resulting implementation failures.
-- [ ] Verify container builds and an isolated Kubernetes rollout with synthetic I/Q,
+- [x] Verify container builds and an isolated Kubernetes rollout with synthetic I/Q,
   healthy probes and recovery after source restart without cascading restarts.
-- [ ] Document architecture, all config, protocol, ABI, DSP/tuning convention,
+- [x] Document architecture, all config, protocol, ABI, DSP/tuning convention,
   library attribution, build/development/test commands and bandwidth costs in English.
 - [ ] Verify actual Pluto reception, browser audio quality, hardware restart recovery,
-  and multiple listeners when hardware is available; record concrete limits.
-- [ ] Audit every checkbox against authoritative evidence, leaving unverifiable
+  public HTTPS/wss and multiple listeners on the target station; record concrete limits.
+- [x] Audit every checkbox against authoritative evidence, leaving unverifiable
   hardware/environment acceptance open with precise reasons.
 
 ## Verification evidence
 
-Initial baseline: no automated test suite. Original user edits existed in
-config/config.yaml and TODO.md. Branch creation succeeded. Existing deployment
-context is kind-kind and must not be changed solely for testing. Use isolated
-services/cluster. Emscripten and Bun are being installed under /tmp for local
-verification. Previously introduced Redis/Rust/legacy work is being removed in
-accordance with the user's final architecture decision.
+Verified on 2026-10-03 on `feat/webassembly`:
+
+- Bun 1.4.2: clean `bun install --frozen-lockfile` succeeded with an unchanged
+  lockfile. Final Docker build also installed the cleaned dependency set with
+  `--frozen-lockfile`. No npm/npx/yarn/pnpm commands or package-manager lockfiles
+  remain. `npm-data`/`npm-letsencrypt` name Nginx Proxy Manager persistent volumes.
+- `bun run typecheck`, `bun run build` and `bun run test`: passed; protocol suite
+  has three tests and 13 assertions. Vite reports a remaining >500 kB JS chunk
+  advisory; it does not fail the build.
+- Native C++ `ctest`: passed, including wanted/opposite/out-of-band/alias rejection,
+  USB/LSB retuning, positive/negative FFT placement and normalization, silence and
+  full-scale input, exact chunk invariance, 48 kHz output from 520,834 Hz and
+  boundary rates, and repeated construction/reset/destruction.
+- `bun run test:wasm`: two tests, 495 assertions passed. The latest host run
+  processed 1,562,502 I/Q samples in 0.257 s (11.66 times real time), produced
+  144,000 PCM samples and kept linear memory fixed at 16 MiB. This measures WASM
+  in Bun on this host, not browser/device/network capacity.
+- Python/backend/browser suite: 10 tests passed. Real ZeroMQ/WebSocket tests
+  verify independent backend replicas, multiple listeners, malformed input,
+  bounded slow-client queues, epoch recovery and subscriber cleanup.
+- Production frontend in Chromium: waterfall pixels, RF/IF tuning, USB/LSB,
+  zoom/pan/palettes, native audio and GainNode volume, source restart, manual
+  disconnect/reconnect, delayed audio-resume cancellation and resource cleanup,
+  and missing-WASM errors passed. No tuning/control frames left the browser.
+- GNU Radio vector-flowgraph check: 2 MHz → 500 kHz filtered decimation passed;
+  wanted-tone RMS 1.000000 and alias RMS 0.00000013; four valid packed frames.
+- All three production container builds passed; GNU Radio/IIO source-image
+  imports, nginx configuration, Compose configuration, Python compilation,
+  shell syntax and `git diff --check` passed. Liquid-dsp compiled natively and
+  through pinned Emscripten 4.0.15 in the frontend image.
+- Dedicated Kind cluster `websdr-wasm-check`: production manifests rolled out
+  with synthetic I/Q and two backend replicas. nginx WebSocket delivery and
+  `application/wasm` passed. A deliberate capture/publication stall triggered
+  exactly one source-container restart; both listeners resumed with a new epoch.
+  Backend and frontend restart counts remained zero. The temporary cluster was
+  deleted; the original `kind-kind` kubeconfig context was unchanged.
+
+Hardware acceptance remains open: a read-only TCP connection to the configured
+Pluto IIO endpoint `192.168.2.1:30431` timed out. No RF reception, hardware
+readback, actual libiio failure/recovery or public TLS edge was tested. The
+existing station was not deployed to or modified. Synthetic tests prove the
+software recovery mechanism, not the hardware fault's root cause.
