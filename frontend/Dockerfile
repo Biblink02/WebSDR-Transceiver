@@ -16,6 +16,6 @@ RUN bun run typecheck && bun run build
 FROM scratch AS frontend-export
 COPY --from=ui /app/dist/ /
 
-FROM nginx:1.27-alpine AS runtime
-COPY --from=ui /app/dist/ /usr/share/nginx/html/
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+FROM caddy:2.11.4-alpine AS runtime
+COPY --from=ui /app/dist/ /srv/
+COPY config/Caddyfile /etc/caddy/Caddyfile

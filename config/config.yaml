@@ -45,7 +45,7 @@ sdr_iq_port: 5000
 # =============================================================================
 # ===                        STREAM URL                               ===
 # =============================================================================
-ws_url: "https://websdr.fbi.h-da.de"
+ws_url: "/"    # Caddy serves HTTPS and the I/Q WebSocket on the same origin.
 
 # Packed signed I/Q, filtered and quantized once at the source.
 iq_target_rate: 500000

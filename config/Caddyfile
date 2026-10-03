@@ -1,0 +1,30 @@
+# Override PUBLIC_SITE for a different hostname or a local http://:80 test site.
+{$PUBLIC_SITE:websdr.fbi.h-da.de} {
+	handle /health {
+		respond "ok" 200
+	}
+	handle /iq {
+		reverse_proxy backend-controller:80
+	}
+	handle /stream-info {
+		reverse_proxy backend-controller:80
+	}
+	handle {
+		root * /srv
+		encode zstd gzip
+		@wasm path /dsp.wasm
+		header @wasm Content-Type application/wasm
+		header @wasm Cache-Control no-cache
+		@config path /config.yaml
+		header @config Cache-Control no-store
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# Kube probes use loopback and never depend on DNS or public TLS issuance.
+http://127.0.0.1:8082 {
+	respond /health "ok" 200
+}

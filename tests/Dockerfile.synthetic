@@ -1,3 +1,3 @@
 FROM websdr-transceiver/sdr-server:wasm-test
 COPY tools/synthetic_iq.py /app/synthetic_iq.py
-CMD ["python3", "-u", "synthetic_iq.py", "--address", "tcp://0.0.0.0:5000", "--health-port", "8081", "--stall-file", "/tmp/iq-stall"]
+CMD ["python3", "-u", "synthetic_iq.py", "--address", "tcp://0.0.0.0:5000", "--health-port", "8081", "--idle-seconds", "0.5", "--stall-file", "/tmp/iq-stall"]
