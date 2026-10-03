@@ -63,7 +63,10 @@ async def test_production_browser_receiver_audio_local_tune_and_source_recovery(
                 await page.wait_for_function('''() => {
                     const canvas=document.querySelector('.waterfall-area canvas');if(!canvas)return false;
                     const data=canvas.getContext('2d').getImageData(0,0,canvas.width,Math.min(60,canvas.height)).data;
-                    for(let i=0;i<data.length;i+=4)if(data[i]+data[i+1]+data[i+2]>10)return true;return false;
+                    let low=765,high=0;
+                    for(let i=0;i<data.length;i+=4){const value=data[i]+data[i+1]+data[i+2];
+                        low=Math.min(low,value);high=Math.max(high,value);}
+                    return high-low>120;
                 }''')
                 await page.get_by_role('button',name='START AUDIO').click()
                 await page.get_by_role('button',name='STOP AUDIO').wait_for()
