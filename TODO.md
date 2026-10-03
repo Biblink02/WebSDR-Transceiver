@@ -181,8 +181,9 @@ Verified on 2026-10-03 on `feat/webassembly`:
   Backend and frontend restart counts remained zero. The temporary cluster was
   deleted; the original `kind-kind` kubeconfig context was unchanged.
 
-Hardware acceptance remains open: a read-only TCP connection to the configured
-Pluto IIO endpoint `192.168.2.1:30431` timed out. No RF reception, hardware
+Hardware acceptance remains open: the user confirmed that the Pluto is available
+only on the production station. A read-only TCP connection from this workspace
+to the configured IIO endpoint `192.168.2.1:30431` timed out. No RF reception, hardware
 readback, actual libiio failure/recovery or public TLS edge was tested. The
 existing station was not deployed to or modified. Synthetic tests prove the
 software recovery mechanism, not the hardware fault's root cause.

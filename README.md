@@ -87,6 +87,10 @@ bun run dev
 
 Open `http://localhost:3100/sdr`. The synthetic source contains three tones for
 local tuning/sideband verification. Tuning messages never leave the browser.
+This exercises the production WebAssembly, waterfall and audio code without a
+Pluto. The synthetic source is a development/test tool and is not deployed in
+the production receiver image. Hardware capture and RF reception remain separate
+acceptance checks on the production station when the device is available.
 
 ## Configuration
 
