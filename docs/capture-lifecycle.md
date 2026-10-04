@@ -3,6 +3,9 @@
 Each backend opens one ZeroMQ SUB socket while it has at least one actual
 WebSocket viewer. The last WebSocket disconnect closes that socket. Idle replicas
 remain ready so a new viewer can reach them and wake the source.
+If a viewer joins before an already queued idle notification is processed, the
+backend preserves its existing subscription. Application shutdown always closes
+the socket, even if cancellation interrupts pending receiver cleanup.
 
 The source uses XPUB subscription notifications to count subscribed backend
 replicas, not people. `XPUB_VERBOSER` reports duplicate subscriptions and each
@@ -15,6 +18,8 @@ On first demand, the controller wakes the Pluto, constructs/configures a GNU Rad
 capture graph and starts it. Source health allows a bounded 30-second warm-up.
 Actual source and publication progress switch it to streaming. Active stalls fail
 health and restart only the source; healthy backends remain alive and reconnect.
+Disconnects/reconnects during the idle grace preserve the original warm-up
+deadline and require progress from the current capture before reporting streaming.
 
 When demand reaches zero, a configurable `sdr_idle_seconds` grace (default 10,
 range 0–300) avoids repeated hardware setup during brief reconnects. New demand
@@ -29,10 +34,16 @@ enqueues frames into a bounded four-frame queue. This avoids socket sharing
 between threads. Idle capture performs no sample processing. `/health`, `/ready`
 and `/startup` remain successful during idle; unreachable hardware during an idle
 sleep request is reported in `last_error` without restarting healthy idle pods.
+Failed sleep requests are retried after five seconds. Failed starts release any
+owned graph and return the device to sleep before retrying; the retry delay starts
+after the failed operation finishes. A failed release keeps the graph owned,
+reports `fault`/`release_pending`, and prevents another start or ENSM sleep until
+release succeeds. Final shutdown still closes health/publication resources if
+graph release raises an exception.
 
 Source diagnostics include `mode`, backend `subscribers`, `capture_active`, start
 and stop counts, `power_state`, `last_error`, source/publication ages and bounded
-queue counters. Backend `/stream-info` includes `receiving` and its local actual
+queue counters, plus `release_pending`. Backend `/stream-info` includes `receiving` and its local actual
 WebSocket client count. Publication counts represent enqueued-to-socket frames;
 ZeroMQ may still discard frames for slow subscribers. Sequence gaps detect loss.
 
