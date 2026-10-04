@@ -87,7 +87,7 @@ cmake -S dsp-wasm -B dsp-wasm/build-native -DCMAKE_BUILD_TYPE=Release
 cmake --build dsp-wasm/build-native --target websdr_channelizer --parallel 4
 python3 -m venv .venv
 .venv/bin/pip install -r backend-controller/requirements.txt -r tests/requirements.txt
-PYTHONPATH=shared:sdr-server .venv/bin/python tools/synthetic_iq.py
+PYTHONPATH=shared:sdr-server .venv/bin/python tools/synthetic_iq.py --scenario clean
 ```
 
 ```bash
@@ -101,13 +101,39 @@ cd frontend/dev/src
 bun run dev
 ```
 
-Open `http://localhost:3100/sdr`. The synthetic source contains three tones for
-local tuning/sideband verification. Fine tuning never leaves the browser. Changing the receive band selects a new
+Open `http://localhost:3100/sdr`. The synthetic source contains generated USB/LSB
+speech, keyed CW and noise across all five bands. Fine tuning never leaves the browser. Changing the receive band selects a new
 `/iq?band=id` stream and stops current audio/recording.
 This exercises the production WebAssembly, waterfall and audio code without a
 Pluto. The synthetic source is a development/test tool and is not deployed in
 the production receiver image. Hardware capture and RF reception remain separate
 acceptance checks on the production station when the device is available.
+
+## Local Kubernetes preview and IIO emulation
+
+With Docker, Kind, kubectl and Python's `venv` module:
+
+```bash
+bash scripts/demo-cluster.sh
+```
+
+The script creates/reuses the ignored `.venv`, installs pinned PyYAML there and
+builds the current worktree. It creates the dedicated `websdr-iq-demo` cluster,
+with its own kubeconfig, two backend replicas and local HTTP Caddy at
+`http://localhost:18080/sdr`. Generated speech/CW and automatic fading, drift,
+loss, QRM and source-stall scenarios run without Pluto.
+
+Use `DEMO_SCENARIO=clean` for a stable scene. `DEMO_SOURCE=iio` adds the official
+libiio emulator and reads its SSB/CW replay through the production GNU Radio IIO
+flowgraph. Ctrl+C stops forwarding; `bash scripts/demo-cluster.sh serve` reopens
+the preview and `bash scripts/demo-cluster.sh stop` removes the demo. Stop before
+changing its source/scenario. `DEMO_PORT` changes the port and `PYTHON_BIN` selects
+the interpreter used to create `.venv`; manual activation is unnecessary.
+
+`bash scripts/check-iio.sh` verifies IIO/GNU Radio independently through Docker.
+`bash scripts/check-scenarios.sh` checks recovered speech and keyed CW in the
+compiled WASM. See [simulation and emulation](docs/simulation.md) for listening
+frequencies, scenario timing, commands, verification and hardware limits.
 
 ## Configuration
 
