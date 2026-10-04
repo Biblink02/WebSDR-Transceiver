@@ -1,0 +1,32 @@
+{
+  "period_seconds": 48,
+  "seed": 9361,
+  "noise_dbfs": -48,
+  "stations": [
+    {"id": "usb", "mode": "usb", "offset_hz": -12000, "amplitude": 0.32},
+    {"id": "lsb", "mode": "lsb", "offset_hz": 31000, "amplitude": 0.22},
+    {"id": "cw", "mode": "cw", "offset_hz": 1000, "amplitude": 0.30, "message": "CQ CQ DE WEBSDR TEST", "wpm": 18},
+    {"id": "usb-west", "mode": "usb", "offset_hz": -80000, "amplitude": 0.22},
+    {"id": "cw-west", "mode": "cw", "offset_hz": -160000, "amplitude": 0.24, "message": "CQ TEST", "wpm": 15},
+    {"id": "lsb-east", "mode": "lsb", "offset_hz": 80000, "amplitude": 0.22},
+    {"id": "cw-east", "mode": "cw", "offset_hz": 160000, "amplitude": 0.24, "message": "WEBSDR", "wpm": 22},
+    {"id": "interferer", "mode": "tone", "offset_hz": -10000, "amplitude": 0}
+  ],
+  "scenarios": {
+    "clean": [],
+    "fading": [{"start": 4, "duration": 28, "action": "fade", "station": "usb", "depth": 0.95, "hz": 0.7}],
+    "drift": [{"start": 4, "duration": 28, "action": "drift", "station": "cw", "hz_per_second": 12}],
+    "squelch": [{"start": 8, "duration": 12, "action": "mute", "station": "*"}],
+    "qrm": [{"start": 8, "duration": 18, "action": "gain", "station": "interferer", "amplitude": 0.5},
+            {"start": 12, "duration": 6, "action": "noise", "dbfs": -24}],
+    "recovery": [{"start": 8, "duration": 8, "action": "stall"}],
+    "automatic": [
+      {"start": 4, "duration": 8, "action": "fade", "station": "usb", "depth": 0.95, "hz": 0.7},
+      {"start": 12, "duration": 12, "action": "drift", "station": "cw", "hz_per_second": 12},
+      {"start": 24, "duration": 4, "action": "mute", "station": "*"},
+      {"start": 28, "duration": 6, "action": "gain", "station": "interferer", "amplitude": 0.5},
+      {"start": 30, "duration": 3, "action": "noise", "dbfs": -24},
+      {"start": 34, "duration": 8, "action": "stall"}
+    ]
+  }
+}

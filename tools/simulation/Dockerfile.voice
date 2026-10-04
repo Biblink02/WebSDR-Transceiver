@@ -1,0 +1,7 @@
+FROM websdr-transceiver/sdr-server:wasm-test AS generate
+RUN apt-get update && apt-get install -y --no-install-recommends espeak-ng \
+ && rm -rf /var/lib/apt/lists/*
+COPY tools/simulation/generate_voice.py tools/simulation/speech.txt /voice/
+RUN python3 /voice/generate_voice.py /output/speech.wav
+FROM scratch
+COPY --from=generate /output/ /

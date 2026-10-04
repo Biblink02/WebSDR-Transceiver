@@ -1,3 +1,6 @@
 FROM websdr-transceiver/sdr-server:wasm-test
 COPY tools/synthetic_iq.py /app/synthetic_iq.py
+COPY tools/signal_scenarios.py /app/signal_scenarios.py
+COPY tools/simulation/ /app/simulation/
+RUN chmod -R a+rX /app/simulation
 CMD ["python3", "-u", "synthetic_iq.py", "--address", "tcp://0.0.0.0:5000", "--health-port", "8081", "--idle-seconds", "0.5", "--stall-file", "/tmp/iq-stall"]
