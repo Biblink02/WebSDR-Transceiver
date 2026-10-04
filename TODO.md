@@ -1,5 +1,34 @@
 # WebSDR browser DSP implementation plan
 
+## Hardware-free signal and IIO testing (2026-10-04)
+
+- [x] Add deterministic generated USB/LSB speech and smoothly keyed Morse across
+  all five bands, using SciPy/eSpeak NG rather than a second receiver DSP implementation.
+- [x] Add versioned clean/fading/drift/squelch/QRM/recovery/automatic scenes, bounded
+  configuration, seeded chunk-invariant noise and scheduled stalls without backlog bursts.
+- [x] Add the official libiio emu backend, pinned commit/archive checksum and an
+  unprivileged IIOD image compatible with the existing GNU Radio distribution client.
+- [x] Generate a valid minimal Pluto XML/DTD and signed 12-bit I/Q replay; use the
+  unchanged production IIO source and GNU Radio throttle only for demo pacing.
+- [x] Verify production IIO capture byte for byte over 64 packed frames, repeat
+  capture with a new epoch, and check frequency/rate, AGC/RF/tracking/FIR and ENSM attributes.
+- [x] Pass 31 Python tests (102.66 s), native CTest, nine Bun tests / 122 assertions,
+  six existing compiled-WASM tests / 767 assertions, Vue typechecking and production build.
+- [x] Pass the additional generated-signal WASM test / 396 assertions: recovered
+  USB/LSB speech correlation 0.9931/0.9967, approximately 5.5 ms filter delay, and
+  keyed 700 Hz CW with silent key-up intervals.
+- [x] Add persistent synthetic/IIO Kind previews with a dedicated kubeconfig,
+  automatically isolated Python `.venv`, pinned PyYAML and local HTTP Caddy.
+- [x] Verify all five bands through Caddy in both previews, source idle/wake,
+  scheduled synthetic liveness recovery and real network-IIO recovery after emulator
+  replacement. Backend/frontend restart counts remain zero; all five listeners resume.
+- [x] Verify real browser USB audio and local recording through emulated IIO,
+  GNU Radio, Caddy, native subbands and WASM, without browser runtime errors.
+- [x] Keep hardware effects/RF acceptance explicit; record commands, station
+  frequencies and limitations in [simulation and emulation](docs/simulation.md).
+- [x] Commit receiver tools in the parent branch and subbands, signal scenarios,
+  IIO integration and demo/docs separately with Conventional Commits, as now requested.
+
 ## Receiver tools follow-up
 
 - [x] Add liquid-dsp audio AGC, smoothed squelch and CW with independent pitch.
