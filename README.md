@@ -51,7 +51,9 @@ WebSockets when the page uses HTTPS. See [Caddy operations](docs/caddy.md).
 The SDR console provides signal search, independent automatic frequency/BW and
 display gain/range, selectable FFTs through 32,768 points, ten palettes, spectrum
 trace, freeze/fullscreen, bookmarks and shared links. FFT/audio stay local to each
-browser. Idle capture releases the GNU Radio graph and requests Pluto sleep after
+browser. Audio AGC/squelch, adjustable CW pitch, pinned tracking/fine AFC, local
+audio recordings with tuning metadata and keyboard shortcuts are also available.
+Idle capture releases the GNU Radio graph and requests Pluto sleep after
 the last viewer leaves. See [console controls](docs/receiver-console.md) and
 [capture lifecycle](docs/capture-lifecycle.md).
 

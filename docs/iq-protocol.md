@@ -55,6 +55,14 @@ carrier to carrier + bandwidth; LSB passes carrier - bandwidth to carrier. The
 complete passband must fit the I/Q span. The UI overlays that interval. Frequency
 controls show RF = stream center/offset + `lnb_lo_freq`, while DSP uses IF.
 
+CW tuning denotes the received carrier itself; its filter is centered on that
+frequency with bandwidth/2 on each side. A second liquid-dsp VCO shifts the
+filtered carrier to the requested 300–1,200 Hz audio pitch before demodulation.
+Optional liquid-dsp audio AGC targets about 0.2 RMS and limits applied boost to
+40 dB. Its squelch state monitors pre-gain demodulated level, holds for 200 ms
+and drives a library low-pass gate envelope. Threshold units are audio dBFS,
+not calibrated RF power. No new DSP dependency or handwritten DSP algorithm is used.
+
 FFT output has negative frequencies on the left, positive frequencies on the
 right, and DC at its center. Magnitudes are normalized by Hann coherent gain,
 converted to dBFS, then adjusted by `calibration`. The existing waterfall worker
@@ -78,6 +86,10 @@ call `_initialize()` exactly once before the receiver functions.
 | dsp_fft_ready(id) | Reports whether the last process call produced an FFT. |
 | dsp_set_fft(id, size) | Returns 1 on success. Rebuilds only FFT/window/history buffers; retains oscillator, filter, resampler and demodulator state. Spectrum pointers must be obtained again after resizing. |
 | dsp_tune(id, offset_hz, bandwidth_hz, sideband) | Returns 1 on success. Sideband is +1 USB or -1 LSB; bandwidth is 90–15,000 Hz. Resets audio state. |
+| dsp_shift(id, offset_hz) | Changes only the translation frequency; retains NCO phase, filters, resampler, modem and audio scheduling. |
+| dsp_mode(id, cw, pitch_hz) | Sets CW flag and beat pitch. Call dsp_tune after a mode change to rebuild the appropriate filter; changing only pitch retains audio state. |
+| dsp_audio_config(id, agc, squelch, threshold_dbfs) | Sets boolean flags and audio squelch threshold (−100 through 0 dBFS). Settings persist through stream reset. |
+| dsp_audio_rssi(id), dsp_squelch_open(id) | Report library level estimate and whether the audio squelch is open. |
 | dsp_reset(id) | Clears oscillator/filter/resampler/FFT history after discontinuity. |
 | dsp_process(id, count, listen, fft) | Processes 1–65,536 samples. Returns PCM count or -1 for invalid ID/count. Flags select demodulation and an FFT snapshot. |
 

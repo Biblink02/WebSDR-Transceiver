@@ -1,4 +1,5 @@
 .git
+.worktrees
 **/node_modules
 **/node_modules.pre-webassembly
 **/__pycache__

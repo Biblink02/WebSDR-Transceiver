@@ -5,11 +5,11 @@ import { performance } from 'node:perf_hooks'
 const wasmPath = new URL('../frontend/dev/src/public/dsp.wasm', import.meta.url)
 const load = async () => instantiateDsp(await Bun.file(wasmPath).arrayBuffer())
 function writeTone(dsp: Awaited<ReturnType<typeof load>>, id: number, rate: number,
-    start: number, count: number, tone: number) {
+    start: number, count: number, tone: number, amplitude = 80) {
     const input = new Int8Array(dsp.memory.buffer, dsp.dsp_input(id), count*2)
     for (let i=0; i<count; i++) {
         const a=2*Math.PI*tone*(start+i)/rate
-        input[i*2]=Math.round(80*Math.cos(a)); input[i*2+1]=Math.round(80*Math.sin(a))
+        input[i*2]=Math.round(amplitude*Math.cos(a)); input[i*2+1]=Math.round(amplitude*Math.sin(a))
     }
 }
 
@@ -32,9 +32,66 @@ test('compiled WASM validates its ABI, runs FFT and recovers after reset', async
     expect(dsp.dsp_input(id)).toBe(0)
 })
 
+test('library audio AGC balances levels, squelch holds then closes, and CW pitch is independent of bandwidth', async () => {
+    const dsp = await load(), id = dsp.dsp_new(520834, 48000, 4096, 0)
+    expect(dsp.dsp_audio_config(id, 1, 0, -45)).toBe(1)
+    expect(dsp.dsp_audio_config(id, 1, 1, NaN)).toBe(0)
+    expect(dsp.dsp_mode(id, 1, 200)).toBe(0)
+    const measure = (amplitude: number, frequency: number, seconds = 1) => {
+        let power = 0, samples = 0, position = 0, crossings = 0, previous = 0
+        while (position < 520834 * seconds) {
+            writeTone(dsp, id, 520834, position, 8192, frequency, amplitude)
+            const count = dsp.dsp_process(id, 8192, 1, 0)
+            const audio = new Float32Array(dsp.memory.buffer, dsp.dsp_audio(id), count)
+            if (position > 520834 * (seconds - .3)) for (const value of audio) {
+                power += value * value; samples++
+                if (previous <= 0 && value > 0) crossings++
+                previous = value
+            }
+            position += 8192
+        }
+        return { rms: Math.sqrt(power / samples), frequency: crossings / (samples / 48000) }
+    }
+    const strong = measure(80, 1000), weak = measure(10, 1000)
+    expect(strong.rms).toBeGreaterThan(.17); expect(strong.rms).toBeLessThan(.23)
+    expect(weak.rms).toBeGreaterThan(.17); expect(weak.rms).toBeLessThan(.23)
+    expect(dsp.dsp_audio_config(id, 1, 1, -15)).toBe(1)
+    expect(measure(10, 1000).rms).toBeLessThan(.001)
+    expect(dsp.dsp_squelch_open(id)).toBe(0)
+    expect(measure(80, 1000).rms).toBeGreaterThan(.17)
+    expect(dsp.dsp_squelch_open(id)).toBe(1)
+    expect(measure(0, 1000, 1.5).rms).toBe(0)
+    expect(dsp.dsp_audio_config(id, 0, 0, -45)).toBe(1)
+    expect(dsp.dsp_mode(id, 1, 900)).toBe(1)
+    expect(dsp.dsp_tune(id, 1000, 200, 1)).toBe(1)
+    const cw = measure(80, 1000)
+    expect(cw.rms).toBeGreaterThan(.3); expect(Math.abs(cw.frequency - 900)).toBeLessThan(5)
+    expect(measure(80, 1800).rms).toBeLessThan(.01)
+    expect(dsp.dsp_mode(id, 1, 500)).toBe(1)
+    expect(Math.abs(measure(80, 1000).frequency - 500)).toBeLessThan(5)
+    dsp.dsp_free(id)
+}, 30000)
+
+test('phase-preserving frequency shifts keep PCM exact when the offset is unchanged', async () => {
+    const dsp = await load(), a = dsp.dsp_new(520834, 48000, 2048, 0), b = dsp.dsp_new(520834, 48000, 2048, 0)
+    for (let iteration = 0; iteration < 30; iteration++) {
+        writeTone(dsp, a, 520834, iteration * 8192, 8192, 1000)
+        writeTone(dsp, b, 520834, iteration * 8192, 8192, 1000)
+        expect(dsp.dsp_shift(a, 0)).toBe(1)
+        const count = dsp.dsp_process(a, 8192, 1, 0)
+        expect(dsp.dsp_process(b, 8192, 1, 0)).toBe(count)
+        const first = new Float32Array(dsp.memory.buffer, dsp.dsp_audio(a), count)
+        const second = new Float32Array(dsp.memory.buffer, dsp.dsp_audio(b), count)
+        expect(first.every((value, index) => value === second[index])).toBe(true)
+    }
+    expect(dsp.dsp_shift(a, NaN)).toBe(0); expect(dsp.dsp_shift(a, 260000)).toBe(0)
+    dsp.dsp_free(a); dsp.dsp_free(b)
+})
+
 test('compiled WASM produces accurate 48 kHz PCM with bounded memory and real-time throughput', async () => {
     const dsp = await load()
     const id=dsp.dsp_new(520834,48000,32768,0)
+    expect(dsp.dsp_audio_config(id, 1, 1, -60)).toBe(1)
     const bytes=dsp.memory.buffer.byteLength
     let samples=0, input=0
     const started=performance.now()

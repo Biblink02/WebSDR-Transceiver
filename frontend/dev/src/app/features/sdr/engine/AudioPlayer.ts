@@ -1,5 +1,6 @@
 let audioContext: AudioContext | null = null
 let gainNode: GainNode | null = null
+let recordingNode: MediaStreamAudioDestinationNode | null = null
 let nextStartTime = 0
 let currentVolume = 1
 let activeSampleRate = 48000
@@ -12,8 +13,7 @@ export async function initAudio(sampleRate: number) {
     if (audioContext && activeSampleRate !== sampleRate) stopAudioPlayback()
     activeSampleRate = sampleRate
     if (!audioContext || audioContext.state === 'closed') {
-        const AC = window.AudioContext || (window as any).webkitAudioContext
-        audioContext = new AC({ sampleRate, latencyHint: 'interactive' })
+        audioContext = new AudioContext({ sampleRate, latencyHint: 'interactive' })
         gainNode = audioContext!.createGain()
         gainNode.gain.value = currentVolume
         gainNode.connect(audioContext!.destination)
@@ -43,6 +43,7 @@ export function feedAudio(samples: Float32Array) {
     nextStartTime = Math.max(nextStartTime, audioContext.currentTime + SCHEDULE_LEAD_SECONDS)
     const source = audioContext.createBufferSource()
     source.buffer = buffer; source.connect(gainNode)
+    if (recordingNode) source.connect(recordingNode)
     sources.add(source)
     source.onended = () => { sources.delete(source); source.disconnect() }
     source.start(nextStartTime)
@@ -51,9 +52,26 @@ export function feedAudio(samples: Float32Array) {
 
 export function stopAudioPlayback() {
     resetAudioQueue()
+    releaseRecordingStream()
     const context = audioContext
     audioContext = null; gainNode = null; nextStartTime = 0
     if (context && context.state !== 'closed') void context.close()
+}
+
+// Tap processed audio before the listener's volume. No microphone permission.
+export function recordingStream(): MediaStream {
+    if (!audioContext || audioContext.state !== 'running') throw new Error('Start audio before recording')
+    if (!recordingNode) {
+        recordingNode = audioContext.createMediaStreamDestination()
+        for (const source of sources) source.connect(recordingNode)
+    }
+    return recordingNode.stream
+}
+export function releaseRecordingStream() {
+    if (!recordingNode) return
+    for (const source of sources) { try { source.disconnect(recordingNode) } catch { /* Source already ended. */ } }
+    for (const track of recordingNode.stream.getTracks()) track.stop()
+    recordingNode = null
 }
 
 export function setVolume(value: number) {

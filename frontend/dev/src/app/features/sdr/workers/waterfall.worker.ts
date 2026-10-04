@@ -1,14 +1,16 @@
 import { paletteColors } from '../core/palettes'
 import { maxPool, WaterfallHistory } from '../core/display'
 import { clamp } from '../core/types'
+import { exhaustive, type WaterfallCommand, type WaterfallEvent, type WaterfallSettings } from '../engine/messages'
 
 const history = new WaterfallHistory()
 let canvas = new OffscreenCanvas(1, WaterfallHistory.rows)
 let context = canvas.getContext('2d', { alpha: false })!
 let colors = paletteColors('viridis')
-let config = { width: 1, viewMin: 0, viewMax: 1, rate: 1, center: 0,
+let config: WaterfallSettings = { width: 1, viewMin: 0, viewMax: 1, rate: 1, center: 0,
     calibration: 0, gain: 0, range: 40, gamma: 0.85, palette: 'viridis' }
 let pending = false, dirty = false
+const send = (message: WaterfallEvent, transfer: Transferable[] = []) => self.postMessage(message, { transfer })
 
 function drawRow(age: number, y: number) {
     const row = history.row(age), width = canvas.width
@@ -36,15 +38,15 @@ function sendFrame() {
     pending = true; dirty = false
     // transferToImageBitmap clears the canvas; createImageBitmap retains scrolling history.
     createImageBitmap(canvas).then(bitmap => {
-        self.postMessage({ type: 'frame', bitmap }, { transfer: [bitmap] })
+        send({ type: 'frame', bitmap }, [bitmap])
     }).catch(() => { pending = false })
 }
-self.onmessage = event => {
-    const { type, payload } = event.data
-    switch (type) {
+self.onmessage = (event: MessageEvent<WaterfallCommand>) => {
+    const message = event.data
+    switch (message.type) {
         case 'config': {
             const old = config
-            config = { ...config, ...payload }
+            config = message.payload
             if (old.palette !== config.palette) colors = paletteColors(config.palette)
             const width = clamp(Math.round(config.width), 1, 2400)
             if (width !== canvas.width) {
@@ -56,6 +58,7 @@ self.onmessage = event => {
             break
         }
         case 'fft': {
+            const payload = message.payload
             const changed = history.size !== payload.length
             history.push(payload)
             if (changed) redraw()
@@ -64,11 +67,12 @@ self.onmessage = event => {
                     0, 1, canvas.width, canvas.height - 1)
                 drawRow(0, 0); sendFrame()
             }
-            self.postMessage({ type: 'fftConsumed' })
+            send({ type: 'fftConsumed' })
             break
         }
         case 'clear': history.clear(); redraw(); break
         case 'ackFrame': pending = false; if (dirty) sendFrame(); break
+        default: exhaustive(message)
     }
 }
 export {}

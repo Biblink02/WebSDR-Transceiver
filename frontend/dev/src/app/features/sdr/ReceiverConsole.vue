@@ -9,7 +9,13 @@ import DisplayPanel from './components/DisplayPanel.vue'
 import SignalPanel from './components/SignalPanel.vue'
 import BookmarkPanel from './components/BookmarkPanel.vue'
 import SpectrumView from './components/SpectrumView.vue'
+import AudioPanel from './components/AudioPanel.vue'
+import RecordingPanel from './components/RecordingPanel.vue'
+import { useRecording } from './composables/useRecording'
+import { useShortcuts } from './composables/useShortcuts'
 const store = useSdrStore(), receiver = useReceiver()
+const recording = useRecording()
+useShortcuts(() => { void receiver.toggleAudio() }, recording.toggle)
 const plot = ref<InstanceType<typeof SpectrumView> | null>(null)
 onMounted(() => receiver.initWorker(data => plot.value?.setLatestData(data)))
 </script>
@@ -19,7 +25,8 @@ onMounted(() => receiver.initWorker(data => plot.value?.setLatestData(data)))
         <ReceiverHeader @toggle-audio="receiver.toggleAudio" @toggle-connection="receiver.toggleConnection"/>
         <div class="receiver-top"><TuningPanel/><AutomationPanel @find-strongest="receiver.findStrongest" @auto-all="receiver.autoAll"/></div>
         <SpectrumView ref="plot"/>
-        <div class="receiver-bottom"><DisplayPanel/><div class="receiver-sidebar"><SignalPanel @select="receiver.select"/><BookmarkPanel/></div></div>
+        <div class="receiver-bottom"><div class="receiver-sidebar"><DisplayPanel/><AudioPanel/><RecordingPanel :recording="recording"/></div>
+            <div class="receiver-sidebar"><SignalPanel @select="receiver.select" @track="receiver.pin"/><BookmarkPanel/></div></div>
         <div class="receiver-telemetry"><span><i class="pi pi-bolt"/> Demand-driven capture · per-listener tuning</span>
             <span>{{ (store.settings.samp_rate / 1000).toFixed(1) }} kS/s · {{ store.frames.toLocaleString() }} frames · {{ store.processingMs.toFixed(1) }} ms DSP/frame · {{ store.gaps }} gaps</span>
         </div>

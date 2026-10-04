@@ -7,7 +7,8 @@ export interface Signal {
     narrow: boolean
 }
 export interface Analysis { signals: Signal[]; noiseDb: number; peakDb: number }
-export interface Bookmark { frequency: number; bandwidth: number; side: 1 | -1 }
+export type ReceiverMode = 'ssb' | 'cw'
+export interface Bookmark { frequency: number; bandwidth: number; side: 1 | -1; mode: ReceiverMode }
 export const FFT_SIZES = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768]
 export const PROFILES = {
     eco: { fftSize: 2048, fps: 5 }, balanced: { fftSize: 4096, fps: 20 },

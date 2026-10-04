@@ -58,12 +58,19 @@ export class SpectrumAnalyzer {
         }
         const signals: Signal[] = regions.filter(r => this.persistence[r.peak] >= 3 && this.average[r.peak] - noiseDb >= 15).map(r => ({
             low: start + r.low * binHz, high: start + r.high * binHz,
-            peakFreq: start + r.peak * binHz, peakDb: this.average[r.peak],
+            peakFreq: start + (r.peak + peakFraction(this.average, r.peak)) * binHz, peakDb: this.average[r.peak],
             snr: this.average[r.peak] - noiseDb,
             narrow: (r.high - r.low) * binHz < Math.max(500, binHz * 5),
         })).sort((a, b) => b.snr - a.snr).slice(0, 12)
         return { signals, noiseDb, peakDb }
     }
+}
+
+// Sub-bin estimate of the library Hann FFT peak; never a modulation/carrier detector.
+function peakFraction(spectrum: Float32Array, bin: number) {
+    const left = spectrum[bin - 1], peak = spectrum[bin], right = spectrum[bin + 1]
+    const curvature = left - 2 * peak + right
+    return Number.isFinite(curvature) && curvature < -0.01 ? clamp(0.5 * (left - right) / curvature, -0.5, 0.5) : 0
 }
 
 export function autoDisplay(analysis: Analysis, calibration: number) {

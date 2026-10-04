@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useSdrStore } from '../store'
-const store = useSdrStore(), step = ref(100), shareLink = ref('')
+const store = useSdrStore(), shareLink = ref('')
 const numberValue = (event: Event) => Number((event.target as HTMLInputElement).value)
 function share() {
     const url = new URL(location.href)
     url.search = new URLSearchParams({ freq: String(store.tuneFreq + store.settings.lnb_lo_freq),
-        bw: String(store.bandwidth), side: store.sideband > 0 ? 'usb' : 'lsb' }).toString()
+        bw: String(store.bandwidth), side: store.sideband > 0 ? 'usb' : 'lsb', mode: store.mode, pitch: String(store.cwPitch) }).toString()
     history.replaceState(history.state, '', url)
     shareLink.value = url.href
     navigator.clipboard?.writeText(url.href).catch(() => {})
@@ -14,26 +14,28 @@ function share() {
 </script>
 <template>
     <section class="panel tuning-panel">
-        <div class="section-title">TUNING <span>{{ store.sideband > 0 ? 'USB' : 'LSB' }}</span></div>
+        <div class="section-title">TUNING <span>{{ store.mode === 'cw' ? 'CW' : store.sideband > 0 ? 'USB' : 'LSB' }}</span></div>
         <div class="frequency-readout">{{ ((store.tuneFreq + store.settings.lnb_lo_freq) / 1e6).toFixed(6) }}<small>MHz RF</small></div>
         <div class="muted fine-print">IF {{ (store.tuneFreq / 1e6).toFixed(6) }} MHz · BW {{ (store.bandwidth / 1000).toFixed(2) }} kHz</div>
         <div class="tuning-fields">
             <label for="receiver-frequency">RF frequency · Hz
-                <input id="receiver-frequency" type="number" :value="store.tuneFreq + store.settings.lnb_lo_freq" :step="step"
+                <input id="receiver-frequency" type="number" :value="store.tuneFreq + store.settings.lnb_lo_freq" :step="store.tuningStep"
                        :min="store.limits.low + store.settings.lnb_lo_freq" :max="store.limits.high + store.settings.lnb_lo_freq"
                        @change="store.manualTune(numberValue($event) - store.settings.lnb_lo_freq)"/>
             </label>
-            <label>Sideband<select aria-label="Sideband" :value="store.sideband"
+            <label>Sideband<select aria-label="Sideband" :value="store.sideband" :disabled="store.mode === 'cw'"
                 @change="store.manualTune(store.tuneFreq, store.bandwidth, numberValue($event) === -1 ? -1 : 1)">
                 <option value="1">USB</option><option value="-1">LSB</option></select></label>
             <label for="receiver-bandwidth">Bandwidth · Hz<input id="receiver-bandwidth" type="number" :value="store.bandwidth" step="100"
                 :min="store.settings.min_bw_limit" :max="store.settings.max_bw_limit"
                 @change="store.manualTune(store.tuneFreq, numberValue($event))"/></label>
         </div>
+        <label class="mode-control">Mode<select aria-label="Receiver mode" :value="store.mode" @change="store.setMode(($event.target as HTMLSelectElement).value === 'cw' ? 'cw' : 'ssb')">
+            <option value="ssb">SSB</option><option value="cw">CW</option></select></label>
         <div class="button-row tuning-actions">
-            <button aria-label="Tune down" @click="store.manualTune(store.tuneFreq - step)"><i aria-hidden="true" class="pi pi-minus"/></button>
-            <select class="step-control" aria-label="Tuning step" v-model.number="step"><option :value="10">10 Hz</option><option :value="100">100 Hz</option><option :value="1000">1 kHz</option></select>
-            <button aria-label="Tune up" @click="store.manualTune(store.tuneFreq + step)"><i aria-hidden="true" class="pi pi-plus"/></button>
+            <button aria-label="Tune down" @click="store.manualTune(store.tuneFreq - store.tuningStep)"><i aria-hidden="true" class="pi pi-minus"/></button>
+            <select class="step-control" aria-label="Tuning step" v-model.number="store.tuningStep"><option :value="10">10 Hz</option><option :value="100">100 Hz</option><option :value="1000">1 kHz</option></select>
+            <button aria-label="Tune up" @click="store.manualTune(store.tuneFreq + store.tuningStep)"><i aria-hidden="true" class="pi pi-plus"/></button>
             <button @click="store.saveBookmark"><i aria-hidden="true" class="pi pi-bookmark"/> Save</button>
             <button @click="share"><i aria-hidden="true" class="pi pi-link"/> Share</button>
         </div>
@@ -48,5 +50,6 @@ function share() {
 .tuning-actions { margin-top:12px; flex-wrap:wrap; }
 .tuning-actions .step-control { width:90px; margin-top:0; flex:0 0 90px; }
 .share-link { margin-top:10px; font-size:10px !important; }
+.mode-control { margin-top:12px; max-width:160px; }
 @media(max-width:500px) { .tuning-fields { grid-template-columns:1fr 1fr; } .tuning-fields label:first-child { grid-column:span 2; } }
 </style>

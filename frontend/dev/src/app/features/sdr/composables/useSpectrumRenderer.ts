@@ -2,13 +2,14 @@ import { onMounted, onUnmounted, watch, type Ref } from 'vue'
 import WaterfallWorker from '../workers/waterfall.worker.ts?worker'
 import { useSdrStore } from '../store'
 import { drawPlot } from '../core/drawSpectrum'
+import { typedWorker, type TypedWorker, type WaterfallCommand, type WaterfallEvent } from '../engine/messages'
 
 export function useSpectrumRenderer(elements: {
     container: Ref<HTMLElement | null>; ruler: Ref<HTMLCanvasElement | null>
     spectrum: Ref<HTMLCanvasElement | null>; waterfall: Ref<HTMLCanvasElement | null>; overlay: Ref<HTMLCanvasElement | null>
 }, viewMin: Ref<number>, viewMax: Ref<number>) {
     const store = useSdrStore()
-    let worker: Worker | null = null, observer: ResizeObserver | null = null
+    let worker: TypedWorker<WaterfallCommand, WaterfallEvent> | null = null, observer: ResizeObserver | null = null
     let pending = false, latest: Float32Array | null = null, trace: Float32Array | null = null
     let animation = 0
     const config = () => ({ width: elements.waterfall.value?.width ?? 1,
@@ -24,7 +25,7 @@ export function useSpectrumRenderer(elements: {
         })
     }
     function scheduleDraw() {
-        if (animation) return
+        if (animation || store.frozen) return
         animation = requestAnimationFrame(() => { animation = 0; draw() })
     }
     function setLatestData(data: Float32Array) {
@@ -42,7 +43,7 @@ export function useSpectrumRenderer(elements: {
     })
     watch(() => store.fftSize, () => { trace = null; latest = null; worker?.postMessage({ type: 'clear' }); scheduleDraw() })
     onMounted(() => {
-        worker = new WaterfallWorker()
+        worker = typedWorker<WaterfallCommand, WaterfallEvent>(new WaterfallWorker())
         worker.onmessage = event => {
             if (event.data.type === 'fftConsumed') {
                 pending = false

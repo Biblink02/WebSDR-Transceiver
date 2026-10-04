@@ -12,3 +12,4 @@ frontend/dev/src/public/dsp.wasm
 frontend/dev/src/node_modules.pre-webassembly/
 **/*.pre-webassembly/
 frontend/dev/src/public/config.yaml
+.worktrees/

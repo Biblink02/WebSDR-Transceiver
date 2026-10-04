@@ -84,9 +84,10 @@ async def test_console_automation_fft_bookmarks_freeze_visibility_and_mobile(tmp
                     assert not await page.get_by_role('checkbox', name='Auto bandwidth', exact=True).is_checked()
                     await page.get_by_role('button', name='Save', exact=True).click()
                     saved = await page.locator('#receiver-frequency').input_value()
+                    saved_bw = await page.locator('#receiver-bandwidth').input_value()
                     await page.get_by_role('button', name='Share', exact=True).click()
                     link = await page.get_by_role('textbox', name='Receiver share link').input_value()
-                    assert 'freq='+saved in link and 'bw=1800' in link
+                    assert 'freq='+saved in link and 'bw='+saved_bw in link
                     # A visibility event is injected to exercise the browser's actual handler.
                     await page.evaluate('''() => { Object.defineProperty(document, 'hidden', {configurable:true, value:true});
                         document.dispatchEvent(new Event('visibilitychange')); }''')

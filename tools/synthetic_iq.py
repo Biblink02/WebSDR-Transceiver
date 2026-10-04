@@ -21,9 +21,11 @@ class SyntheticPower:
 
 
 class SyntheticCapture:
-    def __init__(self, publisher, rate, center, frame_samples=8192, stall_file=None):
+    def __init__(self, publisher, rate, center, frame_samples=8192, stall_file=None, drift=0, mute_primary_file=None):
         self.publisher, self.rate, self.frame_samples = publisher, rate, frame_samples
         self.stall_file = stall_file
+        self.drift = drift
+        self.mute_primary_file = mute_primary_file
         self.stopped = threading.Event()
         publisher.configure(Packetizer(rate, center, frame_samples))
         self.thread = threading.Thread(target=self.run, name='synthetic-capture', daemon=True)
@@ -40,7 +42,8 @@ class SyntheticCapture:
                 deadline = time.monotonic()
                 continue
             sample_time = np.arange(position, position+self.frame_samples)/self.rate
-            samples = (0.30*np.exp(2j*np.pi*1000*sample_time) +
+            primary = 0 if self.mute_primary_file is not None and self.mute_primary_file.exists() else .30
+            samples = (primary*np.exp(2j*np.pi*(1000*sample_time + .5*self.drift*sample_time**2)) +
                        0.20*np.exp(2j*np.pi*31000*sample_time) +
                        0.15*np.exp(-2j*np.pi*21000*sample_time)).astype(np.complex64)
             self.publisher.push(samples)
@@ -64,11 +67,14 @@ def main():
     parser.add_argument('--health-port', type=int)
     parser.add_argument('--idle-seconds', type=float, default=10)
     parser.add_argument('--stall-file', type=Path)
+    parser.add_argument('--drift-hz-per-second', type=float, default=0)
+    parser.add_argument('--mute-primary-file', type=Path)
     args = parser.parse_args()
     health = StreamHealth()
     publisher = Publisher(args.address, health)
     controller = CaptureController(lambda: SyntheticCapture(publisher, args.rate, args.center,
-                                     stall_file=args.stall_file), SyntheticPower(), publisher,
+                                     stall_file=args.stall_file, drift=args.drift_hz_per_second,
+                                     mute_primary_file=args.mute_primary_file), SyntheticPower(), publisher,
                                      health, args.idle_seconds)
     if args.health_port is not None:
         health.serve(args.health_port)
