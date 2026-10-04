@@ -43,8 +43,7 @@
   The full Python suite passed 18 tests; the final tools browser check passed
   in 17.31 seconds, including drifting/lost/recovered targets, hidden-tab AFC,
   decoded recorded audio at zero volume, metadata, shortcuts and a WASM-load race.
-- [x] Prepare the verified changes for atomic commits after the user's 2026-10-04
-  instruction to commit. Pipeline/CI work is excluded.
+- [x] Commit the verified receiver tools after the user's 2026-10-04 instruction. Pipeline/CI work is excluded.
 
 The subband version is implemented and verified separately on `feat/iq-subbands`,
 in the worktree under `.worktrees/iq-subbands`. It derives from these receiver tools

@@ -2,7 +2,7 @@
 
 A browser receiver for QO-100 using PlutoSDR. The server captures and distributes
 one packed I/Q stream. Each listener runs C++ WebAssembly DSP locally for the
-waterfall and USB/LSB audio, and can tune independently.
+waterfall and USB/LSB/CW audio, and can tune independently.
 
 ```mermaid
 flowchart LR
