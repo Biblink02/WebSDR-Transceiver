@@ -1,4 +1,4 @@
-import { parseIqFrame, iqWebSocketUrl } from '../engine/IqProtocol'
+import { FULL_BAND_CAPACITY_CLOSE_CODE, parseIqFrame, iqWebSocketUrl } from '../engine/IqProtocol'
 import { instantiateDsp, type DspExports } from '../engine/WasmDsp'
 import { exhaustive, type DspCommand, type DspEvent, type ReceiverConfig, type ReceiverState, type Tuning } from '../engine/messages'
 import { SpectrumAnalyzer } from '../core/analysis'
@@ -116,10 +116,14 @@ function connect(current: number) {
         }
     }
     connection.onerror = () => { if (current === generation) status('connection-error') }
-    connection.onclose = () => {
+    connection.onclose = event => {
         if (current !== generation) return
         if (heartbeat) clearInterval(heartbeat)
         heartbeat = null; socket = null
+        if (event.code === FULL_BAND_CAPACITY_CLOSE_CODE) {
+            stopped = true; resetStream(); status('capacity')
+            return
+        }
         resetStream(); status(stopped ? 'disconnected' : 'reconnecting')
         if (!stopped) { timer = setTimeout(() => connect(current), retry); retry = Math.min(retry * 2, 5000) }
     }

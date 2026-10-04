@@ -2,12 +2,13 @@ import type { IqSelection } from '&/config'
 import type { Analysis, ReceiverMode } from '../core/types'
 
 export type ReceiverState = 'disconnected' | 'loading' | 'connecting' | 'warming' |
-    'connected' | 'reconnecting' | 'suspended' | 'unavailable' | 'failed' | 'connection-error'
+    'connected' | 'reconnecting' | 'suspended' | 'unavailable' | 'failed' | 'connection-error' | 'capacity'
 export const STATE_LABELS: Record<ReceiverState, string> = {
     disconnected: 'DISCONNECTED', loading: 'LOADING DSP...', connecting: 'CONNECTING...',
     warming: 'WAKING RECEIVER...', connected: 'CONNECTED', reconnecting: 'RECONNECTING...',
     suspended: 'PAUSED IN BACKGROUND', unavailable: 'DSP UNAVAILABLE', failed: 'DSP ERROR',
     'connection-error': 'CONNECTION ERROR',
+    capacity: 'FULL SPECTRUM AT CAPACITY',
 }
 export interface Tuning { freq: number; bw: number; side: 1 | -1; mode: ReceiverMode; pitch: number }
 export interface AudioSettings { agc: boolean; squelch: boolean; threshold: number }

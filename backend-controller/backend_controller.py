@@ -7,18 +7,20 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from config import (WEB_PORT, LISTEN_IP, SDR_HOST, SDR_IQ_PORT,
                     IQ_CLIENT_QUEUE_SIZE, IQ_SEND_TIMEOUT, IQ_STALL_SECONDS,
-                    IQ_SUBBAND_RATE, IQ_INPUT_RATE, IQ_CENTER, IQ_VIEW_LOW, IQ_VIEW_HIGH)
-from iq import IQDistributor
+                    IQ_SUBBAND_RATE, IQ_INPUT_RATE, IQ_CENTER, IQ_VIEW_LOW, IQ_VIEW_HIGH,
+                    IQ_FULL_BAND_MAX_CLIENTS)
+from iq import FULL_BAND_CAPACITY_CLOSE_CODE, FullBandLimitReached, IQDistributor
 from subbands import FULL_BAND, native_library
 
 
 @asynccontextmanager
 async def lifespan(app):
-    native_library()  # Required: fail startup rather than serving an unfiltered stream.
+    native_library()  # Subband processing requires the native library at startup.
     context = zmq.asyncio.Context()
     distributor = IQDistributor(context, f'tcp://{SDR_HOST}:{SDR_IQ_PORT}', IQ_CLIENT_QUEUE_SIZE,
                                 input_rate=IQ_INPUT_RATE, center=IQ_CENTER, view_low=IQ_VIEW_LOW,
-                                view_high=IQ_VIEW_HIGH, subband_rate=IQ_SUBBAND_RATE)
+                                view_high=IQ_VIEW_HIGH, subband_rate=IQ_SUBBAND_RATE,
+                                full_band_max_clients=IQ_FULL_BAND_MAX_CLIENTS)
     app.state.iq = distributor
     task = asyncio.create_task(distributor.run(), name='iq-subscriber')
     app.state.subscriber = task
@@ -72,8 +74,15 @@ async def iq_socket(websocket: WebSocket):
     except ValueError:
         await websocket.close(code=1008, reason='Unknown I/Q receive band')
         return
-    await websocket.accept()
-    queue = distributor.subscribe(band)
+    try:
+        queue = distributor.subscribe(band)
+    except FullBandLimitReached:
+        # A WebSocket close frame exposes the reason/code to browsers; a denied
+        # HTTP upgrade would hide both. Rejection never subscribes to the source.
+        await websocket.accept()
+        await websocket.close(code=FULL_BAND_CAPACITY_CLOSE_CODE, reason='Full spectrum is at capacity')
+        return
+    tasks = []
 
     async def receive():
         while True:
@@ -89,8 +98,9 @@ async def iq_socket(websocket: WebSocket):
             frame = await queue.get()
             await asyncio.wait_for(websocket.send_bytes(frame), IQ_SEND_TIMEOUT)
 
-    tasks = [asyncio.create_task(receive()), asyncio.create_task(transmit())]
     try:
+        await websocket.accept()
+        tasks = [asyncio.create_task(receive()), asyncio.create_task(transmit())]
         done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         for task in done:
             task.result()

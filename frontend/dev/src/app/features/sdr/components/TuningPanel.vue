@@ -24,6 +24,9 @@ function share() {
                 {{ ((band.low + store.settings.lnb_lo_freq) / 1e6).toFixed(4) }}–{{ ((band.high + store.settings.lnb_lo_freq) / 1e6).toFixed(4) }} MHz
             </option></select></label>
         <div class="muted fine-print">{{ (store.settings.samp_rate * 16 / 1e6).toFixed(2) }} Mbit/s I/Q · Changing band stops audio and recording.</div>
+        <p v-if="store.connectionState === 'capacity'" role="alert" class="fine-print">
+            Full spectrum is at capacity. Choose a subband, or press Connect to retry.
+        </p>
         <div class="tuning-fields">
             <label for="receiver-frequency">RF frequency · Hz
                 <input id="receiver-frequency" type="number" :value="store.tuneFreq + store.settings.lnb_lo_freq" :step="store.tuningStep"

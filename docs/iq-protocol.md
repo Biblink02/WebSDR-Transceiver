@@ -10,6 +10,13 @@ the full option separately as `full_band`, with ID `"full"`. An omitted selectio
 still receives the default subband. The route accepts no application messages.
 Fine tuning and playback remain local. See [subband geometry and operation](iq-subbands.md).
 
+Full-spectrum admission is bounded per backend by `iq_full_band_max_clients`.
+Rejection sends WebSocket application close code **4008** with the reason
+`Full spectrum is at capacity`, after the upgrade and without subscribing to
+the source. Browsers stop reconnecting until an explicit Connect or band change.
+Handshake reservations are released on failure/cancellation as well as ordinary
+disconnect; numeric subbands do not consume full-spectrum slots.
+
 ## Binary frame, version 1
 
 All multibyte fields are little endian. The 32-byte header is followed by exactly

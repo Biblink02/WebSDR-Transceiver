@@ -137,6 +137,10 @@ Select **Full spectrum** in the same menu to view the entire configured capture
 and keep the current frequency. This costs 8.33 Mbit/s per browser at 520,834 Hz,
 compared with 2.05 Mbit/s for a subband; the menu displays the full-stream bitrate.
 The selection belongs to this listener and remains manual regardless of load.
+When the station's configured full-spectrum limit is reached, the console shows
+**FULL SPECTRUM AT CAPACITY** and waits. Choose a subband to reconnect, or press
+Connect to retry full reception later. The chosen band does not change on its
+own, and the browser does not keep retrying a capacity rejection.
 Band changes reconnect the stream, release pinned tracking, reset zoom/history
 and finalize recording by stopping audio. Press Start audio to listen again.
 

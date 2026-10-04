@@ -41,6 +41,33 @@ selection. Changing band terminates the old DSP worker, stops audio and finalize
 tracking/history, and starts a new stream. Audio requires a new Start audio click.
 Ordinary fine tuning/AFC continues locally without WebSocket control messages.
 
+## Full-spectrum admission
+
+`iq_full_band_max_clients` in `config/config.yaml` is the maximum number of
+concurrent full-spectrum WebSockets on each backend replica. It defaults to 4;
+0 disables full-spectrum reception. It must be a nonnegative integer, and
+`IQ_FULL_BAND_MAX_CLIENTS` overrides YAML. Changes take effect when the backend
+restarts through the existing configuration/reload workflow.
+
+Each tab/connection counts, including while capture warms up or audio is off.
+Subband connections do not consume the allowance. A slot is reserved synchronously
+before awaiting the WebSocket handshake and released on handshake failure,
+cancellation, disconnect or send timeout. Concurrent requests cannot exceed the
+configured count. Rejected requests do not subscribe upstream or wake capture.
+
+At capacity, the backend accepts the WebSocket upgrade only to send application
+close code 4008 with a capacity reason. The browser shows **FULL SPECTRUM AT
+CAPACITY**, stops retrying, and keeps the selected band. Choose a subband to
+reconnect, or press Connect to explicitly retry full reception. Existing listeners
+are retained, and audio/recording remain stopped after a band change.
+
+The allowance belongs to a backend process, not the whole cluster. With two
+replicas and a limit of 4, up to 8 full connections can be admitted in total,
+provided they are distributed across replicas; a request to a full replica is
+rejected even if another has room. This is a static admission limit, not a CPU or
+network capacity measurement. Choose the count for the available link/headroom;
+subband traffic and other workloads still consume resources.
+
 ## Native implementation and bounds
 
 `dsp-wasm/src/channelizer.cpp` uses liquid-dsp's VCO and multistage antialias
@@ -75,8 +102,9 @@ a 75.4% reduction before overhead. The internal source-to-backend stream retains
 its original rate. Channelizer CPU scales with distinct bands on each replica,
 not with listeners sharing a band. Full selection costs 8.33 Mbit/s per browser
 and processes all samples in browser WASM, while adding no native channelizer
-work. `/stream-info` adds `active_bands`, `full_band_clients` and counters
-for `channel_frames`, `processing_microseconds` and `delivered_bytes`.
+work. `/stream-info` adds `active_bands`, `full_band_clients`,
+`full_band_max_clients` and counters for `full_band_rejected`, `channel_frames`,
+`processing_microseconds` and `delivered_bytes`.
 
 The native tests process actual quantized tones, verify frequency translation,
 output sample count, edge passband response, rejection of an out-of-band tone,
@@ -95,6 +123,13 @@ finalization, band-aware saved/shared frequencies and actual audio from a carrie
 in an overlapping band. Existing drift/CW/AGC/squelch/background/recording tests
 also run on the narrower stream. Deployment checks use a dedicated Kind cluster
 and synthetic capture through Caddy TLS/WSS.
+
+Admission tests exercise 12 simultaneous requests against a one-slot replica,
+independent allowance on a second replica, slot reuse, rejection without source
+wake, a paused handshake and cancellation/failure cleanup. Chromium checks the
+capacity message, lack of automatic retries, preservation of the existing full
+listener's audio, manual subband selection, recording finalization and Connect
+retry after a slot is freed.
 
 Channelization starts from already quantized I/Q8 and requantizes filtered output
 without automatic gain. Its quantization noise, actual RF coverage (including the

@@ -81,7 +81,9 @@ export function useReceiver() {
                     }
                     store.setConnectionState(message.payload)
                     if (message.payload !== 'connected') resetAudioQueue()
-                    if (message.payload === 'unavailable') { active = false; store.connectionWanted = false; stopListening() }
+                    if (message.payload === 'unavailable' || message.payload === 'capacity') {
+                        active = false; store.connectionWanted = false; stopListening()
+                    }
                     break
                 case 'graphicData':
                     try { if (!store.frozen && !hidden.value) graphicCallback?.(message.payload) }
@@ -115,6 +117,8 @@ export function useReceiver() {
     }
     watch(() => store.selectedBand, () => {
         stopListening(); automation.reset()
+        // Choosing another band after capacity rejection is a manual retry.
+        if (store.connectionState === 'capacity') store.connectionWanted = true
         store.setConnectionState(store.connectionWanted ? 'connecting' : 'disconnected')
         if (graphicCallback) initWorker(graphicCallback)
     })

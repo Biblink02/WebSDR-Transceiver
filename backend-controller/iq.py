@@ -6,12 +6,21 @@ import zmq
 from iq_protocol import MAX_FRAME_BYTES, validate_frame
 from subbands import FULL_BAND, BandPlan, NativeChannelizer
 
+FULL_BAND_CAPACITY_CLOSE_CODE = 4008
+
+
+class FullBandLimitReached(Exception):
+    """The full-spectrum listener quota of this backend replica is occupied."""
+
 
 class IQDistributor:
     def __init__(self, context, address, queue_size=4, *, input_rate=520834, center=739700000,
-                 view_low=739500000, view_high=739900000, subband_rate=128000):
+                 view_low=739500000, view_high=739900000, subband_rate=128000, full_band_max_clients=4):
         if not 1 <= queue_size <= 64:
             raise ValueError('I/Q queue size must be in [1, 64]')
+        if type(full_band_max_clients) is not int or full_band_max_clients < 0:
+            raise ValueError('Full-spectrum listener limit must be a nonnegative integer')
+        self.full_band_max_clients = full_band_max_clients
         self.context, self.address, self.queue_size = context, address, queue_size
         self.clients: set[asyncio.Queue] = set()
         self.client_bands = {}
@@ -29,6 +38,12 @@ class IQDistributor:
     def subscribe(self, band=None):
         band = self.plan.default if band is None else band
         self.plan.get_band(band)
+        if (band == FULL_BAND and
+                sum(value == FULL_BAND for value in self.client_bands.values()) >= self.full_band_max_clients):
+            self.counters['full_band_rejected'] += 1
+            raise FullBandLimitReached
+        # Admission and reservation stay synchronous on the owning event loop.
+        # The WebSocket handler reserves before awaiting its handshake.
         queue = asyncio.Queue(maxsize=self.queue_size)
         self.clients.add(queue)
         self.client_bands[queue] = band
@@ -144,6 +159,7 @@ class IQDistributor:
     def diagnostics(self):
         return {'clients': len(self.clients), 'active_bands': len(self.channels),
                 'full_band_clients': sum(band == FULL_BAND for band in self.client_bands.values()),
+                'full_band_max_clients': self.full_band_max_clients,
                 'receiving': self.socket is not None,
                 'sample_rate': self.info.sample_rate if self.info else None,
                 'center_freq': self.info.center_freq if self.info else None,

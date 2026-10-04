@@ -24,6 +24,15 @@ IQ_CLIENT_QUEUE_SIZE = int(get_cfg('iq_client_queue_size', 4))
 IQ_SEND_TIMEOUT = float(get_cfg('iq_send_timeout', 2))
 IQ_STALL_SECONDS = float(get_cfg('iq_stall_seconds', 3))
 IQ_SUBBAND_RATE = int(get_cfg('iq_subband_rate', 128000))
+full_band_limit = get_cfg('iq_full_band_max_clients', 4)
+try:
+    if isinstance(full_band_limit, bool) or not isinstance(full_band_limit, (int, str)):
+        raise ValueError
+    IQ_FULL_BAND_MAX_CLIENTS = int(full_band_limit)
+    if IQ_FULL_BAND_MAX_CLIENTS < 0:
+        raise ValueError
+except ValueError as error:
+    raise ValueError('iq_full_band_max_clients must be a nonnegative integer') from error
 IQ_INPUT_RATE = int(get_cfg('samp_rate', 520834))
 IQ_CENTER = float(get_cfg('lo_freq', 739700000))
 IQ_VIEW_LOW = float(get_cfg('view_limit_min', 10489500000)) - float(get_cfg('lnb_lo_freq', 9750000000))

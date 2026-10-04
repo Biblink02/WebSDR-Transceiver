@@ -1,4 +1,4 @@
-"""Check five Caddy listeners, capture idle/wake and recovery on either IQ branch."""
+"""Check Caddy listeners, capture idle/wake and recovery on either IQ branch."""
 import argparse
 import asyncio
 import json
@@ -73,7 +73,10 @@ async def main(mode, origin, stream):
                     paths = [f'/iq?band={band["id"]}' for band in bands]
                     sample_rate = 128000
                 else:
-                    paths = ['/iq?band=full']*5
+                    capacity = (await http.get(origin+'/stream-info')).json().get('full_band_max_clients', 5)
+                    if capacity == 0:
+                        raise RuntimeError('Full spectrum is disabled; use --stream subbands or raise iq_full_band_max_clients')
+                    paths = ['/iq?band=full']*min(5, capacity)
                     sample_rate = 520834
                 sockets = [await connect(origin.replace('http', 'ws')+path) for path in paths]
                 readers = []
@@ -81,7 +84,7 @@ async def main(mode, origin, stream):
                     first = await asyncio.gather(*(asyncio.wait_for(socket.recv(), 20) for socket in sockets))
                     metadata = [validate_frame(frame) for frame in first]
                     assert all(info.sample_rate == sample_rate for info in metadata)
-                    peaks = [0.0]*5
+                    peaks = [0.0]*len(sockets)
                     deadline = time.monotonic()+4
                     while time.monotonic() < deadline:
                         frames = await asyncio.gather(*(asyncio.wait_for(socket.recv(), 10) for socket in sockets))
@@ -92,7 +95,7 @@ async def main(mode, origin, stream):
                             power = np.abs(np.fft.fft(iq[:count]*np.hanning(count)))**2
                             peaks[index] = max(peaks[index], float(10*np.log10((power.max()+1)/(np.median(power)+1))))
                     assert min(peaks) > 15, peaks
-                    print(f'Five {stream} listeners receive voice/CW, spectral contrast {[round(value, 1) for value in peaks]} dB', flush=True)
+                    print(f'{len(sockets)} {stream} listeners receive voice/CW, spectral contrast {[round(value, 1) for value in peaks]} dB', flush=True)
                     initial = restart_counts()
                     latest = metadata.copy()
                     async def consume(index, socket):

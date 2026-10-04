@@ -1,3 +1,6 @@
+// Application close code: the selected backend's full-spectrum quota is full.
+export const FULL_BAND_CAPACITY_CLOSE_CODE = 4008
+
 export interface IqFrame {
     sequence: number
     sampleRate: number

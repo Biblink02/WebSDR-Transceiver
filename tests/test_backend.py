@@ -21,10 +21,11 @@ def free_port():
 
 
 @asynccontextmanager
-async def backend(port,iq_port,tmp_path,processes=None):
+async def backend(port,iq_port,tmp_path,processes=None,*,env_overrides=None):
     env={**os.environ,'CONFIG_PATH':str(ROOT/'config/config.yaml'),'PORT':str(port),
          'SDR_HOST':'127.0.0.1','SDR_IQ_PORT':str(iq_port),
          'PYTHONPATH':os.pathsep.join(str(ROOT/p) for p in ['shared','backend-controller'])}
+    env.update(env_overrides or {})
     log=(tmp_path/f'backend-{port}.log').open('w')
     process=subprocess.Popen([sys.executable,str(ROOT/'backend-controller/backend_controller.py')],env=env,stdout=log,stderr=log)
     if processes is not None: processes.append(process)

@@ -183,8 +183,10 @@ KUBECONFIG=/tmp/websdr-iq-demo/kubeconfig PYTHONPATH=.:shared:backend-controller
 
 Use `--stream full` to check complete capture on either branch and `--mode iio`
 for the IIO source. That check replaces only its emulator pod and waits for GNU Radio/source
-recovery, then checks idle/wake. It reads five listeners through Caddy; the
-subband version requires visible signals in all five bands.
+recovery, then checks idle/wake. It reads five subband listeners through Caddy
+and requires visible signals in all five bands. Full mode uses up to five
+listeners, capped at `iq_full_band_max_clients` on the subband branch (default
+4 per replica); it fails with a clear message if full reception is disabled.
 
 Initially verified on 2026-10-04 on `feat/iq-subbands`: 31 Python tests, native CTest, nine Bun tests and seven
 compiled-WASM tests passed, along with Vue typechecking and the production build.

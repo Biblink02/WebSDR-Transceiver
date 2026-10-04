@@ -26,6 +26,12 @@ per active subband per replica. The default remains a subband, and selection
 never changes automatically with load or listener count. See
 [subband architecture](docs/iq-subbands.md).
 
+`iq_full_band_max_clients` in `config/config.yaml` limits concurrent full-spectrum
+connections per backend replica (default 4; 0 disables full reception). Requests
+above the limit show a capacity message and wait for a manual subband choice or
+Connect retry. Subband listeners do not consume these slots. The limit is read at
+backend startup; `IQ_FULL_BAND_MAX_CLIENTS` overrides YAML.
+
 ## Build and deployment
 
 Install Docker, Kind, kubectl and ripgrep. The Docker build pins Emscripten 4.0.15

@@ -50,6 +50,7 @@ ws_url: "/"    # Caddy serves HTTPS and the I/Q WebSocket on the same origin.
 # Packed signed I/Q, filtered and quantized once at the source.
 iq_target_rate: 500000
 iq_subband_rate: 128000  # Shared native channelizer output; browser audio remains WASM.
+iq_full_band_max_clients: 4  # Concurrent full-spectrum listeners per backend replica; 0 disables full spectrum.
 iq_frame_samples: 8192
 iq_client_queue_size: 4
 iq_send_timeout: 2
