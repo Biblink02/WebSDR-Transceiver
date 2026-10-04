@@ -21,11 +21,16 @@ class SyntheticPower:
 
 
 class SyntheticCapture:
-    def __init__(self, publisher, rate, center, frame_samples=8192, stall_file=None, drift=0, mute_primary_file=None):
+    def __init__(self, publisher, rate, center, frame_samples=8192, stall_file=None, drift=0, mute_primary_file=None,
+                 scenario=None, scenario_config=None):
         self.publisher, self.rate, self.frame_samples = publisher, rate, frame_samples
         self.stall_file = stall_file
         self.drift = drift
         self.mute_primary_file = mute_primary_file
+        self.scenario = None
+        if scenario and scenario != 'tones':
+            from signal_scenarios import Scenario
+            self.scenario = Scenario(scenario, rate, scenario_config)
         self.stopped = threading.Event()
         publisher.configure(Packetizer(rate, center, frame_samples))
         self.thread = threading.Thread(target=self.run, name='synthetic-capture', daemon=True)
@@ -36,16 +41,24 @@ class SyntheticCapture:
     def run(self):
         position = 0
         deadline = time.monotonic()
+        started = deadline
         while not self.stopped.is_set():
-            if self.stall_file is not None and self.stall_file.exists():
+            if ((self.stall_file is not None and self.stall_file.exists()) or
+                    (self.scenario is not None and self.scenario.stalled(time.monotonic()-started))):
                 self.stopped.wait(.05)
                 deadline = time.monotonic()
+                if self.scenario is not None:
+                    position = max(position, int((deadline-started)*self.rate)//self.frame_samples*self.frame_samples)
                 continue
-            sample_time = np.arange(position, position+self.frame_samples)/self.rate
-            primary = 0 if self.mute_primary_file is not None and self.mute_primary_file.exists() else .30
-            samples = (primary*np.exp(2j*np.pi*(1000*sample_time + .5*self.drift*sample_time**2)) +
-                       0.20*np.exp(2j*np.pi*31000*sample_time) +
-                       0.15*np.exp(-2j*np.pi*21000*sample_time)).astype(np.complex64)
+            if self.scenario is not None:
+                samples = self.scenario.render(position, self.frame_samples)
+            else:
+                # Calibration tones keep frequency/rejection regression checks precise.
+                sample_time = np.arange(position, position+self.frame_samples)/self.rate
+                primary = 0 if self.mute_primary_file is not None and self.mute_primary_file.exists() else .30
+                samples = (primary*np.exp(2j*np.pi*(1000*sample_time + .5*self.drift*sample_time**2)) +
+                           0.20*np.exp(2j*np.pi*31000*sample_time) +
+                           0.15*np.exp(-2j*np.pi*21000*sample_time)).astype(np.complex64)
             self.publisher.push(samples)
             position += self.frame_samples
             deadline += self.frame_samples/self.rate
@@ -69,12 +82,15 @@ def main():
     parser.add_argument('--stall-file', type=Path)
     parser.add_argument('--drift-hz-per-second', type=float, default=0)
     parser.add_argument('--mute-primary-file', type=Path)
+    parser.add_argument('--scenario', default='tones', help='tones, clean, automatic, fading, drift, squelch, qrm or recovery')
+    parser.add_argument('--scenario-config', type=Path, help='Custom JSON station/scenario catalog')
     args = parser.parse_args()
     health = StreamHealth()
     publisher = Publisher(args.address, health)
     controller = CaptureController(lambda: SyntheticCapture(publisher, args.rate, args.center,
                                      stall_file=args.stall_file, drift=args.drift_hz_per_second,
-                                     mute_primary_file=args.mute_primary_file), SyntheticPower(), publisher,
+                                     mute_primary_file=args.mute_primary_file, scenario=args.scenario,
+                                     scenario_config=args.scenario_config), SyntheticPower(), publisher,
                                      health, args.idle_seconds)
     if args.health_port is not None:
         health.serve(args.health_port)

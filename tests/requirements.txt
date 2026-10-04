@@ -3,4 +3,5 @@ pytest-asyncio==1.4.0
 httpx==0.28.1
 websockets==17.1
 numpy==2.5.3
+scipy==1.17.1
 playwright==1.63.0

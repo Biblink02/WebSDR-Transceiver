@@ -1,0 +1,1 @@
+CQ CQ, this is the Web SDR test station. Testing upper and lower sideband reception. One, two, three, four, five. End of test.
