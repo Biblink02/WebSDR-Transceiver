@@ -73,7 +73,7 @@ async def main(mode, origin, stream):
                     paths = [f'/iq?band={band["id"]}' for band in bands]
                     sample_rate = 128000
                 else:
-                    paths = ['/iq']*5
+                    paths = ['/iq?band=full']*5
                     sample_rate = 520834
                 sockets = [await connect(origin.replace('http', 'ws')+path) for path in paths]
                 readers = []
@@ -136,7 +136,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mode', choices=['synthetic', 'iio'], required=True)
     parser.add_argument('--stream', choices=['full', 'subbands'], required=True,
-                        help='Expected IQ distribution in the branch used to build the demo')
+                        help='Receive selection to verify; subbands require feat/iq-subbands')
     parser.add_argument('--origin', default='http://127.0.0.1:18080')
     args = parser.parse_args()
     asyncio.run(main(args.mode, args.origin, args.stream))

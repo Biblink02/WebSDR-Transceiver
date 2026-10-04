@@ -1,14 +1,15 @@
 import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
-import type { AppConfig } from '&/config'
+import type { AppConfig, IqSelection } from '&/config'
 import { FFT_SIZES, PROFILES, clamp, type Bookmark, type Signal, type ReceiverMode } from './core/types'
 import { STATE_LABELS, type ReceiverState } from './engine/messages'
 import { PALETTES } from './core/palettes'
 
 export const useSdrStore = defineStore('sdr', () => {
     const config = ref<AppConfig | null>(null)
-    const selectedBand = ref(0)
+    const selectedBand = ref<IqSelection>(0)
     const bands = computed(() => settings.value.bands.bands)
+    const receiveOptions = computed(() => [settings.value.bands.full_band, ...bands.value])
     const isConnected = ref(false), isListening = ref(false), connectionWanted = ref(true)
     const statusText = ref('CONNECTING...')
     const tuneFreq = ref(0), bandwidth = ref(2700), sideband = ref<1 | -1>(1)
@@ -60,21 +61,21 @@ export const useSdrStore = defineStore('sdr', () => {
         const low = frequency + (mode.value === 'cw' ? -width / 2 : side < 0 ? -width : 0)
         const high = frequency + (mode.value === 'cw' ? width / 2 : side > 0 ? width : 0)
         const available = bands.value.filter(band => low >= band.low && high <= band.high)
-        if (!available.some(band => band.id === selectedBand.value) && available.length) {
+        if (selectedBand.value !== 'full' && !available.some(band => band.id === selectedBand.value) && available.length) {
             const nearest = available.reduce((a, b) => Math.abs(a.center_freq - frequency) < Math.abs(b.center_freq - frequency) ? a : b)
             selectBand(nearest.id, frequency)
         }
         autoFreq.value = false; autoBw.value = false; releaseTracking(); tune(frequency, bw, side)
     }
-    function selectBand(id: number, frequency?: number) {
-        const band = bands.value.find(item => item.id === id)
+    function selectBand(id: IqSelection, frequency?: number) {
+        const band = receiveOptions.value.find(item => item.id === id)
         if (!band) return
         selectedBand.value = band.id
         settings.value.samp_rate = band.sample_rate; settings.value.lo_freq = band.center_freq
         settings.value.view_limit_min = band.low + settings.value.lnb_lo_freq
         settings.value.view_limit_max = band.high + settings.value.lnb_lo_freq
         autoFreq.value = false; autoBw.value = false; releaseTracking(); signals.value = []; frozen.value = false
-        tune(frequency ?? band.center_freq)
+        tune(frequency ?? (id === 'full' ? tuneFreq.value : band.center_freq))
     }
     function setMode(next: ReceiverMode) {
         if (mode.value === next) return
@@ -106,13 +107,13 @@ export const useSdrStore = defineStore('sdr', () => {
             if (Number.isFinite(saved.cwPitch)) cwPitch.value = clamp(saved.cwPitch, 300, 1200)
             if (Array.isArray(saved.bookmarks)) bookmarks.value = saved.bookmarks.slice(0, 8).filter(
                 (b: Bookmark) => b && Number.isFinite(b.frequency) && Number.isFinite(b.bandwidth) &&
-                bands.value.some(band => band.id === b.band && b.frequency >= band.low && b.frequency <= band.high) &&
+                receiveOptions.value.some(band => band.id === b.band && b.frequency >= band.low && b.frequency <= band.high) &&
                 b.bandwidth >= loaded.min_bw_limit && b.bandwidth <= loaded.max_bw_limit && (b.side === 1 || b.side === -1) &&
                 (b.mode === 'ssb' || b.mode === 'cw'))
         } catch { /* Storage is not required for receiving. */ }
         const query = new URLSearchParams(location.search)
-        const requestedBand = Number(query.get('band'))
-        selectBand(query.has('band') && bands.value.some(band => band.id === requestedBand) ? requestedBand : loaded.bands.default)
+        const requestedBand: IqSelection = query.get('band') === 'full' ? 'full' : Number(query.get('band'))
+        selectBand(query.has('band') && receiveOptions.value.some(band => band.id === requestedBand) ? requestedBand : loaded.bands.default)
         if (query.get('mode') === 'cw') mode.value = 'cw'
         if (query.has('pitch') && Number.isFinite(Number(query.get('pitch')))) cwPitch.value = clamp(Number(query.get('pitch')), 300, 1200)
         if (query.has('freq')) manualTune(Number(query.get('freq')) - loaded.lnb_lo_freq,
@@ -124,7 +125,7 @@ export const useSdrStore = defineStore('sdr', () => {
                 squelch: squelch.value, squelchThreshold: squelchThreshold.value, cwPitch: cwPitch.value })) } catch { /* Optional storage. */ }
         }, { deep: true })
     }
-    return { config, settings, limits, profile, bands, selectedBand, selectBand, isConnected, isListening, connectionWanted, statusText,
+    return { config, settings, limits, profile, bands, receiveOptions, selectedBand, selectBand, isConnected, isListening, connectionWanted, statusText,
         tuneFreq, bandwidth, sideband, passband, volume, palette, fftSize, fps, gain, range, gamma, smoothing,
         frozen, pauseHidden, autoFreq, autoBw, autoGain, autoRange, signals, noiseDb, peakDb, bookmarks,
         lastAnalysis, frames, gaps, processingMs, init, setConnectionState, setFrequency, setBandwidth,

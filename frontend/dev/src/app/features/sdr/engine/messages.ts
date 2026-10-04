@@ -1,3 +1,4 @@
+import type { IqSelection } from '&/config'
 import type { Analysis, ReceiverMode } from '../core/types'
 
 export type ReceiverState = 'disconnected' | 'loading' | 'connecting' | 'warming' |
@@ -12,7 +13,7 @@ export interface Tuning { freq: number; bw: number; side: 1 | -1; mode: Receiver
 export interface AudioSettings { agc: boolean; squelch: boolean; threshold: number }
 export interface DisplaySettings { fftSize: number; fps: number; visible: boolean; analyze: boolean; limitLow: number; limitHigh: number }
 export interface ReceiverConfig extends Tuning, DisplaySettings {
-    band: number
+    band: IqSelection
     wsUrl: string; wasmUrl: string; audioRate: number; calibration: number; audio: AudioSettings
 }
 export type DspCommand =

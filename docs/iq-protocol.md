@@ -4,8 +4,11 @@ The SDR publishes exactly one complete binary frame per ZeroMQ message. Backend
 replicas validate these frames and channelize each active receive band once
 using native C++ liquid-dsp. `/iq?band=id` emits the same wire format with the
 subband rate, center and resampled count; sequence and epoch remain those of
-the source. The route accepts no application messages. Fine tuning and playback
-remain local. See [subband geometry and operation](iq-subbands.md).
+the source. `/iq?band=full` forwards the validated original frame unchanged,
+sharing the same upstream subscription with any active subbands. `/bands` exposes
+the full option separately as `full_band`, with ID `"full"`. An omitted selection
+still receives the default subband. The route accepts no application messages.
+Fine tuning and playback remain local. See [subband geometry and operation](iq-subbands.md).
 
 ## Binary frame, version 1
 
@@ -29,8 +32,8 @@ Source quantization computes `round(clamp(component × iq_scale, -1, 1) × 127)`
 Invalid source components become zero and increment diagnostics. Receivers also
 accept -128, mapping it to -1. The maximum frame is 131,104 bytes. Payload alone
 costs `16 × sample_rate` bits/s. The 520,834 Hz upstream costs 8.33 Mbit/s
-once per subscribed backend; each 128 kHz browser stream costs 2.05 Mbit/s
-before frame/TCP/TLS overhead.
+once per subscribed backend and per full-spectrum listener; each 128 kHz browser
+stream costs 2.05 Mbit/s before frame/TCP/TLS overhead.
 
 The source applies GNU Radio antialias filtering before integer decimation. The
 factor is chosen near source/target while requiring an integral resulting rate.

@@ -4,7 +4,7 @@ import time
 from collections import Counter
 import zmq
 from iq_protocol import MAX_FRAME_BYTES, validate_frame
-from subbands import BandPlan, NativeChannelizer
+from subbands import FULL_BAND, BandPlan, NativeChannelizer
 
 
 class IQDistributor:
@@ -28,8 +28,7 @@ class IQDistributor:
 
     def subscribe(self, band=None):
         band = self.plan.default if band is None else band
-        if band not in self.plan.bands:
-            raise ValueError('Unknown I/Q subband')
+        self.plan.get_band(band)
         queue = asyncio.Queue(maxsize=self.queue_size)
         self.clients.add(queue)
         self.client_bands[queue] = band
@@ -64,6 +63,9 @@ class IQDistributor:
         started = time.perf_counter()
         frames = {}
         for band_id in set(self.client_bands.values()):
+            if band_id == FULL_BAND:
+                frames[band_id] = data
+                continue
             if band_id not in self.plan.bands:
                 raise RuntimeError('Source metadata invalidated an active subband')
             if band_id not in self.channels:
@@ -141,6 +143,7 @@ class IQDistributor:
 
     def diagnostics(self):
         return {'clients': len(self.clients), 'active_bands': len(self.channels),
+                'full_band_clients': sum(band == FULL_BAND for band in self.client_bands.values()),
                 'receiving': self.socket is not None,
                 'sample_rate': self.info.sample_rate if self.info else None,
                 'center_freq': self.info.center_freq if self.info else None,

@@ -1,3 +1,5 @@
+import type { IqSelection } from '&/config'
+
 export interface Signal {
     low: number
     high: number
@@ -8,7 +10,7 @@ export interface Signal {
 }
 export interface Analysis { signals: Signal[]; noiseDb: number; peakDb: number }
 export type ReceiverMode = 'ssb' | 'cw'
-export interface Bookmark { frequency: number; bandwidth: number; side: 1 | -1; mode: ReceiverMode; band: number }
+export interface Bookmark { frequency: number; bandwidth: number; side: 1 | -1; mode: ReceiverMode; band: IqSelection }
 export const FFT_SIZES = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768]
 export const PROFILES = {
     eco: { fftSize: 2048, fps: 5 }, balanced: { fftSize: 4096, fps: 20 },

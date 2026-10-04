@@ -102,7 +102,7 @@ async def test_shared_bands_and_invalid_subscription_do_not_wake_idle_backend(tm
         async with backend(free_port(),iq_port,tmp_path) as receiver, httpx.AsyncClient() as http:
             wsurl=receiver.replace('http','ws')+'/iq'
             assert len((await http.get(receiver+'/bands')).json()['bands']) == 5
-            for invalid in ['123','x']:
+            for invalid in ['123','x','fullx']:
                 with pytest.raises(InvalidStatus):
                     async with connect(wsurl+'?band='+invalid): pass
             assert (await http.get(receiver+'/stream-info')).json()['clients'] == 0
@@ -122,3 +122,57 @@ async def test_shared_bands_and_invalid_subscription_do_not_wake_idle_backend(tm
             assert state['clients'] == 0 and state['active_bands'] == 0
     finally:
         publisher.close(linger=0);context.term()
+
+
+@pytest.mark.asyncio
+async def test_full_and_subband_websockets_share_capture_until_last_listener_leaves(tmp_path):
+    from tests.test_subbands import iq_samples
+    context = zmq.asyncio.Context()
+    publisher = context.socket(zmq.XPUB)
+    publisher.setsockopt(zmq.LINGER, 0)
+    publisher.setsockopt(zmq.XPUB_VERBOSE, 1)
+    iq_port = publisher.bind_to_random_port('tcp://127.0.0.1')
+    try:
+        async with backend(free_port(), iq_port, tmp_path) as receiver, httpx.AsyncClient() as http:
+            wsurl = receiver.replace('http', 'ws')+'/iq'
+            catalog = (await http.get(receiver+'/bands')).json()
+            assert catalog['default'] == 0 and len(catalog['bands']) == 5
+            assert catalog['full_band']['id'] == 'full'
+            assert catalog['full_band']['sample_rate'] == 520834
+            assert not (await http.get(receiver+'/stream-info')).json()['receiving']
+            async with connect(wsurl+'?band=full') as full:
+                assert await asyncio.wait_for(publisher.recv(), 2) == b'\x01'
+                payload = iq_samples(100000, 8192)
+                packet = make_header(FrameInfo(0, 520834, 739700000, 8192, 99))+payload
+                await publisher.send(packet)
+                assert await asyncio.wait_for(full.recv(), 2) == packet
+                state = (await http.get(receiver+'/stream-info')).json()
+                assert state['full_band_clients'] == 1 and state['active_bands'] == 0
+                async with connect(wsurl+'?band=1') as a, connect(wsurl+'?band=1') as b:
+                    packet = make_header(FrameInfo(1, 520834, 739700000, 8192, 99))+payload
+                    await publisher.send(packet)
+                    complete, first, second = await asyncio.gather(*(asyncio.wait_for(ws.recv(), 2) for ws in (full, a, b)))
+                    assert complete == packet and first == second
+                    assert validate_frame(first).sample_rate == 128000
+                    assert validate_frame(first).center_freq == 739780000
+                    state = (await http.get(receiver+'/stream-info')).json()
+                    assert state['clients'] == 3 and state['active_bands'] == 1
+                    assert state['full_band_clients'] == 1 and state['counters']['channel_frames'] == 1
+                    assert not await publisher.poll(0)
+                for _ in range(100):
+                    state = (await http.get(receiver+'/stream-info')).json()
+                    if state['clients'] == 1 and state['active_bands'] == 0: break
+                    await asyncio.sleep(.02)
+                assert state['clients'] == 1 and state['active_bands'] == 0 and state['receiving']
+                # Full reception continues through a source restart without allocating DSP.
+                packet = make_header(FrameInfo(0, 520834, 739700000, 8192, 100))+payload
+                await publisher.send(packet)
+                assert await asyncio.wait_for(full.recv(), 2) == packet
+                assert not await publisher.poll(0)
+            assert await asyncio.wait_for(publisher.recv(), 2) == b'\x00'
+            state = (await http.get(receiver+'/stream-info')).json()
+            assert state['clients'] == 0 and state['active_bands'] == 0
+            assert state['full_band_clients'] == 0 and not state['receiving']
+    finally:
+        publisher.close(linger=0)
+        context.term()

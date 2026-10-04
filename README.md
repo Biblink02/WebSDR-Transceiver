@@ -2,14 +2,15 @@
 
 A browser receiver for QO-100 using PlutoSDR. The server captures and distributes
 one packed I/Q stream. Backend replicas produce shared, filtered 128 kHz
-subbands. Each listener runs C++ WebAssembly DSP locally for the waterfall
-and USB/LSB/CW audio, and can tune independently within its selected band.
+subbands and offer the complete capture as a manual receive option. Each listener
+runs C++ WebAssembly DSP locally for the waterfall and USB/LSB/CW audio, and can
+tune independently within its selected span.
 
 ```mermaid
 flowchart LR
     Pluto[PlutoSDR] --> SDR[GNU Radio capture and antialias filter]
     SDR -->|Packed I/Q8 over ZeroMQ| Backend[FastAPI and shared C++ liquid-dsp channelizer]
-    Backend -->|128 kHz I/Q8 WebSocket| Worker[Browser worker and C++ liquid-dsp WASM]
+    Backend -->|Selected subband or full I/Q8 WebSocket| Worker[Browser worker and C++ liquid-dsp WASM]
     Worker --> Waterfall[Waterfall canvas]
     Worker --> Audio[48 kHz Web Audio and GainNode]
 ```
@@ -18,8 +19,12 @@ The deployment consists of an SDR source, stateless backend replicas, and a Vue
 frontend served directly by Caddy. There is no Redis, Socket.IO, audio-worker pool, server
 FFT worker, or compatibility mode. Outbound bandwidth and browser CPU determine
 listener capacity. A 128 kHz subband costs 2.05 Mbit/s per listener before
-overhead, about 75% less than the 520,834 Hz upstream. Native CPU work is shared
-once per active band per replica. See [subband architecture](docs/iq-subbands.md).
+overhead, about 75% less than the 520,834 Hz upstream. Choose **Receive band →
+Full spectrum** to receive the complete capture at 8.33 Mbit/s per listener.
+The backend forwards those frames directly; native channelization is shared once
+per active subband per replica. The default remains a subband, and selection
+never changes automatically with load or listener count. See
+[subband architecture](docs/iq-subbands.md).
 
 ## Build and deployment
 

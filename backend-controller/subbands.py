@@ -4,12 +4,15 @@ import math
 import os
 from dataclasses import asdict, dataclass
 from functools import lru_cache
+from typing import Literal
 from iq_protocol import HEADER, MAX_SAMPLES, FrameInfo, make_header
+
+FULL_BAND = 'full'
 
 
 @dataclass(frozen=True)
 class Band:
-    id: int
+    id: int | Literal['full']
     center_freq: float
     sample_rate: int
     low: float
@@ -50,10 +53,21 @@ class BandPlan:
         self.bands = bands
         self.default = min(bands, key=lambda key: abs(bands[key].center_freq - center))
         self.input_rate, self.center = input_rate, center
+        self.full_band = Band(FULL_BAND, center, input_rate,
+                              max(view_low, center-input_rate/2), min(view_high, center+input_rate/2))
+
+    def get_band(self, selection):
+        if selection == FULL_BAND:
+            return self.full_band
+        try:
+            return self.bands[selection]
+        except KeyError as error:
+            raise ValueError('Unknown I/Q receive band') from error
 
     def json(self):
         return {'default': self.default, 'input_sample_rate': self.input_rate,
-                'input_center_freq': self.center, 'bands': [band.json() for band in self.bands.values()]}
+                'input_center_freq': self.center, 'full_band': self.full_band.json(),
+                'bands': [band.json() for band in self.bands.values()]}
 
 
 @lru_cache(maxsize=1)

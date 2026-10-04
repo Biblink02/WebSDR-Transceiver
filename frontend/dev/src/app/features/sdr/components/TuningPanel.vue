@@ -17,7 +17,9 @@ function share() {
         <div class="section-title">TUNING <span>{{ store.mode === 'cw' ? 'CW' : store.sideband > 0 ? 'USB' : 'LSB' }}</span></div>
         <div class="frequency-readout">{{ ((store.tuneFreq + store.settings.lnb_lo_freq) / 1e6).toFixed(6) }}<small>MHz RF</small></div>
         <div class="muted fine-print">IF {{ (store.tuneFreq / 1e6).toFixed(6) }} MHz · BW {{ (store.bandwidth / 1000).toFixed(2) }} kHz</div>
-        <label class="band-control">Receive band<select aria-label="Receive band" :value="store.selectedBand" @change="store.selectBand(numberValue($event))">
+        <label class="band-control">Receive band<select aria-label="Receive band" :value="store.selectedBand"
+            @change="store.selectBand(($event.target as HTMLSelectElement).value === 'full' ? 'full' : numberValue($event))">
+            <option value="full">Full spectrum · {{ (store.settings.bands.full_band.bits_per_second / 1e6).toFixed(2) }} Mbit/s</option>
             <option v-for="band in store.bands" :key="band.id" :value="band.id">
                 {{ ((band.low + store.settings.lnb_lo_freq) / 1e6).toFixed(4) }}–{{ ((band.high + store.settings.lnb_lo_freq) / 1e6).toFixed(4) }} MHz
             </option></select></label>

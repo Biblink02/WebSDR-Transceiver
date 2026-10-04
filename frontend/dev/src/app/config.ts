@@ -3,7 +3,12 @@ import yaml from 'js-yaml'
 export interface IqBand {
     id: number; center_freq: number; sample_rate: number; low: number; high: number; bits_per_second: number
 }
-export interface BandCatalog { default: number; input_sample_rate: number; input_center_freq: number; bands: IqBand[] }
+export type IqSelection = number | 'full'
+export type IqFullBand = Omit<IqBand, 'id'> & { id: 'full' }
+export interface BandCatalog {
+    default: number; input_sample_rate: number; input_center_freq: number;
+    bands: IqBand[]; full_band: IqFullBand
+}
 
 export interface AppConfig {
     samp_rate: number
@@ -42,13 +47,18 @@ export async function loadConfig(): Promise<AppConfig> {
     const catalogResponse = await fetch('/bands', { cache: 'no-store' })
     if (!catalogResponse.ok) throw new Error('Failed to fetch I/Q subbands')
     const catalog = await catalogResponse.json() as BandCatalog
+    const validSpan = (band: IqBand | IqFullBand) =>
+        [band.center_freq, band.sample_rate, band.low, band.high, band.bits_per_second].every(Number.isFinite) &&
+        Number.isInteger(band.sample_rate) && band.sample_rate >= 48000 && band.sample_rate <= 4000000 &&
+        band.center_freq > 0 && band.low < band.high && band.bits_per_second === band.sample_rate * 16 &&
+        band.low >= band.center_freq - band.sample_rate / 2 && band.high <= band.center_freq + band.sample_rate / 2
     if (!catalog || !Array.isArray(catalog.bands) || !catalog.bands.length || catalog.bands.length > 16 ||
+        catalog.bands.some(band => !band || !Number.isInteger(band.id) || !validSpan(band)) ||
         !Number.isInteger(catalog.default) || !catalog.bands.some(band => band.id === catalog.default) ||
         new Set(catalog.bands.map(band => band.id)).size !== catalog.bands.length ||
-        catalog.bands.some(band => !Number.isInteger(band.id) ||
-            ![band.center_freq, band.sample_rate, band.low, band.high, band.bits_per_second].every(Number.isFinite) ||
-            band.sample_rate < 48000 || band.sample_rate > 4000000 || band.low >= band.high ||
-            band.low < band.center_freq - band.sample_rate / 2 || band.high > band.center_freq + band.sample_rate / 2))
+        !catalog.full_band || catalog.full_band.id !== 'full' || !validSpan(catalog.full_band) ||
+        catalog.full_band.sample_rate !== catalog.input_sample_rate ||
+        catalog.full_band.center_freq !== catalog.input_center_freq)
         throw new Error('Invalid I/Q subband catalog')
     config.bands = catalog
     return config

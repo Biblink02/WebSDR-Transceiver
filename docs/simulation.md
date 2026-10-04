@@ -2,7 +2,8 @@
 
 Two local capture paths exercise the same packed I/Q publisher, bounded fanout
 and browser C++ WASM receiver. `feat/webassembly` forwards the complete I/Q stream;
-`feat/iq-subbands` applies a shared native channelizer before distribution:
+`feat/iq-subbands` defaults to shared native subbands and also offers full capture
+as a manual selection:
 
 ```mermaid
 flowchart LR
@@ -28,8 +29,9 @@ bash scripts/demo-cluster.sh
 The script creates/reuses the ignored `.venv`, installs pinned PyYAML there,
 builds the current code, creates `websdr-iq-demo` with its own kubeconfig, and
 forwards Caddy to `http://localhost:18080/sdr`. Two backend replicas serve the
-complete I/Q stream on `feat/webassembly` or five overlapping receive bands on
-`feat/iq-subbands`. The default source is live synthetic capture running
+complete I/Q stream on `feat/webassembly` or five overlapping receive bands plus
+the manual **Full spectrum** option on `feat/iq-subbands`.
+The default source is live synthetic capture running
 the `automatic` scenario. Capture starts when a viewer connects.
 
 Choose a stable scene or the IIO path before creating the cluster:
@@ -58,7 +60,8 @@ image tags, and does not modify the central hardware configuration.
 
 These frequencies use the repository's 739.7 MHz IF and 9.75 GHz LNB offset.
 Set the displayed RF frequency and mode, then start audio. On `feat/iq-subbands`,
-first select the band from the table; `feat/webassembly` exposes all frequencies
+first select the band from the table, or choose **Full spectrum** to access all
+stations without switching band; `feat/webassembly` exposes all frequencies
 in one stream.
 Use approximately 3 kHz bandwidth for speech and 500 Hz for CW.
 
@@ -178,8 +181,8 @@ KUBECONFIG=/tmp/websdr-iq-demo/kubeconfig PYTHONPATH=.:shared:backend-controller
   .venv/bin/python tests/demo_cluster_check.py --mode synthetic --stream subbands
 ```
 
-Use `--stream full` for the `feat/webassembly` demo and `--mode iio` for the IIO
-source. That check replaces only its emulator pod and waits for GNU Radio/source
+Use `--stream full` to check complete capture on either branch and `--mode iio`
+for the IIO source. That check replaces only its emulator pod and waits for GNU Radio/source
 recovery, then checks idle/wake. It reads five listeners through Caddy; the
 subband version requires visible signals in all five bands.
 

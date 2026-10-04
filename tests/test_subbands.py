@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from iq_protocol import HEADER, FrameInfo, make_header, validate_frame
 from iq import IQDistributor
-from subbands import Band, BandPlan, NativeChannelizer, native_library
+from subbands import FULL_BAND, Band, BandPlan, NativeChannelizer, native_library
 
 RATE, CENTER = 520834, 739700000
 
@@ -78,6 +78,12 @@ def test_band_plan_covers_view_with_overlap_and_bounded_work():
         bands = list(plan.bands.values())
         assert 1 <= len(bands) <= 16
         assert plan.default in plan.bands
+        full = plan.get_band(FULL_BAND)
+        assert full.id == FULL_BAND and full.sample_rate == rate and full.center_freq == CENTER
+        assert full.low == max(CENTER-200000, CENTER-rate/2)
+        assert full.high == min(CENTER+200000, CENTER+rate/2)
+        assert plan.json()['full_band'] == full.json()
+        assert full.json()['bits_per_second'] == rate * 16
         for band in bands:
             assert abs(band.center_freq - CENTER) + band.sample_rate / 2 <= rate / 2
         for before, after in zip(bands, bands[1:]): assert before.high >= after.low
@@ -89,11 +95,43 @@ def test_band_plan_covers_view_with_overlap_and_bounded_work():
     with pytest.raises(ValueError): BandPlan(RATE,CENTER,CENTER+1000000,CENTER+2000000)
 
 
+def test_full_spectrum_bypasses_native_processing_and_bounds_backlog(monkeypatch):
+    def forbidden_channelizer(*args):
+        raise AssertionError('Full-spectrum listeners must not allocate a native channelizer')
+    monkeypatch.setattr('iq.NativeChannelizer', forbidden_channelizer)
+    distributor = IQDistributor(None, 'unused', queue_size=2)
+    first, second = distributor.subscribe(FULL_BAND), distributor.subscribe(FULL_BAND)
+    payload = iq_samples(160000, 256)
+    for sequence in range(3):
+        packet = make_header(FrameInfo(sequence, RATE, CENTER, 256, 7)) + payload
+        distributor.ingest(packet)
+        assert second.get_nowait() is packet
+    assert first.qsize() == 2 and distributor.counters['client_dropped'] == 1
+    assert validate_frame(first.get_nowait()).sequence == 1
+    # A restarted source must clear old-epoch backlog even without native DSP.
+    packet = make_header(FrameInfo(0, RATE, CENTER, 256, 11)) + payload
+    distributor.ingest(packet)
+    assert first.qsize() == 1 and first.get_nowait() is packet
+    assert second.get_nowait() is packet
+    distributor.ingest(b'malformed')
+    assert first.empty() and second.empty() and distributor.counters['malformed'] == 1
+    assert distributor.diagnostics()['full_band_clients'] == 2
+    assert not distributor.channels and not distributor.counters['channel_frames']
+    distributor.unsubscribe(first)
+    assert distributor.demand.is_set() and not distributor.idle.is_set()
+    distributor.unsubscribe(second)
+    assert not distributor.demand.is_set() and distributor.idle.is_set()
+    assert distributor.diagnostics()['full_band_clients'] == 0
+
+
 def test_one_channelizer_per_band_and_last_listener_releases_resources():
     distributor = IQDistributor(None, 'unused')
     a, b, c = distributor.subscribe(0), distributor.subscribe(0), distributor.subscribe(1)
+    full = distributor.subscribe(FULL_BAND)
     info = FrameInfo(0,RATE,CENTER,8192,42)
-    distributor.ingest(make_header(info)+iq_samples(100000,8192))
+    packet = make_header(info)+iq_samples(100000,8192)
+    distributor.ingest(packet)
+    assert full.get_nowait() is packet
     assert distributor.counters['channel_frames'] == 2
     assert distributor.diagnostics()['active_bands'] == 2
     assert a.get_nowait() == b.get_nowait()
@@ -101,6 +139,8 @@ def test_one_channelizer_per_band_and_last_listener_releases_resources():
     distributor.unsubscribe(a); assert len(distributor.channels) == 2
     distributor.unsubscribe(b); assert len(distributor.channels) == 1
     distributor.unsubscribe(c); assert len(distributor.channels) == 0
+    assert distributor.demand.is_set() and not distributor.idle.is_set()
+    distributor.unsubscribe(full)
     assert distributor.idle.is_set() and not distributor.demand.is_set()
     with pytest.raises(ValueError): distributor.subscribe(123)
 

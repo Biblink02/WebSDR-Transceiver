@@ -133,10 +133,15 @@ and RF/audio quality still need testing on target client devices and the Pluto.
 Choose **Receive band** to move the visible spectrum to another portion of the
 station. The 128 kHz stream has a usable 102.4 kHz span and overlaps its neighbors.
 Only the selected span appears in the waterfall and automatic signal search.
+Select **Full spectrum** in the same menu to view the entire configured capture
+and keep the current frequency. This costs 8.33 Mbit/s per browser at 520,834 Hz,
+compared with 2.05 Mbit/s for a subband; the menu displays the full-stream bitrate.
+The selection belongs to this listener and remains manual regardless of load.
 Band changes reconnect the stream, release pinned tracking, reset zoom/history
 and finalize recording by stopping audio. Press Start audio to listen again.
 
 Fine frequency/BW/sideband/CW controls remain local. Entering a frequency outside
-the current band selects a suitable overlapping band when the entire passband
+the current subband selects a suitable overlapping band when the entire passband
 fits; otherwise tuning clamps to the available limits. Shared links and saved
-frequencies retain the chosen band. See [subband details](iq-subbands.md).
+frequencies retain the chosen band, including full spectrum. Fine tuning while
+full spectrum is selected keeps that selection. See [subband details](iq-subbands.md).

@@ -1,11 +1,14 @@
 # Shared native I/Q subbands
 
-This branch replaces the full-width browser stream with a filtered subband.
+This branch defaults to a filtered subband and allows each listener to manually
+select the complete capture instead.
 The Pluto/GNU Radio source remains a single demand-driven publisher. Each backend
 replica subscribes once while it has viewers, runs one native C++ liquid-dsp
-channelizer per distinct active band, then shares that result with all listeners
-of the band. No backend FFT, demodulation or audio is introduced. The browser
-still owns SSB/CW, AGC, squelch, AFC, spectrum analysis and recording.
+channelizer per distinct active subband, then shares that result with all listeners
+of the band. Full-spectrum listeners receive the validated source frames directly,
+without a channelizer, alongside any active subbands. No backend FFT, demodulation
+or audio is introduced. The browser still owns SSB/CW, AGC, squelch, AFC, spectrum
+analysis and recording.
 
 ## Geometry and selection
 
@@ -19,15 +22,22 @@ guard. Plans larger than 16 bands fail configuration validation.
 With the current 520,834 Hz capture and 400 kHz RF view, five 128 kHz bands cover
 the view. Their centers are 80 kHz apart; usable spans overlap by 22.4 kHz.
 `GET /bands` lists numeric IDs, IF centers, sample rates, usable IF bounds and
-payload bitrates. It works while idle without subscribing upstream or waking
+payload bitrates in `bands`, plus `full_band` with ID `"full"` and the source
+center/rate. The full view is clipped to the configured limits and upstream
+Nyquist span. It works while idle without subscribing upstream or waking
 Pluto. `GET /iq?band=id` opens that band; omitted `band` selects the band nearest
-the source center. Invalid IDs are rejected before admission. Frames carry the
-actual band center/rate/count and preserve source sequence/epoch.
+the source center. `GET /iq?band=full` forwards complete source frames, byte for
+byte, with the original rate, center and count. Invalid IDs are rejected before
+admission. Frames carry the actual band center/rate/count and preserve source
+sequence/epoch.
 
 The console selects a receive band and clamps fine tuning to its usable interval.
 A manually entered frequency may select another band that contains the complete
-passband. Saved frequencies and share links retain band selection. Changing band
-terminates the old DSP worker, stops audio and finalizes recording, clears
+passband. **Receive band → Full spectrum** makes the whole configured capture
+view available and preserves the current tuning. Fine tuning in that selection
+does not return to a subband. The choice is per listener; no capacity/load/user-count
+policy changes it automatically. Saved frequencies and share links retain band
+selection. Changing band terminates the old DSP worker, stops audio and finalizes recording, clears
 tracking/history, and starts a new stream. Audio requires a new Start audio click.
 Ordinary fine tuning/AFC continues locally without WebSocket control messages.
 
@@ -52,6 +62,9 @@ Each listener retains its existing bounded FIFO/send deadline. The final viewer
 of a band frees its channelizer. The final viewer of a replica closes its upstream
 subscription, preserving capture idle/sleep behavior across replicas. Sequence,
 epoch and upstream metadata changes clear backlog and native filter/phase history.
+Full-spectrum listeners share the same bounded queues, send deadlines and
+discontinuity handling. A full listener keeps capture awake after the last
+subband listener leaves, while the unused native channelizer is freed immediately.
 The catalog is recalculated from actual source metadata; configuration changes
 should still restart source/backends together.
 
@@ -60,7 +73,9 @@ should still restart source/backends together.
 Payload falls from 8.33 Mbit/s at 520,834 Hz to 2.048 Mbit/s at 128 kHz per browser,
 a 75.4% reduction before overhead. The internal source-to-backend stream retains
 its original rate. Channelizer CPU scales with distinct bands on each replica,
-not with listeners sharing a band. `/stream-info` adds `active_bands` and counters
+not with listeners sharing a band. Full selection costs 8.33 Mbit/s per browser
+and processes all samples in browser WASM, while adding no native channelizer
+work. `/stream-info` adds `active_bands`, `full_band_clients` and counters
 for `channel_frames`, `processing_microseconds` and `delivered_bytes`.
 
 The native tests process actual quantized tones, verify frequency translation,
@@ -72,8 +87,10 @@ Five simultaneously active bands processed 2.013 seconds of I/Q in 0.517 seconds
 on this development machine; a concurrent build run took 0.854 seconds. Both met
 the real-time budget. These measurements do not estimate production CPU capacity.
 
-Real WebSocket tests cover shared processing, different bands, replica independence,
-invalid IDs and last-listener cleanup. Chromium checks band changes, recording
+Real WebSocket tests cover shared processing, mixed full/subband listeners on one
+upstream subscription, exact full-frame forwarding, source epochs, replica
+independence, invalid IDs and last-listener cleanup. Chromium checks manual
+full/subband changes, full-view tuning without a selection change, recording
 finalization, band-aware saved/shared frequencies and actual audio from a carrier
 in an overlapping band. Existing drift/CW/AGC/squelch/background/recording tests
 also run on the narrower stream. Deployment checks use a dedicated Kind cluster

@@ -9,7 +9,7 @@ from config import (WEB_PORT, LISTEN_IP, SDR_HOST, SDR_IQ_PORT,
                     IQ_CLIENT_QUEUE_SIZE, IQ_SEND_TIMEOUT, IQ_STALL_SECONDS,
                     IQ_SUBBAND_RATE, IQ_INPUT_RATE, IQ_CENTER, IQ_VIEW_LOW, IQ_VIEW_HIGH)
 from iq import IQDistributor
-from subbands import native_library
+from subbands import FULL_BAND, native_library
 
 
 @asynccontextmanager
@@ -66,11 +66,11 @@ async def bands():
 async def iq_socket(websocket: WebSocket):
     distributor = app.state.iq
     try:
-        band = int(websocket.query_params.get('band', distributor.plan.default))
-        if band not in distributor.plan.bands:
-            raise ValueError('Unknown band')
+        selection = websocket.query_params.get('band', str(distributor.plan.default))
+        band = FULL_BAND if selection == FULL_BAND else int(selection)
+        distributor.plan.get_band(band)
     except ValueError:
-        await websocket.close(code=1008, reason='Unknown I/Q subband')
+        await websocket.close(code=1008, reason='Unknown I/Q receive band')
         return
     await websocket.accept()
     queue = distributor.subscribe(band)
