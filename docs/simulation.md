@@ -1,7 +1,8 @@
 # Hardware-free receiver testing
 
-Two local capture paths exercise the same packed I/Q publisher, bounded fanout,
-native subband channelizer and browser C++ WASM receiver:
+Two local capture paths exercise the same packed I/Q publisher, bounded fanout
+and browser C++ WASM receiver. `feat/webassembly` forwards the complete I/Q stream;
+`feat/iq-subbands` applies a shared native channelizer before distribution:
 
 ```mermaid
 flowchart LR
@@ -11,12 +12,13 @@ flowchart LR
     Emulator --> GNU[Production GNU Radio IIO flowgraph with demo pacing]
     Synthetic --> Publisher[Production packetizer and demand lifecycle]
     GNU --> Publisher
-    Publisher --> Receiver[Backend subbands and browser WASM / Web Audio]
+    Publisher --> Backend[Full IQ fanout or shared subbands, according to branch]
+    Backend --> Receiver[Browser WASM / Web Audio]
 ```
 
 ## Start the persistent demo
 
-From the `feat/iq-subbands` worktree, with Docker, Kind, kubectl and Python's
+From either branch's worktree, with Docker, Kind, kubectl and Python's
 `venv` module installed:
 
 ```bash
@@ -25,8 +27,9 @@ bash scripts/demo-cluster.sh
 
 The script creates/reuses the ignored `.venv`, installs pinned PyYAML there,
 builds the current code, creates `websdr-iq-demo` with its own kubeconfig, and
-forwards Caddy to `http://localhost:18080/sdr`. Two backend replicas serve five
-overlapping receive bands. The default source is live synthetic capture running
+forwards Caddy to `http://localhost:18080/sdr`. Two backend replicas serve the
+complete I/Q stream on `feat/webassembly` or five overlapping receive bands on
+`feat/iq-subbands`. The default source is live synthetic capture running
 the `automatic` scenario. Capture starts when a viewer connects.
 
 Choose a stable scene or the IIO path before creating the cluster:
@@ -45,7 +48,7 @@ bash scripts/demo-cluster.sh serve
 bash scripts/demo-cluster.sh stop
 ```
 
-Stop the demo before changing its source/scenario and rebuilding. `DEMO_PORT`
+Stop the demo before changing branch, source or scenario and rebuilding. `DEMO_PORT`
 changes the local port. `PYTHON_BIN` selects the interpreter that creates the
 virtual environment; activation is unnecessary. `manifest` prints generated
 YAML without creating a cluster. The script uses its own kubeconfig and test
@@ -54,7 +57,9 @@ image tags, and does not modify the central hardware configuration.
 ## Stations and listening
 
 These frequencies use the repository's 739.7 MHz IF and 9.75 GHz LNB offset.
-Select the band, set the displayed RF frequency and mode, then start audio.
+Set the displayed RF frequency and mode, then start audio. On `feat/iq-subbands`,
+first select the band from the table; `feat/webassembly` exposes all frequencies
+in one stream.
 Use approximately 3 kHz bandwidth for speech and 500 Hz for CW.
 
 | Band | RF frequency (Hz) | Mode | Signal |
@@ -170,19 +175,28 @@ For a running demo, the additional integration check uses its dedicated context:
 
 ```bash
 KUBECONFIG=/tmp/websdr-iq-demo/kubeconfig PYTHONPATH=.:shared:backend-controller \
-  .venv/bin/python tests/demo_cluster_check.py --mode synthetic
+  .venv/bin/python tests/demo_cluster_check.py --mode synthetic --stream subbands
 ```
 
-Use `--mode iio` for the IIO demo. That check replaces only its emulator pod and
-waits for GNU Radio/source recovery, then checks idle/wake. It reads all five
-bands through Caddy and requires visible signals in each band.
+Use `--stream full` for the `feat/webassembly` demo and `--mode iio` for the IIO
+source. That check replaces only its emulator pod and waits for GNU Radio/source
+recovery, then checks idle/wake. It reads five listeners through Caddy; the
+subband version requires visible signals in all five bands.
 
-Verified on 2026-10-04: 31 Python tests, native CTest, nine Bun tests and seven
+Initially verified on 2026-10-04 on `feat/iq-subbands`: 31 Python tests, native CTest, nine Bun tests and seven
 compiled-WASM tests passed, along with Vue typechecking and the production build.
 Recovered USB/LSB speech correlation was 0.9931/0.9967. Both Kubernetes source
 paths passed five-listener recovery with zero backend/frontend restarts. A real
 Chromium session played USB speech and created a local recording through the
 complete IIO/GNU Radio/Caddy/subband/WASM path without runtime errors.
+
+The subsequent lifecycle review passed all 32 Python tests on `feat/webassembly`
+and 30 targeted capture/distribution/native tests on `feat/iq-subbands`, including
+idle-notification and shutdown-cancellation interleavings. Five controller-driven
+GNU Radio/IIO capture/sleep/wake cycles produced correct samples and fresh epochs.
+The full-stream frontend passed Vue typechecking, nine Bun tests, the production
+build and the generated-signal WASM check. Both demo manifest variants match
+between branches except for subband configuration and the `/bands` proxy route.
 
 The model proves software IIO configuration/streaming and receiver behavior. It
 does not model actual RF sensitivity, hardware-rounded sample rates, physical

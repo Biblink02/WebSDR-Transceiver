@@ -1,4 +1,4 @@
-"""Read the running demo through Caddy and check all five bands, idle/wake and IIO recovery."""
+"""Check five Caddy listeners, capture idle/wake and recovery on either IQ branch."""
 import argparse
 import asyncio
 import json
@@ -56,7 +56,7 @@ async def wait_new_epochs(latest, initial, readers, timeout):
     raise AssertionError('Listeners did not resume with a fresh source epoch')
 
 
-async def main(mode, origin):
+async def main(mode, origin, stream):
     if not os.getenv('KUBECONFIG') or CONTEXT not in kubectl('config', 'current-context'):
         raise RuntimeError('Set KUBECONFIG to the dedicated demo kubeconfig')
     health_port = free_port()
@@ -67,14 +67,20 @@ async def main(mode, origin):
             async with httpx.AsyncClient() as http:
                 health_url = f'http://127.0.0.1:{health_port}/health'
                 await status(http, health_url, lambda info: info['mode'] == 'idle')
-                bands = (await http.get(origin+'/bands')).json()['bands']
-                assert len(bands) == 5
-                sockets = [await connect(origin.replace('http', 'ws')+f'/iq?band={band["id"]}') for band in bands]
+                if stream == 'subbands':
+                    bands = (await http.get(origin+'/bands')).json()['bands']
+                    assert len(bands) == 5
+                    paths = [f'/iq?band={band["id"]}' for band in bands]
+                    sample_rate = 128000
+                else:
+                    paths = ['/iq']*5
+                    sample_rate = 520834
+                sockets = [await connect(origin.replace('http', 'ws')+path) for path in paths]
                 readers = []
                 try:
                     first = await asyncio.gather(*(asyncio.wait_for(socket.recv(), 20) for socket in sockets))
                     metadata = [validate_frame(frame) for frame in first]
-                    assert all(info.sample_rate == 128000 for info in metadata)
+                    assert all(info.sample_rate == sample_rate for info in metadata)
                     peaks = [0.0]*5
                     deadline = time.monotonic()+4
                     while time.monotonic() < deadline:
@@ -86,7 +92,7 @@ async def main(mode, origin):
                             power = np.abs(np.fft.fft(iq[:count]*np.hanning(count)))**2
                             peaks[index] = max(peaks[index], float(10*np.log10((power.max()+1)/(np.median(power)+1))))
                     assert min(peaks) > 15, peaks
-                    print(f'Five bands contain voice/CW, spectral contrast {[round(value, 1) for value in peaks]} dB', flush=True)
+                    print(f'Five {stream} listeners receive voice/CW, spectral contrast {[round(value, 1) for value in peaks]} dB', flush=True)
                     initial = restart_counts()
                     latest = metadata.copy()
                     async def consume(index, socket):
@@ -117,10 +123,10 @@ async def main(mode, origin):
                     await asyncio.gather(*(socket.close() for socket in sockets))
                 idle = await status(http, health_url, lambda info: info['mode'] == 'idle')
                 assert not idle['capture_active'] and idle['subscribers'] == 0
-                async with connect(origin.replace('http', 'ws')+'/iq?band=0') as socket:
+                async with connect(origin.replace('http', 'ws')+paths[0]) as socket:
                     info = validate_frame(await asyncio.wait_for(socket.recv(), 20))
-                    assert info.sample_rate == 128000
-                print('PASS: Caddy WebSocket, all bands, capture idle/wake and source recovery', flush=True)
+                    assert info.sample_rate == sample_rate
+                print(f'PASS: Caddy WebSocket, {stream}, capture idle/wake and source recovery', flush=True)
         finally:
             forward.terminate()
             forward.wait(timeout=10)
@@ -129,6 +135,8 @@ async def main(mode, origin):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--mode', choices=['synthetic', 'iio'], required=True)
+    parser.add_argument('--stream', choices=['full', 'subbands'], required=True,
+                        help='Expected IQ distribution in the branch used to build the demo')
     parser.add_argument('--origin', default='http://127.0.0.1:18080')
     args = parser.parse_args()
-    asyncio.run(main(args.mode, args.origin))
+    asyncio.run(main(args.mode, args.origin, args.stream))
