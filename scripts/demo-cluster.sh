@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local, persistent preview of the subband receiver with synthetic I/Q.
+# Local, persistent preview of the current branch with synthetic or emulated I/Q.
 set -euo pipefail
 TASK_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 DEMO_CLUSTER=websdr-iq-demo
