@@ -72,6 +72,7 @@ def native_library():
 
 
 class NativeChannelizer:
+    """Owned by IQDistributor's event loop; process/close must stay on that thread."""
     def __init__(self, input_rate, input_center, band):
         self.library, self.band = native_library(), band
         self.handle = self.library.channelizer_new(input_rate, band.sample_rate, band.center_freq - input_center)
@@ -92,5 +93,6 @@ class NativeChannelizer:
 
     def close(self):
         if self.handle:
-            self.library.channelizer_free(self.handle)
+            handle = self.handle
             self.handle = None
+            self.library.channelizer_free(handle)

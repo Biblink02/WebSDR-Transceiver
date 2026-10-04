@@ -17,12 +17,17 @@ class StreamHealth:
         self.thread = None
         self.mode = 'streaming'
         self.mode_since = self.clock()
+        self.warmup_since = None
         self.warmup_seconds = 30
         self.details = lambda: {}
 
     def set_mode(self, mode):
         if mode != self.mode:
             self.mode, self.mode_since = mode, self.clock()
+            if mode == 'waking' and self.warmup_since is None:
+                self.warmup_since = self.mode_since
+            elif mode in ('idle', 'streaming', 'fault'):
+                self.warmup_since = None
 
     def source_progress(self):
         self.last_source = self.clock()
@@ -36,8 +41,10 @@ class StreamHealth:
         publish_age = now - self.last_publish if self.last_publish is not None else None
         progressing = (source_age is not None and publish_age is not None and
                    source_age <= self.stall_seconds and publish_age <= self.stall_seconds)
+        warming = (self.warmup_since is not None and
+                   now-self.warmup_since <= self.warmup_seconds)
         healthy = (self.mode == 'idle' or
-                   (self.mode == 'waking' and now-self.mode_since <= self.warmup_seconds) or
+                   (self.mode in ('waking', 'cooling') and warming) or
                    (self.mode in ('streaming', 'cooling') and progressing))
         return healthy, {'status': self.mode if healthy else 'stalled', 'mode': self.mode,
                          'source_age_seconds': source_age, 'publish_age_seconds': publish_age,

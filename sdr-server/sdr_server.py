@@ -3,6 +3,7 @@ import logging
 import os
 import signal
 import threading
+from contextlib import ExitStack
 from pathlib import Path
 import numpy as np
 import yaml
@@ -115,9 +116,10 @@ def main():
             controller.tick()
             stopped.wait(0.005 if controller.capture is not None else 0.2)
     finally:
-        controller.close()
-        health.close()
-        publisher.close()
+        with ExitStack() as cleanup:
+            cleanup.callback(publisher.close)
+            cleanup.callback(health.close)
+            cleanup.callback(controller.close)
 
 
 if __name__ == '__main__':

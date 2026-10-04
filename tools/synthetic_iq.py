@@ -3,6 +3,7 @@ import argparse
 import signal
 import threading
 import time
+from contextlib import ExitStack
 from pathlib import Path
 import numpy as np
 from iq_publisher import Packetizer, Publisher
@@ -103,9 +104,10 @@ def main():
             controller.tick()
             stopped.wait(.005 if controller.capture is not None else .1)
     finally:
-        controller.close()
-        health.close()
-        publisher.close()
+        with ExitStack() as cleanup:
+            cleanup.callback(publisher.close)
+            cleanup.callback(health.close)
+            cleanup.callback(controller.close)
 
 
 if __name__ == '__main__':

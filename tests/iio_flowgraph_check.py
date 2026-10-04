@@ -8,36 +8,65 @@ import iio
 import numpy as np
 import yaml
 
-from capture_control import PlutoPower
+from capture_control import CaptureController, PlutoPower
 from iq_protocol import validate_frame
 from iq_publisher import Packetizer
 from sdr_server import ReceiverSource
+from stream_health import StreamHealth
 
 
 class Capture:
     def __init__(self):
         self.frames = []
         self.done = threading.Event()
+        self.health = StreamHealth()
+        self.subscribers = 0
+        self.counters = {}
 
     def configure(self, packetizer):
+        self.frames = []
+        self.done.clear()
         self.packetizer = packetizer
 
+    def discard_pending(self):
+        pass  # Frames are collected synchronously; there is no pending send queue.
+
     def push(self, samples):
-        if len(self.frames) < 64:
-            self.frames.extend(self.packetizer.push(samples))
-            if len(self.frames) >= 64:
-                self.done.set()
+        self.health.source_progress()
+        for frame in self.packetizer.push(samples):
+            self.health.published()
+            if len(self.frames) < 64:
+                self.frames.append(frame)
+        if len(self.frames) >= 64:
+            self.done.set()
 
 
-def receive(config):
+def receive_cycles(config, power):
     capture = Capture()
-    graph = ReceiverSource(config, capture)
+    controller = CaptureController(lambda: ReceiverSource(config, capture), power, capture,
+                                   capture.health, idle_seconds=0)
+    cycles = []
     try:
-        graph.start()
-        assert capture.done.wait(15), 'GNU Radio did not read sufficient emulator samples'
+        controller.tick()
+        for cycle in range(5):
+            capture.subscribers = 2
+            controller.tick()
+            assert capture.done.wait(15), 'GNU Radio did not read sufficient emulator samples'
+            controller.tick()
+            assert capture.health.mode == 'streaming' and capture.health.status()[0]
+            assert controller.starts == cycle+1
+            cycles.append(list(capture.frames))
+            capture.subscribers = 0
+            controller.tick()
+            assert controller.capture is None and not controller.release_pending
+            assert controller.stops == cycle+1 and capture.health.mode == 'idle'
+            assert power.state == 'sleep'
+            context = iio.Context(config['iio_uri'])
+            assert context.find_device('ad9361-phy').attrs['ensm_mode'].value == 'sleep'
+            del context
     finally:
-        graph.close()
-    return capture.frames[:64]
+        controller.close()
+    return cycles
 
 
 def main():
@@ -58,20 +87,18 @@ def main():
                 raise
             time.sleep(.1)
     power = PlutoPower(args.uri)
-    power.sleep()
-    assert power.state == 'sleep'
-    power.wake()
-    first, second = receive(config), receive(config)
+    cycles = receive_cycles(config, power)
+    first = cycles[0]
     info = validate_frame(first[0])
     assert info.sample_rate == config['samp_rate'] == 520834
     assert info.center_freq == config['lo_freq'] == 739700000
-    assert validate_frame(second[0]).epoch != info.epoch
+    assert len({validate_frame(frames[0]).epoch for frames in cycles}) == len(cycles)
     data = np.fromfile(args.replay, dtype='<i2', count=64*8192*2).reshape(-1, 2)
     samples = (data[:, 0]+1j*data[:, 1]).astype(np.complex64)/2048
     golden = Packetizer(info.sample_rate, info.center_freq, 8192, epoch=info.epoch)
     expected = b''.join(frame[32:] for frame in golden.push(samples))
-    assert b''.join(frame[32:] for frame in first) == expected, 'IIO channel order/scale/sample continuity changed'
-    assert b''.join(frame[32:] for frame in second) == expected, 'Reopening the IIO capture changed replay samples'
+    for frames in cycles:
+        assert b''.join(frame[32:] for frame in frames) == expected, 'IIO sleep/wake changed replay samples'
     context = iio.Context(args.uri)
     phy = context.find_device('ad9361-phy')
     rx = phy.find_channel('voltage0', False)
@@ -85,7 +112,7 @@ def main():
     power.wake()
     print('PASS: production GNU Radio IIO source, 520834 Hz/739700000 Hz readback, '
           'SSB/CW replay byte equality, FIR configuration, RF bandwidth/AGC/tracking, '
-          'capture reopen with a fresh epoch and ENSM sleep/wake attributes')
+          'five controller-driven capture/release cycles with fresh epochs and ENSM sleep/wake attributes')
 
 
 if __name__ == '__main__':

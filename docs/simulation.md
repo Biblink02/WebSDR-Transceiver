@@ -145,9 +145,10 @@ bash scripts/check-iio.sh
 ```
 
 It generates a two-second replay, starts an unprivileged emulator with no host
-port, runs the production `ReceiverSource` twice against it, checks sample rate,
+port, runs five complete capture/sleep/wake cycles through `CaptureController`
+and the production `ReceiverSource`, checks sample rate,
 center, RF bandwidth, AGC/tracking/FIR attribute writes and ENSM sleep/wake, and
-compares 64 packed payloads byte for byte with the replay. Reopening must produce
+compares 64 packed payloads per cycle byte for byte with the replay. Reopening must produce
 the same samples and a fresh epoch. Temporary containers/data are removed.
 
 ## Signal and receiver checks

@@ -14,6 +14,9 @@ class CaptureController:
         self.idle_deadline = None
         self.retry_at = 0
         self.sleep_attempted = False
+        self.sleep_retry_at = 0
+        self.release_pending = False
+        self.capture_started = False
         self.starts = 0
         self.stops = 0
         self.last_error = None
@@ -22,74 +25,99 @@ class CaptureController:
 
     def diagnostics(self):
         return {'subscribers': self.publisher.subscribers, 'capture_active': self.capture is not None,
+                'release_pending': self.release_pending,
                 'capture_starts': self.starts, 'capture_stops': self.stops,
                 'idle_grace_seconds': self.idle_seconds,
                 'power_state': self.power.state, 'last_error': self.last_error,
                 'counters': dict(self.publisher.counters)}
 
     def _sleep(self):
-        self.sleep_attempted = True
         try:
             self.power.sleep()
+            self.sleep_attempted = True
+            self.sleep_retry_at = 0
             self.last_error = None
         except Exception as error:
             # Capture is stopped even if the device is unreachable during idle.
+            self.sleep_attempted = False
+            self.sleep_retry_at = self.clock()+5
             self.last_error = str(error)
             logging.warning('Capture idle; device sleep failed: %s', error)
 
+    def _release(self):
+        if self.capture is not None:
+            try:
+                self.capture.close()
+            except Exception as error:
+                # Keep ownership until release succeeds; never sleep or open a
+                # second native graph while this one may still own IIO buffers.
+                self.release_pending = True
+                self.retry_at = self.clock()+5
+                self.last_error = str(error)
+                self.health.set_mode('fault')
+                logging.exception('Unable to release receiver')
+                return False
+            self.capture = None
+            if self.capture_started:
+                self.stops += 1
+            self.capture_started = False
+        self.release_pending = False
+        self.publisher.discard_pending()
+        return True
+
     def tick(self):
         now = self.clock()
+        if self.release_pending:
+            if now >= self.retry_at:
+                self._release()
+            return
         if self.publisher.subscribers:
             self.idle_deadline = None
             if self.capture is not None:
-                if self.health.mode != 'waking' or (
+                if self.health.warmup_since is None or (
                         self.health.last_source is not None and self.health.last_publish is not None
-                        and self.health.last_source >= self.health.mode_since
-                        and self.health.last_publish >= self.health.mode_since):
+                        and self.health.last_source >= self.health.warmup_since
+                        and self.health.last_publish >= self.health.warmup_since):
                     self.health.set_mode('streaming')
+                else:
+                    self.health.set_mode('waking')
                 return
             if now < self.retry_at:
                 return
             self.health.set_mode('waking')
             self.sleep_attempted = False
-            capture = None
             try:
                 self.power.wake()
-                capture = self.factory()
-                capture.start()
-                self.capture = capture
+                self.capture = self.factory()
+                self.capture.start()
+                self.capture_started = True
                 self.starts += 1
                 self.last_error = None
                 logging.info('Capture started for %s backend subscribers', self.publisher.subscribers)
             except Exception as error:
-                if capture is not None:
-                    capture.close()
-                self.last_error = str(error)
-                self.retry_at = now+5
-                self.health.set_mode('fault')
                 logging.exception('Unable to wake receiver')
+                if self._release():
+                    self._sleep()
+                    self.last_error = str(error)
+                    self.health.set_mode('fault')
+                self.retry_at = self.clock()+5
         elif self.capture is not None:
             if self.idle_deadline is None:
                 self.idle_deadline = now+self.idle_seconds
             self.health.set_mode('cooling')
             if now >= self.idle_deadline:
-                self.capture.close()
-                self.capture = None
-                self.stops += 1
-                self.publisher.discard_pending()
-                self._sleep()
-                self.health.set_mode('idle')
-                logging.info('Capture released; receiver idle')
+                if self._release():
+                    self._sleep()
+                    self.health.set_mode('idle')
+                    logging.info('Capture released; receiver idle')
         else:
             self.health.set_mode('idle')
-            if not self.sleep_attempted:
+            if not self.sleep_attempted and now >= self.sleep_retry_at:
                 self._sleep()
 
     def close(self):
-        if self.capture is not None:
-            self.capture.close()
-            self.capture = None
-        self.publisher.discard_pending()
+        if not self._release():
+            raise RuntimeError(f'Receiver release failed: {self.last_error}')
         self._sleep()
         self.health.set_mode('idle')
 

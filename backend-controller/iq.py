@@ -99,32 +99,45 @@ class IQDistributor:
             if not self.clients:
                 continue
             self.socket = self.context.socket(zmq.SUB)
-            for option, value in [(zmq.RCVHWM, 4), (zmq.MAXMSGSIZE, MAX_FRAME_BYTES),
-                                  (zmq.LINGER, 0), (zmq.RECONNECT_IVL, 250),
-                                  (zmq.RECONNECT_IVL_MAX, 2000), (zmq.HEARTBEAT_IVL, 1000),
-                                  (zmq.HEARTBEAT_TIMEOUT, 5000), (zmq.HEARTBEAT_TTL, 5000)]:
-                self.socket.setsockopt(option, value)
-            self.socket.setsockopt(zmq.SUBSCRIBE, b'')
-            self.socket.connect(self.address)
-            idle = asyncio.create_task(self.idle.wait())
+            idle = None
             receive = None
             try:
+                for option, value in [(zmq.RCVHWM, 4), (zmq.MAXMSGSIZE, MAX_FRAME_BYTES),
+                                      (zmq.LINGER, 0), (zmq.RECONNECT_IVL, 250),
+                                      (zmq.RECONNECT_IVL_MAX, 2000), (zmq.HEARTBEAT_IVL, 1000),
+                                      (zmq.HEARTBEAT_TIMEOUT, 5000), (zmq.HEARTBEAT_TTL, 5000)]:
+                    self.socket.setsockopt(option, value)
+                self.socket.setsockopt(zmq.SUBSCRIBE, b'')
+                self.socket.connect(self.address)
+                idle = asyncio.create_task(self.idle.wait())
                 while self.clients:
-                    receive = asyncio.ensure_future(self.socket.recv())
+                    if receive is None:
+                        receive = asyncio.ensure_future(self.socket.recv())
                     done, _ = await asyncio.wait((receive, idle), return_when=asyncio.FIRST_COMPLETED)
                     if idle in done:
-                        break
-                    self.ingest(receive.result())
+                        if not self.clients:
+                            break
+                        # A viewer joined after the idle notification was queued.
+                        # Re-arm it without dropping the live upstream connection.
+                        idle = asyncio.create_task(self.idle.wait())
+                    if receive in done:
+                        data = receive.result()
+                        receive = None
+                        self.ingest(data)
             finally:
                 for task in (receive, idle):
                     if task is not None:
                         task.cancel()
-                await asyncio.gather(*(t for t in (receive, idle) if t is not None), return_exceptions=True)
-                self.socket.close(linger=0)
-                self.socket = None
-                self.close_channels()
-                self.info = None
-                self.last_packet = None
+                try:
+                    await asyncio.gather(*(t for t in (receive, idle) if t is not None), return_exceptions=True)
+                finally:
+                    # Shutdown can cancel run() a second time during the await.
+                    # Socket closure must still precede Context.term().
+                    self.socket.close(linger=0)
+                    self.socket = None
+                    self.close_channels()
+                    self.info = None
+                    self.last_packet = None
 
     def diagnostics(self):
         return {'clients': len(self.clients), 'active_bands': len(self.channels),
