@@ -1,14 +1,15 @@
 # WebSDR-Transceiver
 
 A browser receiver for QO-100 using PlutoSDR. The server captures and distributes
-one packed I/Q stream. Each listener runs C++ WebAssembly DSP locally for the
-waterfall and USB/LSB audio, and can tune independently.
+one packed I/Q stream. Backend replicas produce shared, filtered 128 kHz
+subbands. Each listener runs C++ WebAssembly DSP locally for the waterfall
+and USB/LSB/CW audio, and can tune independently within its selected band.
 
 ```mermaid
 flowchart LR
     Pluto[PlutoSDR] --> SDR[GNU Radio capture and antialias filter]
-    SDR -->|Packed I/Q8 over ZeroMQ| Backend[Stateless FastAPI distributor]
-    Backend -->|Binary WebSocket| Worker[Browser worker and C++ liquid-dsp WASM]
+    SDR -->|Packed I/Q8 over ZeroMQ| Backend[FastAPI and shared C++ liquid-dsp channelizer]
+    Backend -->|128 kHz I/Q8 WebSocket| Worker[Browser worker and C++ liquid-dsp WASM]
     Worker --> Waterfall[Waterfall canvas]
     Worker --> Audio[48 kHz Web Audio and GainNode]
 ```
@@ -16,8 +17,9 @@ flowchart LR
 The deployment consists of an SDR source, stateless backend replicas, and a Vue
 frontend served directly by Caddy. There is no Redis, Socket.IO, audio-worker pool, server
 FFT worker, or compatibility mode. Outbound bandwidth and browser CPU determine
-listener capacity: the configured 520,834 complex samples/s costs about 8.33
-Mbit/s per listener before overhead.
+listener capacity. A 128 kHz subband costs 2.05 Mbit/s per listener before
+overhead, about 75% less than the 520,834 Hz upstream. Native CPU work is shared
+once per active band per replica. See [subband architecture](docs/iq-subbands.md).
 
 ## Build and deployment
 
@@ -41,7 +43,7 @@ ZeroMQ subscriptions and browser streams reconnect. `bash reload.sh` reapplies
 configuration and restarts receiver deployments without rebuilding images.
 `CLUSTER_NAME` selects another Kind cluster; production defaults to `kind`.
 
-Caddy serves the app and proxies `/iq` directly to the backend. Its versioned
+Caddy serves the app and proxies `/iq`, `/bands` and `/stream-info` to the backend. Its versioned
 [Caddyfile](config/Caddyfile) contains the station's public hostname. It obtains
 and renews HTTPS certificates automatically; DNS must point to the station and
 TCP ports 80/443 must reach it. Certificate data persists in `caddy-data`.
@@ -77,17 +79,20 @@ Compose build includes WASM and mounts application files and central config.
 `frontend/dist` without installing dependencies into host directories.
 
 For a hardware-free receiver, use three terminals. The Vite development server
-proxies same-origin `/iq` to `http://127.0.0.1:8080`; `SDR_BACKEND_URL` overrides
+proxies same-origin `/iq` and `/bands` to `http://127.0.0.1:8080`; `SDR_BACKEND_URL` overrides
 the target. Keep the central hardware configuration unchanged.
 
 ```bash
+cmake -S dsp-wasm -B dsp-wasm/build-native -DCMAKE_BUILD_TYPE=Release
+cmake --build dsp-wasm/build-native --target websdr_channelizer --parallel 4
 python3 -m venv .venv
 .venv/bin/pip install -r backend-controller/requirements.txt -r tests/requirements.txt
 PYTHONPATH=shared:sdr-server .venv/bin/python tools/synthetic_iq.py
 ```
 
 ```bash
-CONFIG_PATH=config/config.yaml SDR_HOST=127.0.0.1 PORT=8080 \
+SUBBAND_LIBRARY="$PWD/dsp-wasm/build-native/libwebsdr_channelizer.so" \
+  CONFIG_PATH=config/config.yaml SDR_HOST=127.0.0.1 PORT=8080 \
   PYTHONPATH=shared:backend-controller .venv/bin/python backend-controller/backend_controller.py
 ```
 
@@ -97,7 +102,8 @@ bun run dev
 ```
 
 Open `http://localhost:3100/sdr`. The synthetic source contains three tones for
-local tuning/sideband verification. Tuning messages never leave the browser.
+local tuning/sideband verification. Fine tuning never leaves the browser. Changing the receive band selects a new
+`/iq?band=id` stream and stops current audio/recording.
 This exercises the production WebAssembly, waterfall and audio code without a
 Pluto. The synthetic source is a development/test tool and is not deployed in
 the production receiver image. Hardware capture and RF reception remain separate
@@ -110,6 +116,7 @@ acceptance checks on the production station when the device is available.
 | samp_rate, lo_freq, lnb_lo_freq | Requested hardware sample rate/LO and displayed LNB frequency offset. Stream metadata uses actual hardware-readback values. |
 | iio_uri, rf_bandwidth, buffer_size | Pluto connection, receiver RF bandwidth, and IIO capture buffer. |
 | iq_target_rate | Approximate desired distributed rate; GNU Radio applies antialias filtering before integral decimation. |
+| iq_subband_rate | Desired native shared subband rate (default 128,000 Hz); catalog spans overlap and exclude the filter transition. |
 | iq_frame_samples, iq_scale | Packed frame size (256–65,536 complex samples) and source quantization scale. |
 | sdr_host, sdr_iq_port | Backend ZeroMQ upstream. |
 | iq_client_queue_size, iq_send_timeout | Bounded per-client queue (1–64 frames) and WebSocket send deadline in seconds. |
@@ -127,7 +134,9 @@ HTTP listening port and `CONFIG_PATH` selects the YAML file. Invalid configurati
 fails startup. Source hardware settings are read once at startup. Change central
 configuration and restart deployments to apply them.
 
-`GET /stream-info` exposes actual upstream metadata, connected-client count,
+`GET /bands` returns the bounded catalog without activating capture.
+`GET /stream-info` exposes actual upstream metadata, connected-client count, active
+subband count, channelization time and delivered bytes,
 malformed/dropped/discontinuous frame counters and last-packet age. `/health`
 checks backend subscriber operation; `/ready` accepts healthy idle replicas and
 requires live I/Q while viewers are present. Source `/health`, `/ready`, and

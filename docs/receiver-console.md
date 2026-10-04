@@ -41,8 +41,8 @@ readout. They are not absolute dBm or calibrated antenna power measurements.
 
 ## Resolution, appearance and energy
 
-FFT size is selectable from 256 to 32,768. The default is 4,096; at 520,834 S/s,
-32,768 gives about 15.9 Hz per bin. Frequency resolution improves as FFT size grows,
+FFT size is selectable from 256 to 32,768. The default is 4,096; at 128,000 S/s,
+4,096 gives 31.25 Hz/bin and 32,768 gives about 3.9 Hz/bin. Frequency resolution improves as FFT size grows,
 with a longer observation window and more client processing. C++ rebuilds only
 its liquid-dsp FFT plan/Hann/history buffers on a resolution change. Audio DSP
 objects keep their state; compiled-WASM checks compare PCM exactly across changes.
@@ -127,3 +127,16 @@ options, 32K FFT during native audio, freeze/fullscreen/zoom, gain/range overrid
 bookmarks/share reload, hidden-tab pause/wake, volume and mobile widths. Visibility
 events are injected to exercise the actual handler; browser scheduling policies
 and RF/audio quality still need testing on target client devices and the Pluto.
+
+## Receive bands
+
+Choose **Receive band** to move the visible spectrum to another portion of the
+station. The 128 kHz stream has a usable 102.4 kHz span and overlaps its neighbors.
+Only the selected span appears in the waterfall and automatic signal search.
+Band changes reconnect the stream, release pinned tracking, reset zoom/history
+and finalize recording by stopping audio. Press Start audio to listen again.
+
+Fine frequency/BW/sideband/CW controls remain local. Entering a frequency outside
+the current band selects a suitable overlapping band when the entire passband
+fits; otherwise tuning clamps to the available limits. Shared links and saved
+frequencies retain the chosen band. See [subband details](iq-subbands.md).

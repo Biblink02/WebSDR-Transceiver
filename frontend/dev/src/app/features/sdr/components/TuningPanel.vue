@@ -6,7 +6,7 @@ const numberValue = (event: Event) => Number((event.target as HTMLInputElement).
 function share() {
     const url = new URL(location.href)
     url.search = new URLSearchParams({ freq: String(store.tuneFreq + store.settings.lnb_lo_freq),
-        bw: String(store.bandwidth), side: store.sideband > 0 ? 'usb' : 'lsb', mode: store.mode, pitch: String(store.cwPitch) }).toString()
+        bw: String(store.bandwidth), side: store.sideband > 0 ? 'usb' : 'lsb', mode: store.mode, pitch: String(store.cwPitch), band: String(store.selectedBand) }).toString()
     history.replaceState(history.state, '', url)
     shareLink.value = url.href
     navigator.clipboard?.writeText(url.href).catch(() => {})
@@ -17,6 +17,11 @@ function share() {
         <div class="section-title">TUNING <span>{{ store.mode === 'cw' ? 'CW' : store.sideband > 0 ? 'USB' : 'LSB' }}</span></div>
         <div class="frequency-readout">{{ ((store.tuneFreq + store.settings.lnb_lo_freq) / 1e6).toFixed(6) }}<small>MHz RF</small></div>
         <div class="muted fine-print">IF {{ (store.tuneFreq / 1e6).toFixed(6) }} MHz · BW {{ (store.bandwidth / 1000).toFixed(2) }} kHz</div>
+        <label class="band-control">Receive band<select aria-label="Receive band" :value="store.selectedBand" @change="store.selectBand(numberValue($event))">
+            <option v-for="band in store.bands" :key="band.id" :value="band.id">
+                {{ ((band.low + store.settings.lnb_lo_freq) / 1e6).toFixed(4) }}–{{ ((band.high + store.settings.lnb_lo_freq) / 1e6).toFixed(4) }} MHz
+            </option></select></label>
+        <div class="muted fine-print">{{ (store.settings.samp_rate * 16 / 1e6).toFixed(2) }} Mbit/s I/Q · Changing band stops audio and recording.</div>
         <div class="tuning-fields">
             <label for="receiver-frequency">RF frequency · Hz
                 <input id="receiver-frequency" type="number" :value="store.tuneFreq + store.settings.lnb_lo_freq" :step="store.tuningStep"
@@ -51,5 +56,6 @@ function share() {
 .tuning-actions .step-control { width:90px; margin-top:0; flex:0 0 90px; }
 .share-link { margin-top:10px; font-size:10px !important; }
 .mode-control { margin-top:12px; max-width:160px; }
+.band-control { margin-top:12px; }
 @media(max-width:500px) { .tuning-fields { grid-template-columns:1fr 1fr; } .tuning-fields label:first-child { grid-column:span 2; } }
 </style>

@@ -1,7 +1,7 @@
 # Caddy operations
 
-One Caddy process serves the static Vue/WASM frontend and proxies `/iq` and
-`/stream-info` to the stateless backend. The frontend image and Kubernetes
+One Caddy process serves the static Vue/WASM frontend and proxies `/iq`,
+`/stream-info` and `/bands` to the stateless backend. The frontend image and Kubernetes
 workload are named `websdr-transceiver/frontend` and `frontend`. Proxy Manager,
 its admin port and the separate nginx frontend are removed from the manifests.
 

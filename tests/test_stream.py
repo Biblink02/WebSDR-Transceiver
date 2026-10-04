@@ -54,7 +54,8 @@ async def test_bounded_fanout_and_source_epoch_discards_stale_backlog():
     for sequence in range(20):
         packet=frame(sequence)
         distributor.ingest(packet)
-        assert await fast.get()==packet
+        received = validate_frame(await fast.get())
+        assert received.sequence == sequence and received.sample_rate == 128000
         assert slow.qsize()<=2
     assert distributor.counters['client_dropped']==18
     assert validate_frame(await slow.get()).sequence==18

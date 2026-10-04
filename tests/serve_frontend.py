@@ -3,6 +3,7 @@ import argparse
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit
+from urllib.request import urlopen
 import yaml
 
 parser=argparse.ArgumentParser();parser.add_argument('--port',type=int,required=True)
@@ -17,6 +18,11 @@ class Handler(SimpleHTTPRequestHandler):
         if request_path=='/config.yaml':
             self.send_response(200);self.send_header('Content-Type','application/yaml')
             self.send_header('Content-Length',str(len(payload)));self.end_headers();self.wfile.write(payload)
+        elif request_path == '/bands':
+            with urlopen(args.backend + '/bands', timeout=3) as response:
+                data = response.read()
+            self.send_response(200);self.send_header('Content-Type','application/json')
+            self.send_header('Content-Length',str(len(data)));self.end_headers();self.wfile.write(data)
         else:
             if request_path in ['/sdr','/about-us','/resources']:self.path='/index.html'
             super().do_GET()

@@ -41,7 +41,7 @@ export function useSpectrumRenderer(elements: {
     watch(() => Object.values(config()), () => {
         worker?.postMessage({ type: 'config', payload: config() }); scheduleDraw()
     })
-    watch(() => store.fftSize, () => { trace = null; latest = null; worker?.postMessage({ type: 'clear' }); scheduleDraw() })
+    watch(() => [store.fftSize, store.selectedBand], () => { trace = null; latest = null; worker?.postMessage({ type: 'clear' }); scheduleDraw() })
     onMounted(() => {
         worker = typedWorker<WaterfallCommand, WaterfallEvent>(new WaterfallWorker())
         worker.onmessage = event => {

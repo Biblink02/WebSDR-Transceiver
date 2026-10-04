@@ -23,6 +23,7 @@ export function useReceiver() {
         active = true; suspended = false
         worker.postMessage({ type: 'init', payload: {
             wsUrl: store.settings.ws_url, wasmUrl: new URL('/dsp.wasm', window.location.href).href,
+            band: store.selectedBand,
             audioRate: store.settings.audio_rate, calibration: store.settings.calibration,
             ...tuning(), ...display(), audio: audio(),
         } })
@@ -112,6 +113,11 @@ export function useReceiver() {
         if (store.connectionWanted) connect()
         syncVisibility()
     }
+    watch(() => store.selectedBand, () => {
+        stopListening(); automation.reset()
+        store.setConnectionState(store.connectionWanted ? 'connecting' : 'disconnected')
+        if (graphicCallback) initWorker(graphicCallback)
+    })
     watch([() => store.tuneFreq, () => store.bandwidth, () => store.sideband, () => store.mode, () => store.cwPitch], () =>
         worker?.postMessage({ type: 'tune', payload: tuning() }))
     watch([() => store.audioAgc, () => store.squelch, () => store.squelchThreshold], () =>

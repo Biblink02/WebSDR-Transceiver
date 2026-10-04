@@ -93,7 +93,9 @@ function processFrame(buffer: ArrayBuffer) {
 function connect(current: number) {
     if (stopped || current !== generation || !config) return
     status('connecting')
-    const connection = new WebSocket(iqWebSocketUrl(config.wsUrl))
+    const url = new URL(iqWebSocketUrl(config.wsUrl))
+    url.searchParams.set('band', String(config.band))
+    const connection = new WebSocket(url)
     socket = connection; connection.binaryType = 'arraybuffer'
     connection.onopen = () => {
         if (current !== generation) return

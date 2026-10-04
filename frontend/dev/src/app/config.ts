@@ -1,5 +1,10 @@
 import yaml from 'js-yaml'
 
+export interface IqBand {
+    id: number; center_freq: number; sample_rate: number; low: number; high: number; bits_per_second: number
+}
+export interface BandCatalog { default: number; input_sample_rate: number; input_center_freq: number; bands: IqBand[] }
+
 export interface AppConfig {
     samp_rate: number
     fft_size: number
@@ -15,6 +20,7 @@ export interface AppConfig {
     bandwidth: number
     calibration: number
     ws_url: string
+    bands: BandCatalog
 }
 
 export async function loadConfig(): Promise<AppConfig> {
@@ -33,5 +39,17 @@ export async function loadConfig(): Promise<AppConfig> {
         config.bandwidth < config.min_bw_limit || config.bandwidth > config.max_bw_limit ||
         config.view_limit_max <= config.view_limit_min || config.range_db <= 0 ||
         typeof config.ws_url !== 'string') throw new Error('Unsupported SDR configuration values')
+    const catalogResponse = await fetch('/bands', { cache: 'no-store' })
+    if (!catalogResponse.ok) throw new Error('Failed to fetch I/Q subbands')
+    const catalog = await catalogResponse.json() as BandCatalog
+    if (!catalog || !Array.isArray(catalog.bands) || !catalog.bands.length || catalog.bands.length > 16 ||
+        !Number.isInteger(catalog.default) || !catalog.bands.some(band => band.id === catalog.default) ||
+        new Set(catalog.bands.map(band => band.id)).size !== catalog.bands.length ||
+        catalog.bands.some(band => !Number.isInteger(band.id) ||
+            ![band.center_freq, band.sample_rate, band.low, band.high, band.bits_per_second].every(Number.isFinite) ||
+            band.sample_rate < 48000 || band.sample_rate > 4000000 || band.low >= band.high ||
+            band.low < band.center_freq - band.sample_rate / 2 || band.high > band.center_freq + band.sample_rate / 2))
+        throw new Error('Invalid I/Q subband catalog')
+    config.bands = catalog
     return config
 }

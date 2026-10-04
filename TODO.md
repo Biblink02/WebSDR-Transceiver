@@ -14,15 +14,32 @@
   The full Python suite passed 18 tests; the final tools browser check passed
   in 17.31 seconds, including drifting/lost/recovered targets, hidden-tab AFC,
   decoded recorded audio at zero volume, metadata, shortcuts and a WASM-load race.
-- [x] Prepare the verified changes for atomic commits after the user's 2026-10-04
-  instruction to commit. Pipeline/CI work is excluded.
+- [x] Commit the verified receiver tools after the user's 2026-10-04 instruction. Pipeline/CI work is excluded.
 
-The subband version is implemented and verified separately on `feat/iq-subbands`,
-in the worktree under `.worktrees/iq-subbands`. It derives from these receiver tools
-and adds a shared native C++ channelizer, band selection and dedicated tests.
-Worktrees preserve the two independent working copies. The subband
-suite passed 25 tests and the isolated Caddy/Kind rollout passed with two bands,
-source-only restart, idle/wake, long-lived WSS and persisted TLS data.
+## Shared subbands follow-up (separate branch)
+
+This worktree is on `feat/iq-subbands`, derived from the committed receiver tools
+on `feat/webassembly`. The parent worktree retains the full I/Q stream.
+
+- [x] Add one native C++ liquid-dsp VCO/resampler per active band per backend,
+  share results across listeners, and free native state when the last viewer leaves.
+- [x] Cover the configured RF view with five overlapping 128 kHz bands; preserve
+  complete 15 kHz passbands, bound the catalog to 16 bands and expose idle `/bands`.
+- [x] Add band selection to the browser, shared URLs and bookmarks; changing band
+  stops audio/recording and rebuilds worker/visualization state. Fine tuning stays local.
+- [x] Validate buffer sizes before native copies, filter rejection, rate/phase
+  continuity, source gaps, shared fanout, invalid IDs, cleanup and CPU budget.
+- [x] Pass 25 Python tests (80.70 s), nine Bun tests / 122 assertions, Vue/TypeScript
+  checking, frontend build and both runtime Docker builds. Compiled browser DSP
+  retains the six WASM tests / 767 assertions already verified above.
+- [x] Pass isolated Kind rollout: trusted Caddy TLS/WSS, two backend replicas,
+  two different bands beyond 65 s, idle/wake, source-only liveness restart,
+  zero downstream restarts, Caddy stdin reload and persistent TLS after pod replacement.
+  Dedicated cluster was deleted; the default kube context remains `kind-kind`.
+- [x] Document geometry, bandwidth reduction, native CPU/requantization tradeoffs
+  and remaining hardware acceptance in [subband details](docs/iq-subbands.md).
+- [x] Commit the verified subband implementation separately from its parent.
+  Production deployment and CI work remain outside this follow-up.
 
 ## SDR console and demand-driven capture follow-up
 

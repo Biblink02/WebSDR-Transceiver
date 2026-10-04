@@ -1,4 +1,4 @@
-"""Packed-I/Q WebSocket distribution. All listener DSP runs in the browser."""
+"""Shared C++ I/Q subbands; listener demodulation runs in the browser."""
 import asyncio
 from contextlib import asynccontextmanager, suppress
 import uvicorn
@@ -6,14 +6,19 @@ import zmq.asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from config import (WEB_PORT, LISTEN_IP, SDR_HOST, SDR_IQ_PORT,
-                    IQ_CLIENT_QUEUE_SIZE, IQ_SEND_TIMEOUT, IQ_STALL_SECONDS)
+                    IQ_CLIENT_QUEUE_SIZE, IQ_SEND_TIMEOUT, IQ_STALL_SECONDS,
+                    IQ_SUBBAND_RATE, IQ_INPUT_RATE, IQ_CENTER, IQ_VIEW_LOW, IQ_VIEW_HIGH)
 from iq import IQDistributor
+from subbands import native_library
 
 
 @asynccontextmanager
 async def lifespan(app):
+    native_library()  # Required: fail startup rather than serving an unfiltered stream.
     context = zmq.asyncio.Context()
-    distributor = IQDistributor(context, f'tcp://{SDR_HOST}:{SDR_IQ_PORT}', IQ_CLIENT_QUEUE_SIZE)
+    distributor = IQDistributor(context, f'tcp://{SDR_HOST}:{SDR_IQ_PORT}', IQ_CLIENT_QUEUE_SIZE,
+                                input_rate=IQ_INPUT_RATE, center=IQ_CENTER, view_low=IQ_VIEW_LOW,
+                                view_high=IQ_VIEW_HIGH, subband_rate=IQ_SUBBAND_RATE)
     app.state.iq = distributor
     task = asyncio.create_task(distributor.run(), name='iq-subscriber')
     app.state.subscriber = task
@@ -52,11 +57,23 @@ async def stream_info():
     return app.state.iq.diagnostics()
 
 
+@app.get('/bands')
+async def bands():
+    return app.state.iq.plan.json()
+
+
 @app.websocket('/iq')
 async def iq_socket(websocket: WebSocket):
     distributor = app.state.iq
+    try:
+        band = int(websocket.query_params.get('band', distributor.plan.default))
+        if band not in distributor.plan.bands:
+            raise ValueError('Unknown band')
+    except ValueError:
+        await websocket.close(code=1008, reason='Unknown I/Q subband')
+        return
     await websocket.accept()
-    queue = distributor.subscribe()
+    queue = distributor.subscribe(band)
 
     async def receive():
         while True:

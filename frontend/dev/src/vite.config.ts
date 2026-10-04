@@ -48,6 +48,7 @@ export default ({ mode }: Params) => {
             proxy: {
                 '/iq': { target: backend, ws: true },
                 '/stream-info': { target: backend },
+                '/bands': { target: backend },
             },
             host: '0.0.0.0',
             port: parseInt(process.env.VITE_PORT ?? '3100'),

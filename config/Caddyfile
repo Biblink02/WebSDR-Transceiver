@@ -9,6 +9,10 @@
 	handle /stream-info {
 		reverse_proxy backend-controller:80
 	}
+	handle /bands {
+		header Cache-Control no-store
+		reverse_proxy backend-controller:80
+	}
 	handle {
 		root * /srv
 		encode zstd gzip

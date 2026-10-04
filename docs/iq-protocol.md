@@ -1,8 +1,11 @@
 # I/Q protocol and C++ receiver ABI
 
 The SDR publishes exactly one complete binary frame per ZeroMQ message. Backend
-replicas validate and forward those bytes unchanged over `/iq` WebSockets. The
-route accepts no application messages; tuning and playback are local controls.
+replicas validate these frames and channelize each active receive band once
+using native C++ liquid-dsp. `/iq?band=id` emits the same wire format with the
+subband rate, center and resampled count; sequence and epoch remain those of
+the source. The route accepts no application messages. Fine tuning and playback
+remain local. See [subband geometry and operation](iq-subbands.md).
 
 ## Binary frame, version 1
 
@@ -17,16 +20,17 @@ All multibyte fields are little endian. The 32-byte header is followed by exactl
 | 5 | 1 | Format | 1: signed interleaved I/Q8 |
 | 6 | 2 | Header length | 32 |
 | 8 | 4 | Sequence | uint32, increments once per frame and wraps |
-| 12 | 4 | Sample rate | uint32 Hz, actual filtered hardware rate, 48,000–4,000,000 |
-| 16 | 8 | Center frequency | finite positive float64 Hz, hardware LO before LNB offset |
-| 24 | 4 | Complex sample count | 1–65,536; normally 8,192 |
+| 12 | 4 | Sample rate | uint32 Hz, actual stream rate, 48,000–4,000,000 |
+| 16 | 8 | Center frequency | finite positive float64 Hz, stream center before LNB offset |
+| 24 | 4 | Complex sample count | 1–65,536; source normally 8,192, subband approximately 2,013 |
 | 28 | 4 | Source epoch | random uint32 changed on each source process start |
 
 Source quantization computes `round(clamp(component × iq_scale, -1, 1) × 127)`.
 Invalid source components become zero and increment diagnostics. Receivers also
 accept -128, mapping it to -1. The maximum frame is 131,104 bytes. Payload alone
-costs `16 × sample_rate` bits/s per listener; the configured rate costs about
-8.33 Mbit/s before frame/TCP/TLS overhead.
+costs `16 × sample_rate` bits/s. The 520,834 Hz upstream costs 8.33 Mbit/s
+once per subscribed backend; each 128 kHz browser stream costs 2.05 Mbit/s
+before frame/TCP/TLS overhead.
 
 The source applies GNU Radio antialias filtering before integer decimation. The
 factor is chosen near source/target while requiring an integral resulting rate.
@@ -36,7 +40,8 @@ read from the streaming ADC device so FPGA decimation is included, matching the
 [GNU Radio IIO source](https://github.com/gnuradio/gnuradio/blob/v3.10.9.2/gr-iio/lib/fmcomms2_source_impl.cc).
 
 An epoch change, rate/center change, or sequence gap resets browser DSP and its
-audio schedule. The backend clears old queued frames on upstream discontinuity.
+audio schedule. The backend clears old queued frames and rebuilds the native channelizers on
+upstream discontinuity.
 Each client has a bounded FIFO; overload drops its oldest frame. TCP is reliable,
 so slow clients can still incur OS-buffer latency; a send deadline disconnects
 clients that stop accepting data. A browser closes/reconnects after five seconds
@@ -101,4 +106,5 @@ real-time process function does not allocate new buffers.
 
 liquid-dsp v1.8.3 is fetched by CMake from its release archive with SHA-256
 `18fa83b73db8bb6fe6ea0376e4b5aecf8645970f4604d10d9dadbf609f3f95e2`.
-Its MIT license is distributed as `/licenses/liquid-dsp.txt` alongside the WASM.
+Its MIT license is distributed as `/licenses/liquid-dsp.txt` alongside the WASM
+and `/app/licenses/liquid-dsp.txt` in the native backend image.

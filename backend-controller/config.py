@@ -23,6 +23,11 @@ SDR_IQ_PORT = int(get_cfg('sdr_iq_port', 5000))
 IQ_CLIENT_QUEUE_SIZE = int(get_cfg('iq_client_queue_size', 4))
 IQ_SEND_TIMEOUT = float(get_cfg('iq_send_timeout', 2))
 IQ_STALL_SECONDS = float(get_cfg('iq_stall_seconds', 3))
+IQ_SUBBAND_RATE = int(get_cfg('iq_subband_rate', 128000))
+IQ_INPUT_RATE = int(get_cfg('samp_rate', 520834))
+IQ_CENTER = float(get_cfg('lo_freq', 739700000))
+IQ_VIEW_LOW = float(get_cfg('view_limit_min', 10489500000)) - float(get_cfg('lnb_lo_freq', 9750000000))
+IQ_VIEW_HIGH = float(get_cfg('view_limit_max', 10489900000)) - float(get_cfg('lnb_lo_freq', 9750000000))
 if not 1 <= IQ_CLIENT_QUEUE_SIZE <= 64 or not 0.1 <= IQ_SEND_TIMEOUT <= 10:
     raise ValueError('Invalid I/Q queue size or send timeout')
 if not 1 <= WEB_PORT <= 65535 or not 1 <= SDR_IQ_PORT <= 65535 or not 0.1 <= IQ_STALL_SECONDS <= 60:

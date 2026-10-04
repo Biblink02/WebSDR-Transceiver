@@ -53,7 +53,7 @@ async def test_console_automation_fft_bookmarks_freeze_visibility_and_mobile(tmp
                     contexts = await page.evaluate('window.__audio.created')
                     starts = await page.evaluate('window.__audio.starts')
                     await page.get_by_role('combobox', name='FFT size', exact=True).select_option('32768')
-                    await page.wait_for_function('document.body.innerText.includes("15.9 Hz/bin")')
+                    await page.wait_for_function('document.body.innerText.includes("3.9 Hz/bin")')
                     await page.wait_for_function(f'window.__audio.starts > {starts + 15}')
                     assert await page.evaluate('window.__audio.created') == contexts
                     await page.get_by_role('button', name='Freeze display', exact=True).click()

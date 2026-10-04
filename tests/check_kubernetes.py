@@ -111,15 +111,20 @@ async def main():
                 assert len(initial) == 4 and all(count == 0 for count in initial.values())
                 idle = (await http.get(health_url)).json()
                 assert idle['capture_starts'] == 0 and idle['subscribers'] == 0
+                catalog = (await http.get(base+'/bands')).json()
+                assert len(catalog['bands']) == 5 and catalog['default'] == 0
+                assert all(band['sample_rate'] == 128000 for band in catalog['bands'])
+                assert (await http.get(health_url)).json()['capture_starts'] == 0
                 for command in ['validate', 'reload']:
                     await asyncio.to_thread(kubectl, 'exec', '-i', frontend, '--', 'caddy', command,
                         '--config', '-', '--adapter', 'caddyfile', payload=(ROOT/'config/Caddyfile').read_text())
                 assert (await http.get(base+'/health')).status_code == 200
 
                 async with connect(base.replace('https', 'wss')+'/iq', ssl=tls, max_queue=4) as first, \
-                        connect(base.replace('https', 'wss')+'/iq', ssl=tls, max_queue=4) as second:
+                        connect(base.replace('https', 'wss')+'/iq?band=1', ssl=tls, max_queue=4) as second:
                     metadata = [validate_frame(frame) for frame in await asyncio.gather(first.recv(), second.recv())]
-                    assert all(info.sample_rate == 520834 for info in metadata)
+                    assert all(info.sample_rate == 128000 for info in metadata)
+                    assert metadata[1].center_freq - metadata[0].center_freq == 80000
                     assert metadata[0].epoch == metadata[1].epoch
                     await asyncio.to_thread(kubectl, 'exec', source, '--', 'touch', '/tmp/iq-stall')
                     deadline = time.monotonic() + 60
@@ -164,7 +169,7 @@ async def main():
                 assert replacement != frontend
                 assert kubectl('exec', replacement, '--', 'cat', '/data/caddy/pki/authorities/local/root.crt') == ca.read_text()
                 async with connect(base.replace('https', 'wss')+'/iq', ssl=tls) as resumed:
-                    assert validate_frame(await asyncio.wait_for(resumed.recv(), 5)).sample_rate == 520834
+                    assert validate_frame(await asyncio.wait_for(resumed.recv(), 5)).sample_rate == 128000
                 print('PASS: Caddy HTTPS redirect, trusted local TLS/WSS, WASM/config/licenses, '
                       'two backend replicas, two listeners beyond 65 seconds, idle/wake, '
                       'source-only liveness restart; downstream restarts stayed zero. '
